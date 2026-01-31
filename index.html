@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -25,7 +25,7 @@
         .btn-down { background: #4f46e5; border: none; color: white; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
         .btn-down:hover { background: #4338ca; }
 
-        /* KHUNG CHỨA - ĐÃ SỬA CSS ĐỂ KHẮC PHỤC LỖI KHÔNG CHẠY */
+        /* KHUNG CHỨA (Đã tối ưu để chạy ngầm) */
         #container { flex: 1; position: relative; background: white; width: 100%; height: 100%; }
         
         iframe { 
@@ -35,18 +35,18 @@
             position: absolute; 
             top: 0; 
             left: 0; 
-            /* QUAN TRỌNG: Dùng visibility thay vì display:none để App vẫn chạy ngầm */
-            visibility: hidden; 
-            z-index: 1;
-            background: white;
+            visibility: hidden; /* Tàng hình nhưng vẫn chạy */
+            opacity: 0;
+            z-index: 0;
         }
         
         iframe.active { 
-            visibility: visible; 
+            visibility: visible; /* Hiện hình */
+            opacity: 1;
             z-index: 10; 
         }
 
-        @media print { #header { display: none !important; } iframe.active { height: 100%; visibility: visible; } }
+        @media print { #header { display: none !important; } iframe.active { height: 100%; visibility: visible; opacity: 1; } }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         
         #overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); color: white; z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
@@ -82,9 +82,9 @@
     </div>
 
     <script>
-        // === DÁN LINK API CỦA BẠN VÀO DÒNG DƯỚI ===
-        const API = "https://script.google.com/macros/s/AKfycbzuvcund9zmcC9eTZrrJFt4IvQDo82ordPiuM3lh7QLWP39aZQzclDwxYDtHe9a6WkF/exec"; 
-        // ===========================================
+        // === LINK API MỚI (Đã cập nhật đúng link bạn gửi) ===
+        const API = "https://script.google.com/macros/s/AKfycbyN8xZzY6Ljue3nQNOCe0rajozuRn0rIjhSQqGsyHk9iU2RGNX1kQjBRHuQEjpdfLra/exec"; 
+        // ====================================================
 
         let cache = {}, lastJson = "", isBusy = false;
         const frames = [document.getElementById('f0'), document.getElementById('f1'), document.getElementById('f2')];
@@ -99,7 +99,7 @@
         // 1. TỰ ĐỘNG THU THẬP DỮ LIỆU
         setInterval(() => {
             cache = {}; 
-            // Gửi lệnh lấy dữ liệu đến cả 3 iframe dù nó đang ẩn
+            // Gửi lệnh đến cả 3 iframe dù nó đang ẩn
             if(frames[0].contentWindow) frames[0].contentWindow.postMessage({type:'GET_DATA'},'*');
             if(frames[1].contentWindow) frames[1].contentWindow.postMessage({type:'GET_DATA'},'*');
             if(frames[2].contentWindow) frames[2].contentWindow.postMessage({type:'GET_DATA_IDB'},'*');
@@ -122,6 +122,7 @@
             setStatus('sync', 'Đang lưu tự động...');
             
             try {
+                // Sử dụng mode 'no-cors' để gửi dữ liệu đi mà không bị chặn
                 await fetch(API, {
                     method: 'POST', mode: 'no-cors',
                     headers: {'Content-Type': 'application/json'},
