@@ -3,61 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HỆ THỐNG THADS ONLINE (AUTO-SYNC)</title>
+    <title>HỆ THỐNG ĐỒNG BỘ REALTIME</title>
     <style>
         body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #e2e8f0; }
         
-        /* HEADER */
-        #header { height: 45px; background: #1e40af; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 100; flex-shrink: 0; }
-        .tabs { display: flex; height: 100%; }
-        .tab { background: none; border: none; color: #bfdbfe; padding: 0 20px; font-weight: bold; cursor: pointer; height: 100%; font-size: 13px; outline: none; transition: 0.2s; }
-        .tab:hover { background: rgba(255,255,255,0.1); color: white; }
-        .tab.active { background: #f1f5f9; color: #1e40af; border-top: 4px solid #f59e0b; }
+        /* HEADER MỚI */
+        #header { height: 45px; background: #0f172a; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; color: white; border-bottom: 2px solid #334155; }
+        
+        .tabs { display: flex; gap: 5px; height: 100%; }
+        .tab { background: transparent; border: none; color: #94a3b8; padding: 0 15px; font-weight: 600; cursor: pointer; height: 100%; font-size: 13px; transition: 0.2s; border-bottom: 3px solid transparent; }
+        .tab:hover { color: #e2e8f0; background: rgba(255,255,255,0.05); }
+        .tab.active { color: #38bdf8; border-bottom: 3px solid #38bdf8; }
 
-        /* TRẠNG THÁI & NÚT */
-        .controls { display: flex; align-items: center; gap: 15px; }
-        .status { font-size: 12px; display: flex; align-items: center; gap: 6px; font-weight: 500;}
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
-        .dot.ok { background: #22c55e; box-shadow: 0 0 5px #22c55e; } 
-        .dot.sync { background: #f59e0b; animation: pulse 1s infinite; }
-        .dot.err { background: #ef4444; }
+        /* ĐÈN TRẠNG THÁI */
+        .status-area { display: flex; align-items: center; gap: 10px; font-size: 12px; background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
         
-        .btn-down { background: #4f46e5; border: none; color: white; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
-        .btn-down:hover { background: #4338ca; }
+        .dot.sync { background: #eab308; animation: pulse 1s infinite; } /* Vàng: Đang xử lý */
+        .dot.ok { background: #22c55e; box-shadow: 0 0 8px #22c55e; }   /* Xanh: Đã lưu/Đã tải */
+        .dot.err { background: #ef4444; } /* Đỏ: Lỗi */
 
-        /* KHUNG CHỨA (Đã tối ưu để chạy ngầm) */
-        #container { flex: 1; position: relative; background: white; width: 100%; height: 100%; }
-        
-        iframe { 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            visibility: hidden; /* Tàng hình nhưng vẫn chạy */
-            opacity: 0;
-            z-index: 0;
-        }
-        
-        iframe.active { 
-            visibility: visible; /* Hiện hình */
-            opacity: 1;
-            z-index: 10; 
-        }
+        #status-text { min-width: 80px; text-align: left; font-weight: 500;}
 
-        @media print { #header { display: none !important; } iframe.active { height: 100%; visibility: visible; opacity: 1; } }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        /* IFRAME */
+        #container { flex: 1; position: relative; background: white; }
+        iframe { width: 100%; height: 100%; border: none; position: absolute; visibility: hidden; opacity: 0; transition: opacity 0.3s; }
+        iframe.active { visibility: visible; opacity: 1; z-index: 10; }
+
+        /* MÀN HÌNH CHỜ (LOADING) */
+        #loader { position: fixed; top:0; left:0; width:100%; height:100%; background: #0f172a; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; transition: opacity 0.5s;}
+        .spinner { width: 40px; height: 40px; border: 4px solid #1e293b; border-top: 4px solid #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
         
-        #overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); color: white; z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
-    <div id="overlay">
-        <div class="loader"></div>
-        <h3 id="msg">Đang xử lý...</h3>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <p>Đang đồng bộ dữ liệu...</p>
     </div>
 
     <div id="header">
@@ -66,12 +51,9 @@
             <button class="tab" onclick="sw(1)">GỬI BƯU ĐIỆN</button>
             <button class="tab" onclick="sw(2)">ĐỀ NGHỊ CHI</button>
         </div>
-        <div class="controls">
-            <div class="status">
-                <span class="dot ok" id="dot"></span>
-                <span id="lbl">Sẵn sàng</span>
-            </div>
-            <button class="btn-down" onclick="downloadData()">⬇️ TẢI VỀ (Đổi máy)</button>
+        <div class="status-area">
+            <span id="dot" class="dot sync"></span>
+            <span id="status-text">Đang tải...</span>
         </div>
     </div>
 
@@ -82,13 +64,23 @@
     </div>
 
     <script>
-        // === LINK API MỚI (Đã cập nhật đúng link bạn gửi) ===
-        const API = "https://script.google.com/macros/s/AKfycbyN8xZzY6Ljue3nQNOCe0rajozuRn0rIjhSQqGsyHk9iU2RGNX1kQjBRHuQEjpdfLra/exec"; 
-        // ====================================================
+        // ================================================================
+        // DÁN LINK GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY:
+        const API = "https://script.google.com/macros/s/AKfycbxgFs9T6PTLiu8k9qdHJ_UJAwtPMcmzymMGG23_FcN7EPG40DMolYB-wcAVo0WXdCM5/exec";
+        // ================================================================
 
-        let cache = {}, lastJson = "", isBusy = false;
-        const frames = [document.getElementById('f0'), document.getElementById('f1'), document.getElementById('f2')];
+        let localData = {};
+        let serverHash = ""; 
+        let isTyping = false;
+        let typingTimer;
         
+        const frames = [document.getElementById('f0'), document.getElementById('f1'), document.getElementById('f2')];
+        const statusTxt = document.getElementById('status-text');
+        const dot = document.getElementById('dot');
+
+        // 1. KHỞI ĐỘNG: Tải dữ liệu ngay
+        window.onload = () => loadData(true);
+
         function sw(i) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
@@ -96,83 +88,99 @@
             frames[i].classList.add('active');
         }
 
-        // 1. TỰ ĐỘNG THU THẬP DỮ LIỆU
-        setInterval(() => {
-            cache = {}; 
-            // Gửi lệnh đến cả 3 iframe dù nó đang ẩn
-            if(frames[0].contentWindow) frames[0].contentWindow.postMessage({type:'GET_DATA'},'*');
-            if(frames[1].contentWindow) frames[1].contentWindow.postMessage({type:'GET_DATA'},'*');
-            if(frames[2].contentWindow) frames[2].contentWindow.postMessage({type:'GET_DATA_IDB'},'*');
-        }, 10000); 
-
-        // 2. XỬ LÝ KẾT QUẢ TRẢ VỀ
+        // 2. NHẬN BIẾT NGƯỜI DÙNG ĐANG NHẬP LIỆU
         window.addEventListener('message', e => {
             if(e.data.type && e.data.type.includes('DATA_RETURN')) {
-                cache[e.data.app] = e.data.data;
-                if(Object.keys(cache).length === 3) autoSave();
+                localData[e.data.app] = e.data.data;
+                
+                // Khi đang gõ phím -> Chuyển trạng thái sang VÀNG (Đang chờ lưu)
+                isTyping = true;
+                setStatus('sync', 'Đang nhập...');
+                
+                // Nếu ngừng gõ 2 giây -> Tự động lưu
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    isTyping = false;
+                    saveData();
+                }, 2000);
             }
         });
 
-        async function autoSave() {
-            if(isBusy) return;
-            const currentJson = JSON.stringify(cache);
-            if(currentJson === lastJson) return;
-
-            isBusy = true;
-            setStatus('sync', 'Đang lưu tự động...');
-            
+        // 3. HÀM TỰ ĐỘNG LƯU (AUTO SAVE)
+        async function saveData() {
+            setStatus('sync', 'Đang lưu...');
             try {
-                // Sử dụng mode 'no-cors' để gửi dữ liệu đi mà không bị chặn
+                // Gửi dữ liệu đi
                 await fetch(API, {
-                    method: 'POST', mode: 'no-cors',
+                    method: 'POST',
+                    mode: 'no-cors',
                     headers: {'Content-Type': 'application/json'},
-                    body: currentJson
+                    body: JSON.stringify(localData)
                 });
-                lastJson = currentJson; 
-                setStatus('ok', 'Đã lưu an toàn');
-            } catch(err) {
-                console.error(err);
-                setStatus('err', 'Lỗi kết nối mạng!');
-            } finally {
-                isBusy = false;
+                // Cập nhật lại mốc so sánh
+                serverHash = JSON.stringify(localData);
+                setStatus('ok', 'Đã lưu xong');
+            } catch(e) {
+                console.error(e);
+                setStatus('err', 'Lỗi lưu!');
             }
         }
 
-        function setStatus(type, text) {
-            const d = document.getElementById('dot');
-            d.className = 'dot ' + type;
-            document.getElementById('lbl').innerText = text;
-        }
+        // 4. HÀM TỰ ĐỘNG TẢI (AUTO LOAD)
+        async function loadData(firstTime = false) {
+            // Nếu đang gõ phím thì KHÔNG tải về (tránh giật)
+            if(isTyping && !firstTime) return;
 
-        async function downloadData() {
-            if(!confirm("⚠️ CẢNH BÁO: Dữ liệu trên máy này sẽ bị GHI ĐÈ.\nChỉ dùng khi vừa đổi sang máy mới.\n\nTiếp tục?")) return;
-            document.getElementById('overlay').style.display = 'flex';
-            document.getElementById('msg').innerText = "Đang tải dữ liệu...";
-            
             try {
-                const res = await fetch(API);
+                // Thêm ?t=... để chống Cache trình duyệt
+                const res = await fetch(API + "?t=" + Date.now());
                 const data = await res.json();
+                const jsonStr = JSON.stringify(data);
+
+                // Nếu dữ liệu trên mây KHÁC dữ liệu dưới máy -> Cập nhật
+                if(jsonStr !== serverHash) {
+                    serverHash = jsonStr;
+                    localData = data;
+                    
+                    if(data.app1) frames[0].contentWindow.postMessage({type:'RESTORE_DATA', payload: data.app1}, '*');
+                    if(data.app2) frames[1].contentWindow.postMessage({type:'RESTORE_DATA', payload: data.app2}, '*');
+                    if(data.app3) frames[2].contentWindow.postMessage({type:'RESTORE_DATA_IDB', payload: data.app3}, '*');
+                    
+                    console.log("Đã cập nhật dữ liệu mới từ Server");
+                }
                 
-                if(!data || !data.app1) { 
-                    alert("Chưa có dữ liệu trên mây!"); 
-                    document.getElementById('overlay').style.display = 'none';
-                    return; 
+                if(!isTyping) setStatus('ok', 'Sẵn sàng');
+
+                // Tắt màn hình chờ nếu là lần đầu
+                if(firstTime) {
+                    document.getElementById('loader').style.opacity = '0';
+                    setTimeout(()=>document.getElementById('loader').style.display='none', 500);
                 }
 
-                document.getElementById('msg').innerText = "Đang nạp dữ liệu...";
-                frames[0].contentWindow.postMessage({type:'RESTORE_DATA', payload: data.app1}, '*');
-                frames[1].contentWindow.postMessage({type:'RESTORE_DATA', payload: data.app2}, '*');
-                frames[2].contentWindow.postMessage({type:'RESTORE_DATA_IDB', payload: data.app3}, '*'); 
-
-                setTimeout(() => {
-                    alert("✅ ĐÃ XONG! Trang sẽ tự tải lại.");
-                    location.reload(); 
-                }, 3000);
-
-            } catch(e) { 
-                alert("Lỗi: " + e); 
-                document.getElementById('overlay').style.display='none'; 
+            } catch(e) {
+                console.error(e);
+                if(firstTime) { 
+                    alert("Không thể kết nối dữ liệu! Vui lòng kiểm tra mạng.");
+                    document.getElementById('loader').style.display='none';
+                }
             }
+        }
+
+        // 5. CHU KỲ KIỂM TRA: 10 giây một lần
+        setInterval(() => {
+            if(!isTyping) loadData();
+        }, 10000);
+
+        // Kích hoạt iframe gửi dữ liệu mỗi 5s để cập nhật biến localData
+        setInterval(() => {
+            frames[0].contentWindow.postMessage({type:'GET_DATA'},'*');
+            frames[1].contentWindow.postMessage({type:'GET_DATA'},'*');
+            frames[2].contentWindow.postMessage({type:'GET_DATA_IDB'},'*');
+        }, 5000);
+
+        function setStatus(cls, txt) {
+            dot.className = 'dot ' + cls;
+            statusTxt.innerText = txt;
         }
     </script>
 </body>
