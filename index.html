@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HỆ THỐNG THADS ONLINE (AUTO-SYNC)</title>
+    <style>
+        body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #e2e8f0; }
+        
+        /* HEADER */
+        #header { height: 45px; background: #1e40af; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 100; flex-shrink: 0; }
+        .tabs { display: flex; height: 100%; }
+        .tab { background: none; border: none; color: #bfdbfe; padding: 0 20px; font-weight: bold; cursor: pointer; height: 100%; font-size: 13px; outline: none; transition: 0.2s; }
+        .tab:hover { background: rgba(255,255,255,0.1); color: white; }
+        .tab.active { background: #f1f5f9; color: #1e40af; border-top: 4px solid #f59e0b; }
+
+        /* TRẠNG THÁI & NÚT */
+        .controls { display: flex; align-items: center; gap: 15px; }
+        .status { font-size: 12px; display: flex; align-items: center; gap: 6px; font-weight: 500;}
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+        .dot.ok { background: #22c55e; box-shadow: 0 0 5px #22c55e; } 
+        .dot.sync { background: #f59e0b; animation: pulse 1s infinite; }
+        .dot.err { background: #ef4444; }
+        
+        .btn-down { background: #4f46e5; border: none; color: white; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+        .btn-down:hover { background: #4338ca; }
+
+        /* KHUNG CHỨA - ĐÃ SỬA CSS ĐỂ KHẮC PHỤC LỖI KHÔNG CHẠY */
+        #container { flex: 1; position: relative; background: white; width: 100%; height: 100%; }
+        
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            /* QUAN TRỌNG: Dùng visibility thay vì display:none để App vẫn chạy ngầm */
+            visibility: hidden; 
+            z-index: 1;
+            background: white;
+        }
+        
+        iframe.active { 
+            visibility: visible; 
+            z-index: 10; 
+        }
+
+        @media print { #header { display: none !important; } iframe.active { height: 100%; visibility: visible; } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        #overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); color: white; z-index: 999; justify-content: center; align-items: center; flex-direction: column; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="overlay">
+        <div class="loader"></div>
+        <h3 id="msg">Đang xử lý...</h3>
+    </div>
+
+    <div id="header">
+        <div class="tabs">
+            <button class="tab active" onclick="sw(0)">QUẢN LÝ BIÊN LAI</button>
+            <button class="tab" onclick="sw(1)">GỬI BƯU ĐIỆN</button>
+            <button class="tab" onclick="sw(2)">ĐỀ NGHỊ CHI</button>
+        </div>
+        <div class="controls">
+            <div class="status">
+                <span class="dot ok" id="dot"></span>
+                <span id="lbl">Sẵn sàng</span>
+            </div>
+            <button class="btn-down" onclick="downloadData()">⬇️ TẢI VỀ (Đổi máy)</button>
+        </div>
+    </div>
+
+    <div id="container">
+        <iframe id="f0" src="bien-lai.html" class="active"></iframe>
+        <iframe id="f1" src="buu-dien.html"></iframe>
+        <iframe id="f2" src="de-nghi-chi.html"></iframe>
+    </div>
+
+    <script>
+        // === DÁN LINK API CỦA BẠN VÀO DÒNG DƯỚI ===
+        const API = "https://script.google.com/macros/s/AKfycbzuvcund9zmcC9eTZrrJFt4IvQDo82ordPiuM3lh7QLWP39aZQzclDwxYDtHe9a6WkF/exec"; 
+        // ===========================================
+
+        let cache = {}, lastJson = "", isBusy = false;
+        const frames = [document.getElementById('f0'), document.getElementById('f1'), document.getElementById('f2')];
+        
+        function sw(i) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
+            document.querySelectorAll('.tab')[i].classList.add('active');
+            frames[i].classList.add('active');
+        }
+
+        // 1. TỰ ĐỘNG THU THẬP DỮ LIỆU
+        setInterval(() => {
+            cache = {}; 
+            // Gửi lệnh lấy dữ liệu đến cả 3 iframe dù nó đang ẩn
+            if(frames[0].contentWindow) frames[0].contentWindow.postMessage({type:'GET_DATA'},'*');
+            if(frames[1].contentWindow) frames[1].contentWindow.postMessage({type:'GET_DATA'},'*');
+            if(frames[2].contentWindow) frames[2].contentWindow.postMessage({type:'GET_DATA_IDB'},'*');
+        }, 10000); 
+
+        // 2. XỬ LÝ KẾT QUẢ TRẢ VỀ
+        window.addEventListener('message', e => {
+            if(e.data.type && e.data.type.includes('DATA_RETURN')) {
+                cache[e.data.app] = e.data.data;
+                if(Object.keys(cache).length === 3) autoSave();
+            }
+        });
+
+        async function autoSave() {
+            if(isBusy) return;
+            const currentJson = JSON.stringify(cache);
+            if(currentJson === lastJson) return;
+
+            isBusy = true;
+            setStatus('sync', 'Đang lưu tự động...');
+            
+            try {
+                await fetch(API, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: {'Content-Type': 'application/json'},
+                    body: currentJson
+                });
+                lastJson = currentJson; 
+                setStatus('ok', 'Đã lưu an toàn');
+            } catch(err) {
+                console.error(err);
+                setStatus('err', 'Lỗi kết nối mạng!');
+            } finally {
+                isBusy = false;
+            }
+        }
+
+        function setStatus(type, text) {
+            const d = document.getElementById('dot');
+            d.className = 'dot ' + type;
+            document.getElementById('lbl').innerText = text;
+        }
+
+        async function downloadData() {
+            if(!confirm("⚠️ CẢNH BÁO: Dữ liệu trên máy này sẽ bị GHI ĐÈ.\nChỉ dùng khi vừa đổi sang máy mới.\n\nTiếp tục?")) return;
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('msg').innerText = "Đang tải dữ liệu...";
+            
+            try {
+                const res = await fetch(API);
+                const data = await res.json();
+                
+                if(!data || !data.app1) { 
+                    alert("Chưa có dữ liệu trên mây!"); 
+                    document.getElementById('overlay').style.display = 'none';
+                    return; 
+                }
+
+                document.getElementById('msg').innerText = "Đang nạp dữ liệu...";
+                frames[0].contentWindow.postMessage({type:'RESTORE_DATA', payload: data.app1}, '*');
+                frames[1].contentWindow.postMessage({type:'RESTORE_DATA', payload: data.app2}, '*');
+                frames[2].contentWindow.postMessage({type:'RESTORE_DATA_IDB', payload: data.app3}, '*'); 
+
+                setTimeout(() => {
+                    alert("✅ ĐÃ XONG! Trang sẽ tự tải lại.");
+                    location.reload(); 
+                }, 3000);
+
+            } catch(e) { 
+                alert("Lỗi: " + e); 
+                document.getElementById('overlay').style.display='none'; 
+            }
+        }
+    </script>
+</body>
+</html>
