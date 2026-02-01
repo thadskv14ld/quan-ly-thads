@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hệ thống Quản lý C09-THADS - V6.1 (Updated CHV)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f1f5f9; }
+        label { display: block; font-size: 0.75rem; font-weight: 700; color: #334155; margin-bottom: 2px; text-transform: uppercase; }
+        .cb-nhan-thay { width: 1.5rem; height: 1.5rem; accent-color: #2563eb; cursor: pointer; }
+        .cb-thu-phi { width: 1.2rem; height: 1.2rem; accent-color: #ea580c; cursor: pointer; }
+        .input-error { border-color: #ef4444 !important; background-color: #fef2f2 !important; }
+        .date-input-container { position: relative; display: flex; align-items: center; }
+        .date-input-container input[type="text"] { padding-right: 35px; }
+        .picker-icon { position: absolute; right: 10px; pointer-events: none; color: #64748b; }
+        .hidden-picker { position: absolute; right: 5px; width: 25px; opacity: 0; cursor: pointer; }
+        .date-group-header { background: #e2e8f0; padding: 10px 15px; font-weight: 800; color: #1e293b; border-left: 5px solid #2563eb; margin-top: 15px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+        
+        #qrModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; }
+        .qr-box { background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); max-width: 280px; width: 90%; }
+
+        /* --- CẤU HÌNH IN & XUẤT PDF CHUẨN --- */
+        @media print {
+            @page { 
+                size: A4 portrait; 
+                margin: 2cm 2cm 2cm 2cm; 
+            }
+            body { background: white; margin: 0; padding: 0; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; page-break-after: always; }
+            
+            #documentRender { 
+                width: 100%; 
+                font-family: "Times New Roman", Times, serif !important; 
+                font-size: 12pt !important; 
+                line-height: 1.35; 
+                color: black; 
+            }
+            .f-12-bold-upper { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
+            .f-10-italic { font-size: 10pt; font-style: italic; }
+            .bold { font-weight: bold; }
+            .italic { font-style: italic; }
+            .text-center { text-align: center; }
+            .text-justify { text-align: justify; }
+            table { border-collapse: collapse; width: 100%; border: none; }
+            td { border: none; padding: 0; vertical-align: top; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div class="max-w-7xl mx-auto no-print space-y-6">
+        <div class="bg-slate-900 text-white p-4 rounded-lg flex justify-between items-center shadow-lg">
+            <div class="flex items-center gap-2">
+                <i data-lucide="clipboard-list" class="text-orange-500"></i>
+                <h1 class="text-lg font-bold tracking-tighter uppercase">QUẢN LÝ NGHIỆP VỤ C09-THADS</h1>
+            </div>
+            <button onclick="resetForm()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-bold uppercase">Tạo hồ sơ mới</button>
+        </div>
+
+        <div id="mainForm" class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 border-b pb-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">A</span>
+                    <h2 class="font-bold text-slate-700 uppercase text-sm">Thông tin người thụ hưởng</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2"><label>Họ và tên / Tổ chức (*)</label><input type="text" id="hoTen" class="req w-full border-2 border-slate-100 p-2 rounded text-sm uppercase font-bold outline-none focus:border-blue-500"></div>
+                    <div><label>Năm sinh</label><input type="number" id="namSinh" class="w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
+                    <div class="md:col-span-3"><label>Địa chỉ (*)</label><input type="text" id="diaChi" class="req w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
+                </div>
+
+                <div class="flex items-center gap-3 p-3 bg-blue-50 rounded border border-blue-100">
+                    <input type="checkbox" id="coNguoiNhanThay" onchange="toggleNhanThay()" class="cb-nhan-thay">
+                    <label for="coNguoiNhanThay" class="font-bold text-blue-800 text-sm cursor-pointer m-0">☑ CÓ NGƯỜI NHẬN THAY (ỦY QUYỀN)</label>
+                </div>
+
+                <div id="formNhanThay" class="hidden p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2"><label>Họ tên người nhận thay (*)</label><input type="text" id="tenThay" class="w-full border border-slate-300 p-2 rounded text-sm font-bold uppercase"></div>
+                        <div><label>Năm sinh</label><input type="number" id="namSinhThay" class="w-full border border-slate-300 p-2 rounded text-sm"></div>
+                        <div class="md:col-span-3"><label>Địa chỉ người thay (*)</label><input type="text" id="dcThay" class="w-full border border-slate-300 p-2 rounded text-sm"></div>
+                        <div><label>Số CCCD (*)</label><input type="text" id="cccdThay" class="w-full border border-slate-300 p-2 rounded text-sm font-bold"></div>
+                        <div>
+                            <label>Ngày cấp</label>
+                            <div class="date-input-container">
+                                <input type="text" id="ngayThay" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="w-full border border-slate-300 p-2 rounded text-sm">
+                                <i data-lucide="calendar" class="w-4 h-4 picker-icon"></i>
+                                <input type="date" class="hidden-picker" onchange="syncPicker(this, 'ngayThay')">
+                            </div>
+                        </div>
+                        <div><label>Nơi cấp CCCD</label>
+                            <select id="noiThay" class="w-full border border-slate-300 p-2 rounded text-sm font-bold">
+                                <option value="Cục Cảnh sát quản lý hành chính về trật tự xã hội">Cục Cảnh sát quản lý hành chính về trật tự xã hội</option>
+                                <option value="Bộ Công an">Bộ Công an</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="formNguoiNhan" class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                    <div><label>Số CCCD người nhận chi</label><input type="text" id="cccdSo" class="w-full border-2 border-slate-100 p-2 rounded text-sm font-bold"></div>
+                    <div>
+                        <label>Ngày cấp</label>
+                        <div class="date-input-container">
+                            <input type="text" id="cccdNgay" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="w-full border-2 border-slate-100 p-2 rounded text-sm">
+                            <i data-lucide="calendar" class="w-4 h-4 picker-icon"></i>
+                            <input type="date" class="hidden-picker" onchange="syncPicker(this, 'cccdNgay')">
+                        </div>
+                    </div>
+                    <div><label>Nơi cấp CCCD</label>
+                        <select id="cccdNoi" class="w-full border-2 border-slate-100 p-2 rounded text-sm font-bold">
+                            <option value="Cục Cảnh sát quản lý hành chính về trật tự xã hội">Cục Cảnh sát quản lý hành chính về trật tự xã hội</option>
+                            <option value="Bộ Công an">Bộ Công an</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4 mt-8 pt-6 border-t-4 border-slate-100">
+                <div class="flex items-center gap-2 border-b pb-2">
+                    <span class="bg-orange-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">B</span>
+                    <h2 class="font-bold text-slate-700 uppercase text-sm">Tài chính & Thanh toán</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label>Số tài khoản</label><input type="text" id="stk" class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
+                    <div><label>Ngân hàng & Chi nhánh</label><input type="text" id="nganHang" class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
+                    <div><label>Mã Ngân hàng</label><input type="text" id="maNH" class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
+                </div>
+                <div><label>Giấy uỷ quyền / Biên bản (Số - ngày - tháng - năm)</label><input type="text" id="giayUQ" placeholder="Số... ngày... tháng... năm..." class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div>
+                        <label class="text-blue-700 font-bold">Số tiền chi trả (*)</label>
+                        <input type="text" id="soTien" oninput="handleMoneyChange(this)" placeholder="0" class="req w-full border-2 border-blue-200 p-2 rounded text-lg font-bold text-blue-700 outline-none">
+                        <div class="flex items-center gap-4 bg-white p-2 mt-2 rounded border border-slate-200">
+                            <div class="flex items-center gap-2 pr-4 border-r">
+                                <input type="checkbox" id="coThuPhi" onchange="handleFeeChange()" class="cb-thu-phi">
+                                <label for="coThuPhi" class="font-bold text-orange-700 text-[10px] m-0">THU PHÍ</label>
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[9px] text-slate-400 uppercase">Phí tự động</label>
+                                <input type="text" id="phiHienThi" disabled placeholder="---" class="w-full bg-transparent border-none font-bold text-orange-600 outline-none text-sm">
+                            </div>
+                            <div id="boxTiLePhi" class="hidden flex gap-3">
+                                <label class="flex items-center gap-1 cursor-pointer text-xs font-bold"><input type="radio" name="tiLePhi" value="1" onchange="handleMoneyChange(document.getElementById('soTien'))" checked> 1%</label>
+                                <label class="flex items-center gap-1 cursor-pointer text-xs font-bold"><input type="radio" name="tiLePhi" value="3" onchange="handleMoneyChange(document.getElementById('soTien'))"> 3%</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-slate-500 font-bold">Số tiền bằng chữ (Đối chiếu)</label>
+                        <div id="txtDocTien" class="w-full h-[88px] bg-white border-2 border-slate-100 p-3 rounded text-sm italic text-slate-600 flex items-start shadow-inner">
+                            Chưa nhập số tiền...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 pt-6 border-t">
+                <div><label>Số Quyết định THA (*)</label><input type="text" id="qdSo" onfocus="handleQDFocus(this)" class="req w-full border-2 border-slate-100 p-2 rounded text-sm font-bold text-blue-700 outline-none" value="/QĐ-THADS"></div>
+                <div>
+                    <label>Ngày Quyết định (*)</label>
+                    <div class="date-input-container">
+                        <input type="text" id="qdNgay" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="req w-full border-2 border-slate-100 p-2 rounded text-sm">
+                        <i data-lucide="calendar" class="w-4 h-4 picker-icon"></i>
+                        <input type="date" class="hidden-picker" onchange="syncPicker(this, 'qdNgay')">
+                    </div>
+                </div>
+                <div><label>Cơ quan ban hành (*)</label><input type="text" id="qdNoi" class="req w-full border-2 border-slate-100 p-2 rounded text-sm" value="Thi hành án dân sự tỉnh Lâm Đồng"></div>
+                
+                <div class="bg-blue-50 p-2 rounded border border-blue-100">
+                    <label class="text-blue-800">Tên Chấp hành viên</label>
+                    <div class="flex gap-1">
+                        <select id="chvSelect" class="w-full border border-blue-200 p-2 rounded text-sm font-bold text-blue-900 outline-none"></select>
+                        <button onclick="addCHVName()" class="bg-white border border-blue-200 text-blue-600 px-2 rounded hover:bg-blue-100 font-bold" title="Thêm tên mới">+</button>
+                        <button onclick="delCHVName()" class="bg-white border border-red-200 text-red-500 px-2 rounded hover:bg-red-50 font-bold" title="Xóa tên đang chọn">-</button>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2"><label>Lý do chi (*)</label><textarea id="lyDo" class="req w-full border-2 border-slate-100 p-2 rounded text-sm h-[70px]">Chi trả tiền tạm thu theo Quyết định Thi hành án</textarea></div>
+            </div>
+
+            <div id="formActions" class="mt-8 flex justify-center gap-4">
+                <button id="btnSave" onclick="saveData()" class="bg-orange-600 text-white px-16 py-4 rounded-xl font-bold hover:bg-orange-700 flex items-center gap-3 shadow-xl transition-all uppercase border-b-4 border-orange-800 active:border-b-0 active:translate-y-1">
+                    <i data-lucide="save"></i> Lưu hồ sơ
+                </button>
+                <button id="btnCancel" onclick="resetForm()" class="hidden bg-slate-200 text-slate-600 px-8 py-4 rounded-xl font-bold hover:bg-slate-300 uppercase flex items-center gap-2">
+                    <i data-lucide="x-circle"></i> Hủy bỏ
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md border border-slate-200 overflow-hidden">
+            <div class="p-4 bg-slate-100 border-b flex justify-between items-center">
+                <div class="flex gap-4 items-center flex-1">
+                    <h3 class="font-bold text-slate-700 uppercase text-xs whitespace-nowrap">Danh sách hồ sơ</h3>
+                    <div class="relative w-full max-w-md">
+                        <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                        <input type="text" id="searchBox" oninput="debounceRender()" placeholder="Tìm Tên, Số QĐ, Ngày, Tiền..." class="pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm outline-none w-full shadow-sm focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="flex gap-2 ml-4">
+                    <button onclick="printSelected()" class="bg-green-600 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-green-700 uppercase">
+                        <i data-lucide="printer" class="w-4 h-4"></i> In đã chọn (<span id="countSelected">0</span>)
+                    </button>
+                    <button onclick="exportToWord()" class="bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-blue-800 uppercase">
+                        <i data-lucide="file-text" class="w-4 h-4"></i> Xuất Word
+                    </button>
+                </div>
+            </div>
+            
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-800 text-[10px] uppercase font-black text-white border-b">
+                    <tr>
+                        <th class="p-3 w-8"><input type="checkbox" id="masterCheck" onchange="toggleMaster(this)"></th>
+                        <th class="p-3 w-1/4">Người thụ hưởng / Lý do</th>
+                        <th class="p-3">Số Quyết định</th>
+                        <th class="p-3 text-right">Số tiền</th>
+                        <th class="p-3 text-center">Trạng thái</th>
+                        <th class="p-3">Ghi chú</th>
+                        <th class="p-3 text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="listContainer"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="qrModal" onclick="this.style.display='none'">
+        <div class="qr-box" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kiểm tra tài khoản</span>
+                <button onclick="document.getElementById('qrModal').style.display='none'" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <img id="qrImageDisplay" src="" class="w-full aspect-square bg-slate-50 border p-2 rounded-lg" alt="QR">
+            <div id="qrStkDisplay" class="mt-3 font-black text-blue-700 text-lg tracking-wider"></div>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+
+    <script>
+        lucide.createIcons();
+        let db = [];
+        let editId = null;
+        let isCopyMode = false;
+
+        /* --- LOGIC QUẢN LÝ TÊN CHẤP HÀNH VIÊN --- */
+        const STORAGE_KEY_CHV = 'chv_list_store_v1';
+        let chvList = JSON.parse(localStorage.getItem(STORAGE_KEY_CHV)) || ["Nguyễn Công Cường"]; // Mặc định
+
+        function saveCHVList() {
+            localStorage.setItem(STORAGE_KEY_CHV, JSON.stringify(chvList));
+            const currentVal = document.getElementById('chvSelect').value;
+            renderCHVSelect(currentVal);
+        }
+
+        function renderCHVSelect(selectedVal = null) {
+            const sel = document.getElementById('chvSelect');
+            if(!sel) return;
+            sel.innerHTML = '';
+            chvList.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.text = name;
+                sel.appendChild(opt);
+            });
+            // Nếu có giá trị được chỉ định (khi sửa/load), chọn nó. 
+            // Nếu không, chọn phần tử đầu tiên.
+            if(selectedVal && chvList.includes(selectedVal)) {
+                sel.value = selectedVal;
+            } else if (chvList.length > 0) {
+                sel.value = chvList[0];
+            }
+        }
+
+        function addCHVName() {
+            const newName = prompt("Nhập tên Chấp hành viên mới:");
+            if(newName && newName.trim() !== "") {
+                const cleanName = newName.trim();
+                if(!chvList.includes(cleanName)) {
+                    chvList.push(cleanName);
+                    saveCHVList();
+                    // Chọn ngay tên mới
+                    document.getElementById('chvSelect').value = cleanName;
+                } else {
+                    alert("Tên này đã có trong danh sách!");
+                }
+            }
+        }
+
+        function delCHVName() {
+            const val = document.getElementById('chvSelect').value;
+            if(!val) return;
+            if(confirm(`Bạn có chắc muốn xóa tên "${val}" khỏi danh sách?`)) {
+                chvList = chvList.filter(x => x !== val);
+                if(chvList.length === 0) chvList.push("Nguyễn Công Cường"); // Luôn giữ ít nhất 1 tên
+                saveCHVList();
+            }
+        }
+
+        // Khởi tạo Select khi load trang
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCHVSelect();
+        });
+        /* --- KẾT THÚC LOGIC CHV --- */
+        
+        const BANK_MAP = { 
+            "Vietcombank": "VCB", "Ngoại thương": "VCB",
+            "Vietinbank": "CTG", "Công thương": "CTG",
+            "BIDV": "BIDV", "Đầu tư và Phát triển": "BIDV",
+            "Agribank": "VBA", "Nông nghiệp": "VBA",
+            "MBBank": "MB", "Quân đội": "MB",
+            "Techcombank": "TCB", "Kỹ thương": "TCB",
+            "Sacombank": "STB", "Sài Gòn Thương Tín": "STB",
+            "VPBank": "VPB", "Thịnh Vượng": "VPB",
+            "ACB": "ACB", "Á Châu": "ACB",
+            "TPBank": "TPB", "Tiên Phong": "TPB",
+            "VIB": "VIB", "Quốc tế": "VIB"
+        };
+
+        let searchTimeout;
+        function debounceRender() { clearTimeout(searchTimeout); searchTimeout = setTimeout(renderTable, 500); }
+
+        function handleQDFocus(el) { if (el.value === "/QĐ-THADS") el.setSelectionRange(0, 0); }
+
+        function showQR(id) {
+            const r = db.find(x => x.id === id);
+            if (!r.stk || !r.nganHang) { alert("Thiếu STK hoặc Ngân hàng!"); return; }
+            let bankCode = "";
+            const inputBank = r.nganHang.toLowerCase();
+            for (let key in BANK_MAP) { if (inputBank.includes(key.toLowerCase())) { bankCode = BANK_MAP[key]; break; } }
+            if (!bankCode) bankCode = r.nganHang.split(' ')[0];
+            document.getElementById('qrImageDisplay').src = `https://img.vietqr.io/image/${bankCode}-${r.stk}-compact2.jpg?label=KIEM%20TRA%20TK`;
+            document.getElementById('qrStkDisplay').innerText = r.stk;
+            document.getElementById('qrModal').style.display = 'flex';
+        }
+
+        function renderTable() {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const container = document.getElementById('listContainer');
+            container.innerHTML = '';
+            const filtered = db.filter(r => {
+                const sTien = Number(r.soTien).toLocaleString('vi-VN');
+                return r.hoTen.toLowerCase().includes(search) || r.qdSo.toLowerCase().includes(search) || r.qdNgay.toLowerCase().includes(search) || r.lyDo.toLowerCase().includes(search) || sTien.includes(search);
+            });
+            const groups = filtered.reduce((acc, obj) => {
+                const date = obj.dateCreated;
+                acc[date] = acc[date] || [];
+                acc[date].push(obj);
+                return acc;
+            }, {});
+            const sortedDates = Object.keys(groups).sort((a, b) => {
+                const toDate = d => new Date(d.split('/').reverse().join('-'));
+                return toDate(b) - toDate(a);
+            });
+            const fragment = document.createDocumentFragment();
+            sortedDates.forEach(date => {
+                const groupTr = document.createElement('tr');
+                groupTr.innerHTML = `<td colspan="7" class="date-group-header"><i data-lucide="calendar" class="w-4 h-4"></i> NGÀY TẠO: ${date}</td>`;
+                fragment.appendChild(groupTr);
+                groups[date].forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b hover:bg-slate-50 transition-colors';
+                    const stColor = r.isPaid ? 'text-teal-500' : 'text-red-500';
+                    tr.innerHTML = `
+                        <td class="p-3"><input type="checkbox" class="row-check" value="${r.id}" onchange="updateCount()"></td>
+                        <td class="p-3"><div class="font-bold uppercase text-slate-800 text-xs">${r.hoTen}</div><div class="text-[11px] text-slate-500 mt-1 leading-tight">${r.lyDo}</div></td>
+                        <td class="p-3"><div class="font-bold text-blue-700 text-xs">${r.qdSo}</div><div class="text-[10px] text-slate-400">(${r.qdNgay || '...'})</div></td>
+                        <td class="p-3 text-right font-bold text-slate-800 text-xs">${Number(r.soTien).toLocaleString('vi-VN')}</td>
+                        <td class="p-3 text-center" id="cell-status-${r.id}"><div class="font-black text-[11px] cursor-pointer ${stColor}" onclick="handleStatusToggle(${r.id})">${r.isPaid ? 'ĐÃ CHI' : 'CHƯA CHI'}</div><div class="text-[10px] font-bold text-teal-800">${r.paidDate || ''}</div></td>
+                        <td class="p-3"><input type="text" value="${r.ghiChu || ''}" onblur="updateGhiChu(${r.id}, this.value)" placeholder="..." class="bg-transparent border-b border-dashed border-slate-200 w-full text-[11px] outline-none"></td>
+                        <td class="p-3 text-center"><div class="flex gap-1 justify-center">
+                            <button onclick="editRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-blue-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                            <button onclick="copyRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-amber-600"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                            <button onclick="delRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-300 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            <button onclick="showQR(${r.id})" class="p-1.5 bg-slate-100 rounded text-purple-600 hover:bg-purple-600 hover:text-white"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
+                        </div></td>`;
+                    fragment.appendChild(tr);
+                });
+            });
+            container.appendChild(fragment);
+            lucide.createIcons();
+            updateCount();
+        }
+
+        function copyRec(id) { const r = db.find(x => x.id === id); fillForm(r); editId = null; isCopyMode = true; document.getElementById('btnSave').innerHTML = `<i data-lucide="copy"></i> LƯU BẢN SAO MỚI`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
+        
+        function fillForm(r) { 
+            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'lyDo', 'tenThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = r[f] || ""; }); 
+            document.getElementById('coThuPhi').checked = r.hasFee; 
+            document.getElementById('coNguoiNhanThay').checked = r.hasNT; 
+            // Load CHV Name
+            renderCHVSelect(r.chvName); 
+            handleFeeChange(); 
+            toggleNhanThay(); 
+        }
+
+        function editRec(id) { const r = db.find(x => x.id === id); editId = r.id; isCopyMode = false; fillForm(r); document.getElementById('btnSave').innerHTML = `<i data-lucide="check"></i> Cập nhật hồ sơ`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
+        
+        function resetForm() { 
+            editId = null; isCopyMode = false; 
+            document.getElementById('btnSave').innerHTML = `<i data-lucide="save"></i> Lưu hồ sơ`; 
+            document.getElementById('btnCancel').classList.add('hidden'); 
+            document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error')); 
+            document.getElementById('coThuPhi').checked = false; 
+            document.getElementById('coNguoiNhanThay').checked = false; 
+            handleFeeChange(); 
+            toggleNhanThay(); 
+            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'tenThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = (f === 'qdNoi' ? "Thi hành án dân sự tỉnh Lâm Đồng" : (f === 'cccdNoi' || f === 'noiThay' ? "Cục Cảnh sát quản lý hành chính về trật tự xã hội" : (f === 'qdSo' ? "/QĐ-THADS" : ""))); }); 
+            document.getElementById('lyDo').value = "Chi trả tiền tạm thu theo Quyết định Thi hành án"; 
+            document.getElementById('txtDocTien').innerText = "Chưa nhập số tiền..."; 
+            // Reset CHV Select to default
+            renderCHVSelect();
+            lucide.createIcons(); 
+        }
+
+        async function saveData() { 
+            if (!validateForm()) return; 
+            const tongTien = parseInt(document.getElementById('soTien').value.replace(/\D/g,"")) || 0; 
+            const hasFee = document.getElementById('coThuPhi').checked; 
+            const tiLe = parseInt(document.querySelector('input[name="tiLePhi"]:checked').value); 
+            const phi = hasFee ? Math.round(tongTien * tiLe / 100) : 0; 
+            const data = { 
+                id: (editId) ? editId : Date.now(), 
+                dateCreated: (editId) ? (db.find(x=>x.id===editId).dateCreated) : new Date().toLocaleDateString('vi-VN'), 
+                hoTen: document.getElementById('hoTen').value, 
+                namSinh: document.getElementById('namSinh').value, 
+                diaChi: document.getElementById('diaChi').value, 
+                cccdSo: document.getElementById('cccdSo').value, 
+                cccdNgay: document.getElementById('cccdNgay').value, 
+                cccdNoi: document.getElementById('cccdNoi').value, 
+                stk: document.getElementById('stk').value, 
+                nganHang: document.getElementById('nganHang').value, 
+                maNH: document.getElementById('maNH').value, 
+                lyDo: document.getElementById('lyDo').value, 
+                soTien: tongTien, hasFee, tiLePhi: tiLe, phiTien: phi, 
+                thucNhan: tongTien - phi, 
+                isPaid: (editId) ? (db.find(x=>x.id===editId).isPaid) : false, 
+                paidDate: (editId) ? (db.find(x=>x.id===editId).paidDate) : '', 
+                ghiChu: (editId) ? (db.find(x=>x.id===editId).ghiChu || "") : "", 
+                hasNT: document.getElementById('coNguoiNhanThay').checked, 
+                tenThay: document.getElementById('tenThay').value, 
+                dcThay: document.getElementById('dcThay').value, 
+                cccdThay: document.getElementById('cccdThay').value, 
+                ngayThay: document.getElementById('ngayThay').value, 
+                noiThay: document.getElementById('noiThay').value, 
+                giayUQ: document.getElementById('giayUQ').value, 
+                qdSo: document.getElementById('qdSo').value, 
+                qdNgay: document.getElementById('qdNgay').value, 
+                qdNoi: document.getElementById('qdNoi').value,
+                // NEW: SAVE CHV NAME
+                chvName: document.getElementById('chvSelect').value
+            }; 
+            if (editId) db = db.map(x => x.id === editId ? data : x); else db.unshift(data); 
+            
+            // 1. LƯU VÀO DB MÁY
+            await saveToIDB(data);
+
+            // === [THÊM DÒNG NÀY] ===
+            window.parent.postMessage({type: 'DATA_RETURN', app: 'app3', data: db}, '*');
+            // ======================
+
+            resetForm();
+            renderTable();
+        }
+
+        function formatDateInput(el) { let val = el.value.replace(/\D/g, ""); if (val.length === 8) el.value = val.slice(0, 2) + "/" + val.slice(2, 4) + "/" + val.slice(4, 8); }
+        function syncPicker(picker, textId) { if (!picker.value) return; const [y, m, d] = picker.value.split('-'); document.getElementById(textId).value = `${d}/${m}/${y}`; }
+        function isValidDate(dateStr) { return /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/.test(dateStr); }
+        function validateForm() { let isValid = true; document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error')); document.querySelectorAll('.req').forEach(el => { if (!el.value.trim() || el.value === "/QĐ-THADS") { el.classList.add('input-error'); isValid = false; } }); ['qdNgay', 'cccdNgay', 'ngayThay'].forEach(id => { const el = document.getElementById(id); if (el && el.value.trim() && !isValidDate(el.value)) { el.classList.add('input-error'); isValid = false; } }); return isValid; }
+        function toggleNhanThay() { const checked = document.getElementById('coNguoiNhanThay').checked; document.getElementById('formNhanThay').style.display = checked ? 'block' : 'none'; document.getElementById('formNguoiNhan').style.display = checked ? 'none' : 'grid'; }
+        function handleFeeChange() { document.getElementById('boxTiLePhi').style.display = document.getElementById('coThuPhi').checked ? 'flex' : 'none'; handleMoneyChange(document.getElementById('soTien')); }
+        function handleMoneyChange(e) { let val = e.value.replace(/\D/g, ""); e.value = val ? new Intl.NumberFormat('vi-VN').format(val) : ""; const hasFee = document.getElementById('coThuPhi').checked, tiLe = document.querySelector('input[name="tiLePhi"]:checked').value; const tongTien = parseInt(val) || 0, phi = hasFee ? Math.round(tongTien * tiLe / 100) : 0, thucNhan = tongTien - phi; document.getElementById('phiHienThi').value = hasFee ? new Intl.NumberFormat('vi-VN').format(phi) : "---"; document.getElementById('txtDocTien').innerText = val ? docSo(thucNhan) : "Chưa nhập số tiền..."; }
+        function handleStatusToggle(id) { const r = db.find(x => x.id === id); if (r.isPaid) { if(confirm("Chuyển về trạng thái CHƯA CHI?")) updateStatus(id, false, ""); } else { document.getElementById(`cell-status-${id}`).innerHTML = `<div class="flex flex-col items-center gap-1"><div class="date-input-container"><input type="text" id="tempDate-${id}" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="text-[10px] border p-1 rounded w-24"><input type="date" class="hidden-picker" style="width:20px" onchange="syncPicker(this, 'tempDate-${id}')"></div><div class="flex gap-1"><button onclick="confirmPaid(${id})" class="bg-teal-600 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Lưu</button><button onclick="renderTable()" class="bg-slate-400 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Hủy</button></div></div>`; } }
+        function confirmPaid(id) { const d = document.getElementById(`tempDate-${id}`).value; if(!isValidDate(d)) return alert("Vui lòng nhập đúng định dạng dd/mm/yyyy!"); updateStatus(id, true, d); }
+        function updateStatus(id, isPaid, date) { 
+            db = db.map(x => x.id === id ? {...x, isPaid, paidDate: date} : x); 
+            const updated = db.find(x => x.id === id); 
+            saveToIDB(updated);
+
+            // === [THÊM DÒNG NÀY] ===
+            window.parent.postMessage({type: 'DATA_RETURN', app: 'app3', data: db}, '*');
+            // ======================
+
+            renderTable();
+        }
+        function updateCount() { const count = document.querySelectorAll('.row-check:checked').length; document.getElementById('countSelected').innerText = count; document.getElementById('masterCheck').checked = (count > 0 && count === document.querySelectorAll('.row-check').length); }
+        function toggleMaster(m) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = m.checked); updateCount(); }
+        
+        async function updateGhiChu(id, val) { 
+            db = db.map(x => x.id === id ? {...x, ghiChu: val} : x); 
+            const updated = db.find(x => x.id === id); 
+            await saveToIDB(updated); // SỬA LỖI: dùng saveToIDB thay vì deleteFromIDB
+
+            // === [THÊM DÒNG NÀY] ===
+            window.parent.postMessage({type: 'DATA_RETURN', app: 'app3', data: db}, '*');
+            // ======================
+        }
+
+        async function delRec(id) { 
+            if(confirm("Xóa hồ sơ?")) { 
+                db = db.filter(x => x.id !== id); 
+                await deleteFromIDB(id); 
+
+                // === [THÊM DÒNG NÀY] ===
+                window.parent.postMessage({type: 'DATA_RETURN', app: 'app3', data: db}, '*');
+                // ======================
+
+                renderTable(); 
+            } 
+        }
+
+        /* HÀM IN & PDF DÙNG CHUNG - ĐẢM BẢO 100% ĐỒNG NHẤT */
+        function printSelected() { 
+            const checked = document.querySelectorAll('.row-check:checked'); 
+            if (checked.length === 0) return alert("Chọn hồ sơ!"); 
+            document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); 
+            window.print(); 
+        }
+
+        /* HÀM XUẤT WORD MỚI - GIỮ NGUYÊN CẤU TRÚC */
+        function exportToWord() {
+            const checked = document.querySelectorAll('.row-check:checked');
+            if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất Word!");
+
+            const content = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join('<br style="page-break-before: always">');
+            
+            // CSS header cho file Word để nhận diện khổ A4 và font Times New Roman
+            const header = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>Giấy đề nghị chi C09</title>
+                <style>
+                    @page Section1 {size:595.3pt 841.9pt; margin:2.0cm 2.0cm 2.0cm 2.0cm; mso-header-margin:35.4pt; mso-footer-margin:35.4pt; mso-paper-source:0;}
+                    div.Section1 {page:Section1;}
+                    body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.35; }
+                    .f-12-bold-upper { font-weight: bold; text-transform: uppercase; font-size: 12pt; }
+                    .f-10-italic { font-style: italic; font-size: 10pt; }
+                    .bold { font-weight: bold; }
+                    .italic { font-style: italic; }
+                    .text-center { text-align: center; }
+                    .text-justify { text-align: justify; }
+                    table { width: 100%; border-collapse: collapse; }
+                    td { vertical-align: top; }
+                </style>
+                </head><body><div class='Section1'>`;
+            
+            const footer = "</div></body></html>";
+            const sourceHTML = header + content + footer;
+            
+            const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
+            const fileName = checked.length === 1 ? `C09_${db.find(x => x.id == checked[0].value).hoTen}.doc` : `Danh_sach_chi_C09.doc`;
+            
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function getPrintTemplate(r) {
+            const nS = r.namSinh ? `, sinh năm ${r.namSinh}` : "", c_S = r.hasNT ? r.cccdThay : (r.cccdSo || "...................."), c_Noi = r.hasNT ? r.noiThay : (r.cccdNoi || "........................................"), c_Ng = r.hasNT ? (r.ngayThay || '..........') : (r.cccdNgay || '..........'), uq = r.hasNT ? (r.giayUQ || "........................................") : "Giấy uỷ quyền (nếu là nhận thay) số:........... ngày ..... tháng ...... năm ....................";
+            let rowNT = r.hasNT ? `Người nhận thay: ${r.tenThay || '....................'}<br>Địa chỉ: ${r.dcThay || '....................'}<br>` : "", mH = r.hasFee ? `&nbsp;&nbsp;&nbsp;&nbsp;Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Còn thực nhận: <span class="bold">${Number(r.thucNhan).toLocaleString('vi-VN')}</span> đồng` : `&nbsp;&nbsp;&nbsp;&nbsp;+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng: <span class="bold">${Number(r.soTien).toLocaleString('vi-VN')}</span> đồng`;
+            
+            // LOGIC TÊN CHẤP HÀNH VIÊN: NẾU KHÔNG CÓ THÌ LẤY MẶC ĐỊNH
+            const tenCHV = r.chvName || "Nguyễn Công Cường";
+
+            return `<div id="documentRender" class="print-only">
+                <table><tr><td style="width: 55%; font-weight: bold;">Đơn vị: Thi hành án dân sự tỉnh Lâm Đồng</td><td style="width: 45%; font-weight: bold; text-align: center;">Mẫu số: C09-THADS</td></tr><tr><td></td><td class="f-10-italic text-center">(Ban hành kèm theo Thông tư số 04/2023/TT-BTP<br>ngày 14/8/2023 của Bộ Tư pháp)</td></tr></table>
+                <div class="text-center" style="margin-top: 35px; position: relative; margin-bottom: 25px;"><span class="f-12-bold-upper" style="font-size: 14pt;">GIẤY ĐỀ NGHỊ CHI</span><span style="position: absolute; right: 0; font-size: 12pt;">Số:...................</span><div class="italic" style="margin-top: 2px;">Ngày .........tháng....... năm 20...</div></div>
+                <div class="text-center" style="margin-bottom: 25px;">Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng</div>
+                <div class="text-justify">Đề nghị chi cho: <span class="bold">${r.hoTen}</span>${nS}.<br>Địa chỉ: ${r.diaChi}<br>${rowNT}CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}<br>Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}<br>Lý do chi: ${r.lyDo}, gồm các khoản sau:<br>${mH}<br>Viết bằng chữ: <span class="italic">${docSo(r.thucNhan)}</span><br>Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}<br>Hình thức thanh toán: Chuyển khoản./.</div>
+                <table style="margin-top: 30px;"><tr class="text-center bold"><td style="width: 55%;">TL. TRƯỞNG THI HÀNH ÁN DÂN SỰ<br>TRƯỞNG PHÒNG<br>PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14</td><td style="width: 45%;">CHẤP HÀNH VIÊN</td></tr><tr class="text-center bold"><td style="padding-top: 75px;">Qua Đình Thiện</td><td style="padding-top: 75px;">${tenCHV}</td></tr></table></div>`;
+        }
+
+        function docSo(n){
+            if(!n || n==0) return ""; const ChuSo=["không","một","hai","ba","bốn","năm","sáu","bảy","tám","chín"];
+            function doc3(n){ let t=Math.floor(n/100), c=Math.floor((n%100)/10), d=n%10, res=""; if(t>0) res+=ChuSo[t]+" trăm "; if(c==0 && d>0) res+=(t>0?"lẻ ":"")+ChuSo[d]; if(c==1) res+="mười "+(d==5?"lăm":(d==0?"":ChuSo[d])); if(c>1) res+=ChuSo[c]+" mươi "+(d==1?"mốt":(d==5?"lăm":(d==0?"":ChuSo[d]))); return res; }
+            let res="", dv=[""," nghìn"," triệu"," tỷ"], i=0, temp=n; do { let m=temp%1000; if(m>0) res=doc3(m)+dv[i]+" "+res; temp=Math.floor(temp/1000); i++; } while(temp>0);
+            let s = res.trim(); return s.charAt(0).toUpperCase() + s.slice(1) + " đồng";
+        }
+
+        // IndexedDB setup
+        let idbDb, idbRequest = indexedDB.open('c09_thads_v6', 1);
+        idbRequest.onupgradeneeded = e => e.target.result.createObjectStore('records', { keyPath: 'id' });
+        idbRequest.onsuccess = e => { idbDb = e.target.result; loadData(); };
+
+        async function loadData() {
+            const tx = idbDb.transaction('records', 'readonly');
+            const store = tx.objectStore('records');
+            const req = store.getAll();
+            req.onsuccess = () => { db = req.result || []; renderTable(); };
+        }
+
+        async function saveToIDB(record) {
+            const tx = idbDb.transaction('records', 'readwrite');
+            const store = tx.objectStore('records');
+            await store.put(record);
+        }
+
+        async function deleteFromIDB(id) {
+            const tx = idbDb.transaction('records', 'readwrite');
+            const store = tx.objectStore('records');
+            await store.delete(id);
+        }
+    </script>
+<script>
+window.addEventListener('message', function(e) {
+    if (e.data.type === 'GET_DATA_IDB') {
+        const req = indexedDB.open('c09_thads_v6'); // Tên DB gốc của bạn
+        req.onsuccess = function(ev) {
+            const db = ev.target.result;
+            // Kiểm tra nếu store tồn tại
+            if(!db.objectStoreNames.contains('records')) {
+                 window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: []}, '*');
+                 return;
+            }
+            const tx = db.transaction('records', 'readonly');
+            const store = tx.objectStore('records');
+            const getAll = store.getAll();
+            getAll.onsuccess = () => {
+                window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: getAll.result}, '*');
+            };
+        };
+    }
+    if (e.data.type === 'RESTORE_DATA_IDB') {
+        const items = e.data.payload;
+        if(!items || !Array.isArray(items)) return;
+        const req = indexedDB.open('c09_thads_v6');
+        req.onsuccess = function(ev) {
+            const db = ev.target.result;
+            const tx = db.transaction('records', 'readwrite');
+            const store = tx.objectStore('records');
+            // Xóa cũ nạp mới hoặc ghi đè
+            store.clear().onsuccess = () => {
+                items.forEach(item => store.put(item));
+                setTimeout(()=> location.reload(), 1000);
+            }
+        };
+    }
+});
+</script>
+</body>
+</html>

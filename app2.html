@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUẢN LÝ VĂN BẢN GỬI - THADS KV 14</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* =========================================
+           1. GIAO DIỆN HIỂN THỊ (SCREEN UI)
+           ========================================= */
+        :root {
+            --primary: #1e40af;       
+            --primary-dark: #1e3a8a; 
+            --bg-body: #f1f5f9;       
+            --text-main: #000000;
+            --border: #cbd5e1;        
+        }
+
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-body); margin: 0; padding: 0; color: #334155; font-size: 14px; }
+
+        .app-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: white; padding: 15px; text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;
+        }
+        .app-header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .container { max-width: 1250px; margin: auto; padding: 0 15px 40px 15px; }
+
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 20px; }
+        .card-body { padding: 25px; }
+
+        .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #eff6ff; }
+        .section-title { font-weight: 800; color: var(--primary-dark); text-transform: uppercase; font-size: 16px; letter-spacing: 0.5px; }
+        .section-icon { background: var(--primary-dark); color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+
+        .form-row { margin-bottom: 20px; }
+        .row-3-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; color: var(--text-main); }
+
+        input, textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; font-weight: 500; color: #1e293b; background: #fff; }
+        input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        
+        /* HIỆU ỨNG COPY MÀU ĐỎ */
+        .is-copy { color: #ef4444 !important; border-color: #fca5a5 !important; font-weight: 600; }
+
+        .receiver-list { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; background: #f8fafc; }
+        .receiver-row { display: grid; grid-template-columns: 1fr 120px 40px; gap: 10px; margin-bottom: 10px; }
+        
+        .btn-add { background: white; border: 1px dashed var(--primary); color: var(--primary); width: 100%; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+        .action-area { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px; display: flex; justify-content: center; gap: 15px; }
+        .btn { border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-post { background: #2563eb; color: white; }
+        .btn-direct { background: #059669; color: white; }
+        .btn-cancel { background: #64748b; color: white; }
+
+        .search-container { display: flex; gap: 15px; align-items: center; margin-bottom: 25px; background: white; padding: 15px 20px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        #searchInput { border: none; flex: 1; padding: 5px; font-size: 15px; margin: 0; }
+
+        table.main-list { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        table.main-list th { padding: 15px; color: #64748b; font-size: 12px; text-transform: uppercase; background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left; }
+        table.main-list td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
+        
+        .action-btns { display: flex; gap: 8px; justify-content: center; }
+        .btn-icon { width: 34px; height: 34px; border-radius: 6px; border: 1px solid #e2e8f0; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-icon:hover { background: var(--primary); color: white; }
+
+        /* THÔNG BÁO BẢN QUYỀN */
+        .app-footer { text-align: center; padding: 30px 0; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; margin-top: 50px; }
+        .app-footer p { margin: 5px 0; }
+        .copyright-tag { font-weight: 600; color: #64748b; text-transform: uppercase; }
+
+        /* =========================================
+           2. CẤU TRÚC IN (CSS) - GIỮ NGUYÊN 100%
+           ========================================= */
+        @media print {
+            * { font-family: "Times New Roman", Times, serif !important; }
+            @page { size: A4; margin: 20mm 15mm 20mm 20mm; }
+            body { background: white; padding: 0; font-size: 12pt; }
+            .no-print { display: none !important; }
+            #printA4Area { display: block !important; padding: 0; }
+            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .header-table td { vertical-align: top; text-align: center; font-size: 11pt; color: black; white-space: nowrap; }
+            .a4-title { text-align: center; font-weight: bold; font-size: 12pt; margin: 25px 0 15px 0; text-transform: uppercase; }
+            table.print-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            table.print-table th, table.print-table td { border: 1px solid black !important; padding: 8px; font-size: 11pt; color: black; word-wrap: break-word; text-align: justify; }
+            .footer-area { margin-top: 30px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+            .footer-col { width: 48%; text-align: center; }
+            .is-direct .barcode-col { display: none !important; }
+            #printSenderName { font-weight: bold; margin-top: 60px; font-size: 12pt; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-header no-print">
+    <h1>QUẢN LÝ VĂN BẢN GỬI - PHÒNG THADS KV 14 - LÂM ĐỒNG</h1>
+</div>
+
+<div class="container no-print">
+    <div class="card">
+        <div class="card-body">
+            <div class="section-header">
+                <div class="section-icon">1</div>
+                <div class="section-title">Thông tin người nhận</div>
+            </div>
+            
+            <div class="form-row">
+                <label>Nơi nhận/Người nhận</label>
+                <div class="receiver-list">
+                    <div id="receiverContainer">
+                        <div class="receiver-row">
+                            <input type="text" class="in-name" placeholder="Họ tên người nhận" oninput="this.classList.remove('is-copy')">
+                            <input type="number" class="in-year" placeholder="Năm" style="text-align: center;" oninput="this.classList.remove('is-copy')">
+                            <button style="border:none; background:none; cursor:pointer; color:#94a3b8; font-size:18px;" onclick="this.parentElement.remove()">✕</button>
+                        </div>
+                    </div>
+                    <button class="btn-add" onclick="addNewReceiver()">+ THÊM NGƯỜI NHẬN</button>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label>Địa chỉ chi tiết (Nơi nhận)</label>
+                <input type="text" id="inAddr" placeholder="Số nhà, đường, thôn/xóm, xã/phường, quận/huyện..." oninput="this.classList.remove('is-copy')">
+            </div>
+
+            <div class="section-header" style="margin-top: 35px;">
+                <div class="section-icon">2</div>
+                <div class="section-title">Chi tiết Văn bản & Gửi</div>
+            </div>
+
+            <div class="form-row row-3-cols">
+                <div><label>SỐ ĐIỆN THOẠI</label><input type="text" id="inPhone" oninput="this.classList.remove('is-copy')"></div>
+                <div><label>MÃ VẠCH BƯU ĐIỆN</label><input type="text" id="inBarcode" oninput="this.classList.remove('is-copy')"></div>
+                <div><label>NGƯỜI GỬI (KÝ TÊN)</label><input type="text" id="inSender" style="font-weight: bold; color: #1e40af;"></div>
+            </div>
+
+            <div class="form-row">
+                <label>Nội dung văn bản / Trích yếu</label>
+                <textarea id="inContent" rows="3" oninput="this.classList.remove('is-copy')"></textarea>
+            </div>
+        </div>
+
+        <div class="action-area" id="mainActionGroup">
+            <button class="btn btn-direct" onclick="saveData('DIRECT')">👤 Lưu Gửi Trực Tiếp</button>
+            <button class="btn btn-post" onclick="saveData('POST')">📮 Lưu Gửi Bưu Điện</button>
+        </div>
+        <div class="action-area" id="editActionGroup" style="display: none; background: #fffbeb;">
+            <button class="btn btn-cancel" onclick="resetForm()">✕ Hủy Sửa</button>
+            <button class="btn btn-direct" onclick="saveData('DIRECT')">💾 Cập Nhật Trực Tiếp</button>
+            <button class="btn btn-post" onclick="saveData('POST')">💾 Cập Nhật Bưu Điện</button>
+        </div>
+        <div class="action-area" id="copyActionGroup" style="display: none; background: #f0fdf4;">
+            <button class="btn btn-cancel" onclick="resetForm()">✕ Hủy Copy</button>
+            <button class="btn btn-direct" onclick="saveData('DIRECT')">📋 Lưu Copy (Trực Tiếp)</button>
+            <button class="btn btn-post" onclick="saveData('POST')">📋 Lưu Copy (Bưu Điện)</button>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <span style="font-size: 20px;">🔎</span>
+        <input type="text" id="searchInput" placeholder="Tìm kiếm tên, địa chỉ, nội dung..." oninput="renderTable()">
+        <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; white-space:nowrap;">
+            <input type="checkbox" id="checkShowDate"> Hiện ngày
+        </label>
+        <button class="btn" onclick="printA4()" style="background:#334155; color:white;">IN A4</button>
+        <button class="btn" onclick="printTem()" style="background:#059669; color:white;">IN TEM</button>
+    </div>
+
+    <table class="main-list">
+        <thead>
+            <tr>
+                <th width="40" style="text-align:center;"><input type="checkbox" id="selectAll" onclick="toggleAll()"></th>
+                <th width="100" style="text-align:center;">Hình thức</th>
+                <th>Người nhận & Địa chỉ</th>
+                <th>Nội dung</th>
+                <th width="130" style="text-align:center;">Mã vạch</th>
+                <th width="120" style="text-align:center;">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody id="dataTableBody"></tbody>
+    </table>
+
+    <footer class="app-footer no-print">
+        <p class="copyright-tag">THÔNG BÁO BẢN QUYỀN</p>
+        <p>Ứng dụng được xây dựng bởi cá nhân ông <strong>Mai Đức Lên</strong>.</p>
+        <p>Chỉ phục vụ mục đích sử dụng nội bộ, không thương mại.</p>
+    </footer>
+</div>
+
+<div id="printA4Area" style="display: none;">
+    <table class="header-table">
+        <tr>
+            <td width="48%">
+                <div>THI HÀNH ÁN DÂN SỰ TỈNH LÂM ĐỒNG</div>
+                <div style="font-weight: bold;">PHÒNG THI HÀNH ÁN DÂN SỰ</div>
+                <div style="font-weight: bold; text-decoration: underline;">KHU VỰC 14</div>
+            </td>
+            <td>
+                <div style="font-weight: bold;">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div style="font-weight: bold; text-decoration: underline;">Độc lập - Tự do - Hạnh phúc</div>
+            </td>
+        </tr>
+    </table>
+    <div class="a4-title" id="a4MainTitle">DANH SÁCH GỬI CÔNG VĂN...</div>
+    <table class="print-table">
+        <thead>
+            <tr><th width="45">TT</th><th width="220">Nơi nhận/người nhận</th><th>Số công văn...</th><th width="140" class="barcode-col">Số Mã vạch</th></tr>
+        </thead>
+        <tbody id="a4Body"></tbody>
+    </table>
+    <div class="footer-area">
+        <div class="footer-col">
+            <div style="height: 30px;"></div><div style="font-weight: bold;" id="footerConfirmLabel">XÁC NHẬN CỦA BƯU ĐIỆN</div><div style="font-style: italic;">(Ký, ghi rõ họ tên)</div>
+        </div>
+        <div class="footer-col">
+            <div id="footerDate" style="font-style: italic;"></div><div style="font-weight: bold; text-transform: uppercase;">NGƯỜI GỬI</div><div style="font-style: italic;">(Ký, ghi rõ họ tên)</div><div id="printSenderName"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('thads_v13')) || [];
+    let editingId = null;
+
+    function addNewReceiver(n = '', y = '', isRed = false) {
+        const div = document.createElement('div');
+        div.className = 'receiver-row';
+        const cls = isRed ? 'is-copy' : '';
+        div.innerHTML = `<input type="text" class="in-name ${cls}" value="${n}" placeholder="Họ tên" oninput="this.classList.remove('is-copy')">
+                         <input type="number" class="in-year ${cls}" value="${y}" style="text-align:center;" placeholder="Năm" oninput="this.classList.remove('is-copy')">
+                         <button style="border:none; background:none; cursor:pointer;" onclick="this.parentElement.remove()">✕</button>`;
+        document.getElementById('receiverContainer').appendChild(div);
+    }
+
+    // ===========================================
+    // HÀM LƯU DỮ LIỆU ĐÃ SỬA LỖI VÀ ĐỒNG BỘ
+    // ===========================================
+    function saveData(type) {
+        const names = document.querySelectorAll('.in-name'), years = document.querySelectorAll('.in-year');
+        let recs = [];
+        names.forEach((n, i) => { if(n.value.trim()) recs.push({name: n.value.trim(), year: years[i].value}) });
+        if(recs.length === 0) return alert("Vui lòng nhập người nhận!");
+
+        const data = {
+            id: editingId || Date.now(), type: type, recs: recs,
+            addr: document.getElementById('inAddr').value,
+            phone: document.getElementById('inPhone').value,
+            content: document.getElementById('inContent').value,
+            barcode: document.getElementById('inBarcode').value,
+            day: editingId ? db.find(x => x.id === editingId).day : new Date().toLocaleDateString('vi-VN')
+        };
+        if(editingId) db[db.findIndex(x => x.id === editingId)] = data; else db.push(data);
+        
+        // 1. Lưu vào máy
+        localStorage.setItem('thads_v13', JSON.stringify(db));
+        localStorage.setItem('thads_last_sender', document.getElementById('inSender').value);
+        
+        // 2. GỬI TÍN HIỆU ĐỒNG BỘ LÊN MÂY
+        window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
+
+        location.reload();
+    }
+
+    function renderTable() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        const tbody = document.getElementById('dataTableBody'); tbody.innerHTML = '';
+        const filtered = db.filter(i => 
+            i.recs.some(r => r.name.toLowerCase().includes(q)) || 
+            i.addr.toLowerCase().includes(q) || i.content.toLowerCase().includes(q) || (i.barcode && i.barcode.toLowerCase().includes(q))
+        );
+        const groups = filtered.reduce((acc, i) => { acc[i.day] = acc[i.day] || []; acc[i.day].push(i); return acc; }, {});
+        Object.keys(groups).reverse().forEach(day => {
+            tbody.innerHTML += `<tr><td colspan="6"><div style="background:#e0e7ff; color:#3730a3; padding:5px 15px; border-radius:20px; font-weight:700; font-size:12px; margin:15px 0 10px 0; display:inline-block;">📅 Ngày ${day}</div></td></tr>`;
+            groups[day].reverse().forEach(item => {
+                const names = item.recs.map(r => `<strong>${r.name}</strong> ${r.year ? '('+r.year+')' : ''}`).join('<br>');
+                const badge = item.type === 'POST' ? '<span style="color:#2563eb; font-weight:700;">Bưu điện</span>' : '<span style="color:#16a34a; font-weight:700;">Trực tiếp</span>';
+                tbody.innerHTML += `
+                    <tr>
+                        <td align="center"><input type="checkbox" class="row-cb" value="${item.id}"></td>
+                        <td align="center">${badge}</td>
+                        <td>${names}<br><small style="color:#64748b">🏠 ${item.addr}</small></td>
+                        <td style="white-space: pre-wrap;">${item.content}</td>
+                        <td align="center"><strong style="color:#ef4444;">${item.barcode || '-'}</strong></td>
+                        <td class="action-btns">
+                            <button class="btn-icon" onclick="editItem(${item.id})">✏️</button>
+                            <button class="btn-icon" onclick="makeCopy(${item.id})">📋</button>
+                            <button class="btn-icon" onclick="deleteItem(${item.id})">🗑️</button>
+                        </td>
+                    </tr>`;
+            });
+        });
+    }
+
+    /* LOGIC IN ẤN - GIỮ NGUYÊN */
+    function printA4() {
+        const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
+        if(ids.length === 0) return alert("Chọn dòng cần in!");
+        const selected = db.filter(i => ids.includes(i.id));
+        const isDirect = selected.every(i => i.type === 'DIRECT');
+        document.getElementById('a4MainTitle').innerText = isDirect ? "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO..." : "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO... QUA BƯU ĐIỆN";
+        document.getElementById('footerConfirmLabel').innerText = isDirect ? "XÁC NHẬN CỦA BÊN NHẬN" : "XÁC NHẬN CỦA BƯU ĐIỆN";
+        if(isDirect) document.body.classList.add('is-direct'); else document.body.classList.remove('is-direct');
+        const now = new Date(), isTick = document.getElementById('checkShowDate').checked;
+        document.getElementById('footerDate').innerText = `Liên Hương, ngày ${isTick ? now.getDate() : "…."} tháng ${now.getMonth()+1} năm ${now.getFullYear()}`;
+        document.getElementById('printSenderName').innerText = document.getElementById('inSender').value;
+        let h = ''; selected.forEach((item, i) => {
+            const n = item.recs.map(r => `${r.name}${r.year ? ', sinh năm '+r.year : ''}`).join(' và ');
+            h += `<tr><td align="center">${i+1}</td><td><strong>${n}</strong><br>Địa chỉ: ${item.addr}</td><td style="white-space: pre-wrap;">${item.content}</td><td align="center" class="barcode-col"><strong>${item.barcode || ''}</strong></td></tr>`;
+        });
+        document.getElementById('a4Body').innerHTML = h; window.print();
+    }
+
+    function printTem() {
+        const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
+        if(ids.length === 0) return alert("Chọn dòng!");
+        const selected = db.filter(i => ids.includes(i.id));
+        let h = '';
+        selected.forEach(item => {
+            const names = item.recs.map(r => `<strong style="font-size:11.5px">${r.name}</strong> <span style="font-size:10px; font-weight:normal">${r.year ? '('+r.year+')' : ''}</span>`).join(', ');
+            h += `<div style="width:50mm; height:30mm; padding:2mm; box-sizing:border-box; font-family:Arial; line-height:1.1; border:1px solid black; overflow:hidden; page-break-inside:avoid; text-align:justify;">
+                    <div style="font-size:10px; margin-bottom:1mm;">Người nhận: ${names}</div>
+                    ${item.addr ? '<div style="font-size:10.5px; margin-bottom:1mm;">Đ/c: '+item.addr+'</div>' : ''}
+                    ${item.phone ? '<div style="font-size:10.5px;">SĐT: '+item.phone+'</div>' : ''}
+                  </div>`;
+        });
+        const w = window.open('', '_blank');
+        w.document.write(`<html><head><style>@page { size: 50mm 30mm; margin: 0; } body { margin: 0; padding: 0; }</style></head><body>${h}
+        <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };<\/script></body></html>`);
+        w.document.close();
+    }
+
+    function editItem(id) {
+        const item = db.find(x => x.id === id); editingId = id;
+        document.getElementById('receiverContainer').innerHTML = '';
+        item.recs.forEach(r => addNewReceiver(r.name, r.year));
+        ['inAddr', 'inPhone', 'inContent', 'inBarcode'].forEach(fid => {
+            document.getElementById(fid).value = item[fid.replace('in','').toLowerCase()] || '';
+        });
+        showActions('EDIT'); window.scrollTo(0,0);
+    }
+
+    function makeCopy(id) {
+        const item = db.find(x => x.id === id); editingId = null;
+        document.getElementById('receiverContainer').innerHTML = '';
+        item.recs.forEach(r => addNewReceiver(r.name, r.year, true));
+        ['inAddr', 'inPhone', 'inContent', 'inBarcode'].forEach(fid => {
+            const el = document.getElementById(fid);
+            el.value = item[fid.replace('in','').toLowerCase()] || '';
+            el.classList.add('is-copy');
+        });
+        showActions('COPY'); window.scrollTo(0,0);
+    }
+
+    function showActions(mode) {
+        document.getElementById('mainActionGroup').style.display = 'none';
+        document.getElementById('editActionGroup').style.display = mode === 'EDIT' ? 'flex' : 'none';
+        document.getElementById('copyActionGroup').style.display = mode === 'COPY' ? 'flex' : 'none';
+    }
+
+    function resetForm() { location.reload(); }
+    
+    // ===========================================
+    // HÀM XÓA ĐÃ CẬP NHẬT ĐỒNG BỘ MÂY
+    // ===========================================
+    function deleteItem(id) { 
+        if(confirm("Xóa dòng này?")) { 
+            db = db.filter(i => i.id !== id); 
+            localStorage.setItem('thads_v13', JSON.stringify(db)); 
+            
+            // GỬI TÍN HIỆU XÓA LÊN MÂY
+            window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
+
+            renderTable(); 
+        } 
+    }
+    
+    function toggleAll() { const s = document.getElementById('selectAll').checked; document.querySelectorAll('.row-cb').forEach(c => c.checked = s); }
+    window.onload = () => { renderTable(); document.getElementById('inSender').value = localStorage.getItem('thads_last_sender') || ''; };
+</script>
+<script>
+window.addEventListener('message', function(e) {
+    if (e.data.type === 'GET_DATA') {
+        // Chỉ lấy key 'thads_v13' theo đúng logic app này
+        const val = localStorage.getItem('thads_v13');
+        const data = val ? {'thads_v13': val} : {};
+        window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: data}, '*');
+    }
+    if (e.data.type === 'RESTORE_DATA') {
+        const d = e.data.payload;
+        if(d) { Object.keys(d).forEach(k => localStorage.setItem(k, d[k])); location.reload(); }
+    }
+});
+</script>
+</body>
+</html>

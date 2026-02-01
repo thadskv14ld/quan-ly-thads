@@ -1,0 +1,158 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HỆ THỐNG THADS ĐỒNG BỘ</title>
+    <style>
+        body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; overflow: hidden; }
+        
+        /* HEADER */
+        .header { height: 45px; background: #0f172a; display: flex; align-items: center; padding: 0 10px; border-bottom: 4px solid #334155; }
+        
+        /* TABS */
+        .tabs { display: flex; gap: 4px; height: 100%; align-items: flex-end; flex: 1; }
+        .tab { 
+            background: #1e293b; color: #94a3b8; border: none; 
+            padding: 8px 20px; cursor: pointer; font-weight: bold; font-size: 13px;
+            border-radius: 8px 8px 0 0; transition: 0.2s;
+        }
+        .tab:hover { background: #334155; color: white; }
+        .tab.active { background: #f1f5f9; color: #0f172a; height: 38px; }
+
+        /* STATUS LIGHT */
+        .status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: white; background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; }
+        .led { width: 10px; height: 10px; border-radius: 50%; background: #64748b; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: 0.3s; }
+        .led.saving { background: #facc15; box-shadow: 0 0 10px #facc15; } /* Vàng: Đang đợi lưu */
+        .led.syncing { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; } /* Xanh dương: Đang gửi */
+        .led.ok { background: #22c55e; box-shadow: 0 0 10px #22c55e; } /* Xanh lá: Xong */
+        .led.error { background: #ef4444; }
+
+        /* IFRAME CONTAINER */
+        #container { flex: 1; position: relative; background: #f1f5f9; }
+        iframe { width: 100%; height: 100%; border: none; position: absolute; visibility: hidden; }
+        iframe.active { visibility: visible; z-index: 10; }
+        
+        /* LOADER */
+        #loader { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; justify-content: center; align-items: center; color: white; flex-direction: column; transition: opacity 0.5s; }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <h2>Đang tải dữ liệu từ mây...</h2>
+        <p>Vui lòng đợi giây lát</p>
+    </div>
+
+    <div class="header">
+        <div class="tabs">
+            <button class="tab active" onclick="switchApp(0)">1. BIÊN LAI</button>
+            <button class="tab" onclick="switchApp(1)">2. BƯU ĐIỆN</button>
+            <button class="tab" onclick="switchApp(2)">3. ĐỀ NGHỊ CHI</button>
+        </div>
+        <div class="status">
+            <span id="statusText">Sẵn sàng</span>
+            <div id="led" class="led ok"></div>
+        </div>
+    </div>
+
+    <div id="container">
+        <iframe id="f1" src="app1.html" class="active"></iframe>
+        <iframe id="f2" src="app2.html"></iframe>
+        <iframe id="f3" src="app3.html"></iframe>
+    </div>
+
+    <script>
+        // ============================================================
+        // LINK API ĐÃ ĐƯỢC CẬP NHẬT
+        const API_URL = "https://script.google.com/macros/s/AKfycbxyRidXEMFY-SM_Q3I0dXEahZ-lMOoWLEN3NTF9E90CAVwbYHXGk4hW7T_vNlSbeIED/exec"; 
+        // ============================================================
+
+        const frames = [document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3')];
+        const statusText = document.getElementById('statusText');
+        const led = document.getElementById('led');
+        let saveTimer;
+
+        // 1. CHUYỂN TAB
+        function switchApp(index) {
+            document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
+            frames.forEach((f, i) => f.classList.toggle('active', i === index));
+        }
+
+        // 2. KHỞI ĐỘNG: TẢI DỮ LIỆU TỪ MÂY
+        window.onload = async () => {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json(); // Data dạng { app1: "...", app2: "...", app3: "..." }
+                
+                // Bắn dữ liệu vào từng App con
+                if(data.app1) frames[0].contentWindow.postMessage({type: 'RESTORE_DATA', payload: JSON.parse(data.app1)}, '*');
+                if(data.app2) frames[1].contentWindow.postMessage({type: 'RESTORE_DATA', payload: JSON.parse(data.app2)}, '*');
+                if(data.app3) frames[2].contentWindow.postMessage({type: 'RESTORE_DATA_IDB', payload: data.app3}, '*'); // App3 dùng IDB
+
+                // Tắt màn hình chờ
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+
+            } catch(e) {
+                console.error(e);
+                alert("Không thể tải dữ liệu từ máy chủ. Đang sử dụng dữ liệu offline trên máy.");
+                document.getElementById('loader').style.display = 'none';
+            }
+        };
+
+        // 3. LẮNG NGHE TÍN HIỆU TỪ APP CON
+        window.addEventListener('message', (e) => {
+            if(e.data.type === 'DATA_RETURN' || e.data.type === 'DATA_RETURN_IDB') {
+                const appName = e.data.app; // 'app1', 'app2', 'app3'
+                const appData = e.data.data;
+                
+                // Hiệu ứng đèn vàng (Đang chờ gõ xong)
+                setStatus('saving', 'Đang chờ lưu...');
+                clearTimeout(saveTimer);
+
+                // Đợi 2 giây sau khi ngừng thao tác mới gửi lên mây (Debounce)
+                saveTimer = setTimeout(() => {
+                    syncToCloud(appName, appData);
+                }, 2000);
+            }
+        });
+
+        // 4. GỬI LÊN MÂY
+        async function syncToCloud(appName, data) {
+            setStatus('syncing', 'Đang đồng bộ...');
+            try {
+                // Tạo gói tin chỉ chứa app đang thay đổi để gửi đi
+                const payload = {};
+                payload[appName] = data;
+
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Gửi đi mà không cần chờ phản hồi chi tiết
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                setStatus('ok', 'Đã lưu mây');
+                setTimeout(() => setStatus('ok', 'Sẵn sàng'), 2000);
+            } catch(e) {
+                console.error(e);
+                setStatus('error', 'Lỗi mạng!');
+            }
+        }
+
+        function setStatus(state, text) {
+            led.className = 'led ' + state;
+            statusText.innerText = text;
+        }
+        
+        // 5. ĐỊNH KỲ 10 GIÂY HỎI CÁC APP CON XEM CÓ DỮ LIỆU KHÔNG (Backup)
+        setInterval(() => {
+             frames[0].contentWindow.postMessage({type:'GET_DATA'}, '*');
+             frames[1].contentWindow.postMessage({type:'GET_DATA'}, '*');
+             frames[2].contentWindow.postMessage({type:'GET_DATA_IDB'}, '*');
+        }, 10000);
+
+    </script>
+</body>
+</html>
