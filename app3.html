@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Hệ thống Quản lý C09-THADS - V6.1 (Updated CHV)</title>
+    <title>Hệ thống Quản lý C09-THADS - V6.1 (Fix Button)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -21,23 +21,12 @@
         #qrModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; }
         .qr-box { background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); max-width: 280px; width: 90%; }
 
-        /* --- CẤU HÌNH IN & XUẤT PDF CHUẨN --- */
         @media print {
-            @page { 
-                size: A4 portrait; 
-                margin: 2cm 2cm 2cm 2cm; 
-            }
+            @page { size: A4 portrait; margin: 2cm; }
             body { background: white; margin: 0; padding: 0; }
             .no-print { display: none !important; }
             .print-only { display: block !important; page-break-after: always; }
-            
-            #documentRender { 
-                width: 100%; 
-                font-family: "Times New Roman", Times, serif !important; 
-                font-size: 12pt !important; 
-                line-height: 1.35; 
-                color: black; 
-            }
+            #documentRender { width: 100%; font-family: "Times New Roman", Times, serif !important; font-size: 12pt !important; line-height: 1.35; color: black; }
             .f-12-bold-upper { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
             .f-10-italic { font-size: 10pt; font-style: italic; }
             .bold { font-weight: bold; }
@@ -249,126 +238,52 @@
         let editId = null;
         let isCopyMode = false;
 
-        /* --- LOGIC QUẢN LÝ TÊN CHẤP HÀNH VIÊN --- */
+        /* CHV LOGIC */
         const STORAGE_KEY_CHV = 'chv_list_store_v1';
-        let chvList = JSON.parse(localStorage.getItem(STORAGE_KEY_CHV)) || ["Nguyễn Công Cường"]; // Mặc định
+        let chvList = JSON.parse(localStorage.getItem(STORAGE_KEY_CHV)) || ["Nguyễn Công Cường"]; 
 
-        function saveCHVList() {
-            localStorage.setItem(STORAGE_KEY_CHV, JSON.stringify(chvList));
-            const currentVal = document.getElementById('chvSelect').value;
-            renderCHVSelect(currentVal);
-        }
-
+        function saveCHVList() { localStorage.setItem(STORAGE_KEY_CHV, JSON.stringify(chvList)); renderCHVSelect(document.getElementById('chvSelect').value); }
         function renderCHVSelect(selectedVal = null) {
-            const sel = document.getElementById('chvSelect');
-            if(!sel) return;
-            sel.innerHTML = '';
-            chvList.forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.text = name;
-                sel.appendChild(opt);
-            });
-            // Nếu có giá trị được chỉ định (khi sửa/load), chọn nó. 
-            // Nếu không, chọn phần tử đầu tiên.
-            if(selectedVal && chvList.includes(selectedVal)) {
-                sel.value = selectedVal;
-            } else if (chvList.length > 0) {
-                sel.value = chvList[0];
-            }
+            const sel = document.getElementById('chvSelect'); if(!sel) return; sel.innerHTML = '';
+            chvList.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.text = name; sel.appendChild(opt); });
+            if(selectedVal && chvList.includes(selectedVal)) sel.value = selectedVal; else if (chvList.length > 0) sel.value = chvList[0];
         }
+        function addCHVName() { const newName = prompt("Nhập tên CHV mới:"); if(newName && newName.trim()){ const c = newName.trim(); if(!chvList.includes(c)){ chvList.push(c); saveCHVList(); document.getElementById('chvSelect').value = c; }}}
+        function delCHVName() { const val = document.getElementById('chvSelect').value; if(!val) return; if(confirm(`Xóa "${val}"?`)){ chvList = chvList.filter(x => x !== val); if(chvList.length === 0) chvList.push("Nguyễn Công Cường"); saveCHVList(); }}
+        document.addEventListener('DOMContentLoaded', () => { renderCHVSelect(); });
 
-        function addCHVName() {
-            const newName = prompt("Nhập tên Chấp hành viên mới:");
-            if(newName && newName.trim() !== "") {
-                const cleanName = newName.trim();
-                if(!chvList.includes(cleanName)) {
-                    chvList.push(cleanName);
-                    saveCHVList();
-                    // Chọn ngay tên mới
-                    document.getElementById('chvSelect').value = cleanName;
-                } else {
-                    alert("Tên này đã có trong danh sách!");
-                }
-            }
-        }
-
-        function delCHVName() {
-            const val = document.getElementById('chvSelect').value;
-            if(!val) return;
-            if(confirm(`Bạn có chắc muốn xóa tên "${val}" khỏi danh sách?`)) {
-                chvList = chvList.filter(x => x !== val);
-                if(chvList.length === 0) chvList.push("Nguyễn Công Cường"); // Luôn giữ ít nhất 1 tên
-                saveCHVList();
-            }
-        }
-
-        // Khởi tạo Select khi load trang
-        document.addEventListener('DOMContentLoaded', () => {
-            renderCHVSelect();
-        });
-        /* --- KẾT THÚC LOGIC CHV --- */
-        
-        const BANK_MAP = { 
-            "Vietcombank": "VCB", "Ngoại thương": "VCB",
-            "Vietinbank": "CTG", "Công thương": "CTG",
-            "BIDV": "BIDV", "Đầu tư và Phát triển": "BIDV",
-            "Agribank": "VBA", "Nông nghiệp": "VBA",
-            "MBBank": "MB", "Quân đội": "MB",
-            "Techcombank": "TCB", "Kỹ thương": "TCB",
-            "Sacombank": "STB", "Sài Gòn Thương Tín": "STB",
-            "VPBank": "VPB", "Thịnh Vượng": "VPB",
-            "ACB": "ACB", "Á Châu": "ACB",
-            "TPBank": "TPB", "Tiên Phong": "TPB",
-            "VIB": "VIB", "Quốc tế": "VIB"
-        };
-
+        /* BANK MAP & UTILS */
+        const BANK_MAP = { "Vietcombank": "VCB", "Ngoại thương": "VCB", "Vietinbank": "CTG", "Công thương": "CTG", "BIDV": "BIDV", "Agribank": "VBA", "MBBank": "MB", "Techcombank": "TCB", "Sacombank": "STB", "VPBank": "VPB", "ACB": "ACB", "TPBank": "TPB", "VIB": "VIB" };
         let searchTimeout;
         function debounceRender() { clearTimeout(searchTimeout); searchTimeout = setTimeout(renderTable, 500); }
-
         function handleQDFocus(el) { if (el.value === "/QĐ-THADS") el.setSelectionRange(0, 0); }
-
         function showQR(id) {
-            const r = db.find(x => x.id === id);
-            if (!r.stk || !r.nganHang) { alert("Thiếu STK hoặc Ngân hàng!"); return; }
-            let bankCode = "";
-            const inputBank = r.nganHang.toLowerCase();
-            for (let key in BANK_MAP) { if (inputBank.includes(key.toLowerCase())) { bankCode = BANK_MAP[key]; break; } }
-            if (!bankCode) bankCode = r.nganHang.split(' ')[0];
-            document.getElementById('qrImageDisplay').src = `https://img.vietqr.io/image/${bankCode}-${r.stk}-compact2.jpg?label=KIEM%20TRA%20TK`;
-            document.getElementById('qrStkDisplay').innerText = r.stk;
-            document.getElementById('qrModal').style.display = 'flex';
+            const r = db.find(x => x.id === id); if (!r.stk || !r.nganHang) { alert("Thiếu STK/Ngân hàng!"); return; }
+            let code = ""; const inBank = r.nganHang.toLowerCase();
+            for (let k in BANK_MAP) { if (inBank.includes(k.toLowerCase())) { code = BANK_MAP[k]; break; } }
+            if (!code) code = r.nganHang.split(' ')[0];
+            document.getElementById('qrImageDisplay').src = `https://img.vietqr.io/image/${code}-${r.stk}-compact2.jpg?label=KIEM%20TRA`;
+            document.getElementById('qrStkDisplay').innerText = r.stk; document.getElementById('qrModal').style.display = 'flex';
         }
 
+        /* RENDER TABLE */
         function renderTable() {
             const search = document.getElementById('searchBox').value.toLowerCase();
-            const container = document.getElementById('listContainer');
-            container.innerHTML = '';
+            const container = document.getElementById('listContainer'); container.innerHTML = '';
             const filtered = db.filter(r => {
                 const sTien = Number(r.soTien).toLocaleString('vi-VN');
                 return r.hoTen.toLowerCase().includes(search) || r.qdSo.toLowerCase().includes(search) || r.qdNgay.toLowerCase().includes(search) || r.lyDo.toLowerCase().includes(search) || sTien.includes(search);
             });
-            const groups = filtered.reduce((acc, obj) => {
-                const date = obj.dateCreated;
-                acc[date] = acc[date] || [];
-                acc[date].push(obj);
-                return acc;
-            }, {});
-            const sortedDates = Object.keys(groups).sort((a, b) => {
-                const toDate = d => new Date(d.split('/').reverse().join('-'));
-                return toDate(b) - toDate(a);
-            });
+            const groups = filtered.reduce((acc, obj) => { const d = obj.dateCreated; acc[d] = acc[d] || []; acc[d].push(obj); return acc; }, {});
+            const sortedDates = Object.keys(groups).sort((a, b) => { const toDate = d => new Date(d.split('/').reverse().join('-')); return toDate(b) - toDate(a); });
+            
             const fragment = document.createDocumentFragment();
             sortedDates.forEach(date => {
-                const groupTr = document.createElement('tr');
-                groupTr.innerHTML = `<td colspan="7" class="date-group-header"><i data-lucide="calendar" class="w-4 h-4"></i> NGÀY TẠO: ${date}</td>`;
-                fragment.appendChild(groupTr);
+                const trG = document.createElement('tr'); trG.innerHTML = `<td colspan="7" class="date-group-header"><i data-lucide="calendar" class="w-4 h-4"></i> NGÀY TẠO: ${date}</td>`; fragment.appendChild(trG);
                 groups[date].forEach(r => {
-                    const tr = document.createElement('tr');
-                    tr.className = 'border-b hover:bg-slate-50 transition-colors';
+                    const tr = document.createElement('tr'); tr.className = 'border-b hover:bg-slate-50 transition-colors';
                     const stColor = r.isPaid ? 'text-teal-500' : 'text-red-500';
-                    tr.innerHTML = `
-                        <td class="p-3"><input type="checkbox" class="row-check" value="${r.id}" onchange="updateCount()"></td>
+                    tr.innerHTML = `<td class="p-3"><input type="checkbox" class="row-check" value="${r.id}" onchange="updateCount()"></td>
                         <td class="p-3"><div class="font-bold uppercase text-slate-800 text-xs">${r.hoTen}</div><div class="text-[11px] text-slate-500 mt-1 leading-tight">${r.lyDo}</div></td>
                         <td class="p-3"><div class="font-bold text-blue-700 text-xs">${r.qdSo}</div><div class="text-[10px] text-slate-400">(${r.qdNgay || '...'})</div></td>
                         <td class="p-3 text-right font-bold text-slate-800 text-xs">${Number(r.soTien).toLocaleString('vi-VN')}</td>
@@ -384,41 +299,15 @@
                 });
             });
             container.appendChild(fragment);
-            lucide.createIcons();
-            updateCount();
+            lucide.createIcons(); updateCount();
         }
 
         function copyRec(id) { const r = db.find(x => x.id === id); fillForm(r); editId = null; isCopyMode = true; document.getElementById('btnSave').innerHTML = `<i data-lucide="copy"></i> LƯU BẢN SAO MỚI`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
-        
-        function fillForm(r) { 
-            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'lyDo', 'tenThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = r[f] || ""; }); 
-            document.getElementById('coThuPhi').checked = r.hasFee; 
-            document.getElementById('coNguoiNhanThay').checked = r.hasNT; 
-            // Load CHV Name
-            renderCHVSelect(r.chvName); 
-            handleFeeChange(); 
-            toggleNhanThay(); 
-        }
-
+        function fillForm(r) { ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'lyDo', 'tenThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = r[f] || ""; }); document.getElementById('coThuPhi').checked = r.hasFee; document.getElementById('coNguoiNhanThay').checked = r.hasNT; renderCHVSelect(r.chvName); handleFeeChange(); toggleNhanThay(); }
         function editRec(id) { const r = db.find(x => x.id === id); editId = r.id; isCopyMode = false; fillForm(r); document.getElementById('btnSave').innerHTML = `<i data-lucide="check"></i> Cập nhật hồ sơ`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
-        
-        function resetForm() { 
-            editId = null; isCopyMode = false; 
-            document.getElementById('btnSave').innerHTML = `<i data-lucide="save"></i> Lưu hồ sơ`; 
-            document.getElementById('btnCancel').classList.add('hidden'); 
-            document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error')); 
-            document.getElementById('coThuPhi').checked = false; 
-            document.getElementById('coNguoiNhanThay').checked = false; 
-            handleFeeChange(); 
-            toggleNhanThay(); 
-            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'tenThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = (f === 'qdNoi' ? "Thi hành án dân sự tỉnh Lâm Đồng" : (f === 'cccdNoi' || f === 'noiThay' ? "Cục Cảnh sát quản lý hành chính về trật tự xã hội" : (f === 'qdSo' ? "/QĐ-THADS" : ""))); }); 
-            document.getElementById('lyDo').value = "Chi trả tiền tạm thu theo Quyết định Thi hành án"; 
-            document.getElementById('txtDocTien').innerText = "Chưa nhập số tiền..."; 
-            // Reset CHV Select to default
-            renderCHVSelect();
-            lucide.createIcons(); 
-        }
+        function resetForm() { editId = null; isCopyMode = false; document.getElementById('btnSave').innerHTML = `<i data-lucide="save"></i> Lưu hồ sơ`; document.getElementById('btnCancel').classList.add('hidden'); document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error')); document.getElementById('coThuPhi').checked = false; document.getElementById('coNguoiNhanThay').checked = false; handleFeeChange(); toggleNhanThay(); document.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]), textarea').forEach(el => el.value = ""); document.getElementById('qdSo').value="/QĐ-THADS"; document.getElementById('qdNoi').value="Thi hành án dân sự tỉnh Lâm Đồng"; document.getElementById('cccdNoi').value="Cục Cảnh sát quản lý hành chính về trật tự xã hội"; document.getElementById('noiThay').value="Cục Cảnh sát quản lý hành chính về trật tự xã hội"; document.getElementById('lyDo').value="Chi trả tiền tạm thu theo Quyết định Thi hành án"; document.getElementById('txtDocTien').innerText="Chưa nhập số tiền..."; renderCHVSelect(); lucide.createIcons(); }
 
+        /* SAVE DATA - ĐÃ SỬA LỖI NÚT LƯU */
         async function saveData() { 
             if (!validateForm()) return; 
             const tongTien = parseInt(document.getElementById('soTien').value.replace(/\D/g,"")) || 0; 
@@ -453,7 +342,6 @@
                 qdSo: document.getElementById('qdSo').value, 
                 qdNgay: document.getElementById('qdNgay').value, 
                 qdNoi: document.getElementById('qdNoi').value,
-                // NEW: SAVE CHV NAME
                 chvName: document.getElementById('chvSelect').value
             }; 
             if (editId) db = db.map(x => x.id === editId ? data : x); else db.unshift(data); 
@@ -461,9 +349,8 @@
             // 1. LƯU VÀO DB MÁY
             await saveToIDB(data);
 
-            // === [THÊM DÒNG NÀY] ===
+            // 2. GỬI LÊN MÂY (ĐỒNG BỘ)
             window.parent.postMessage({type: 'DATA_RETURN', app: 'app3', data: db}, '*');
-            // ======================
 
             resetForm();
             renderTable();
@@ -476,175 +363,97 @@
         function toggleNhanThay() { const checked = document.getElementById('coNguoiNhanThay').checked; document.getElementById('formNhanThay').style.display = checked ? 'block' : 'none'; document.getElementById('formNguoiNhan').style.display = checked ? 'none' : 'grid'; }
         function handleFeeChange() { document.getElementById('boxTiLePhi').style.display = document.getElementById('coThuPhi').checked ? 'flex' : 'none'; handleMoneyChange(document.getElementById('soTien')); }
         function handleMoneyChange(e) { let val = e.value.replace(/\D/g, ""); e.value = val ? new Intl.NumberFormat('vi-VN').format(val) : ""; const hasFee = document.getElementById('coThuPhi').checked, tiLe = document.querySelector('input[name="tiLePhi"]:checked').value; const tongTien = parseInt(val) || 0, phi = hasFee ? Math.round(tongTien * tiLe / 100) : 0, thucNhan = tongTien - phi; document.getElementById('phiHienThi').value = hasFee ? new Intl.NumberFormat('vi-VN').format(phi) : "---"; document.getElementById('txtDocTien').innerText = val ? docSo(thucNhan) : "Chưa nhập số tiền..."; }
+        
         function handleStatusToggle(id) { const r = db.find(x => x.id === id); if (r.isPaid) { if(confirm("Chuyển về trạng thái CHƯA CHI?")) updateStatus(id, false, ""); } else { document.getElementById(`cell-status-${id}`).innerHTML = `<div class="flex flex-col items-center gap-1"><div class="date-input-container"><input type="text" id="tempDate-${id}" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="text-[10px] border p-1 rounded w-24"><input type="date" class="hidden-picker" style="width:20px" onchange="syncPicker(this, 'tempDate-${id}')"></div><div class="flex gap-1"><button onclick="confirmPaid(${id})" class="bg-teal-600 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Lưu</button><button onclick="renderTable()" class="bg-slate-400 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Hủy</button></div></div>`; } }
         function confirmPaid(id) { const d = document.getElementById(`tempDate-${id}`).value; if(!isValidDate(d)) return alert("Vui lòng nhập đúng định dạng dd/mm/yyyy!"); updateStatus(id, true, d); }
+        
         function updateStatus(id, isPaid, date) { 
             db = db.map(x => x.id === id ? {...x, isPaid, paidDate: date} : x); 
             const updated = db.find(x => x.id === id); 
             saveToIDB(updated);
-
-            // === [THÊM DÒNG NÀY] ===
+            
+            // GỬI LÊN MÂY
             window.parent.postMessage({type: 'DATA_RETURN', app: 'app3', data: db}, '*');
-            // ======================
-
+            
             renderTable();
         }
+
         function updateCount() { const count = document.querySelectorAll('.row-check:checked').length; document.getElementById('countSelected').innerText = count; document.getElementById('masterCheck').checked = (count > 0 && count === document.querySelectorAll('.row-check').length); }
         function toggleMaster(m) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = m.checked); updateCount(); }
         
         async function updateGhiChu(id, val) { 
             db = db.map(x => x.id === id ? {...x, ghiChu: val} : x); 
             const updated = db.find(x => x.id === id); 
-            await saveToIDB(updated); // SỬA LỖI: dùng saveToIDB thay vì deleteFromIDB
-
-            // === [THÊM DÒNG NÀY] ===
+            await saveToIDB(updated); 
+            
+            // GỬI LÊN MÂY
             window.parent.postMessage({type: 'DATA_RETURN', app: 'app3', data: db}, '*');
-            // ======================
         }
 
         async function delRec(id) { 
             if(confirm("Xóa hồ sơ?")) { 
                 db = db.filter(x => x.id !== id); 
                 await deleteFromIDB(id); 
-
-                // === [THÊM DÒNG NÀY] ===
+                
+                // GỬI LÊN MÂY
                 window.parent.postMessage({type: 'DATA_RETURN', app: 'app3', data: db}, '*');
-                // ======================
-
+                
                 renderTable(); 
             } 
         }
 
-        /* HÀM IN & PDF DÙNG CHUNG - ĐẢM BẢO 100% ĐỒNG NHẤT */
-        function printSelected() { 
-            const checked = document.querySelectorAll('.row-check:checked'); 
-            if (checked.length === 0) return alert("Chọn hồ sơ!"); 
-            document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); 
-            window.print(); 
-        }
-
-        /* HÀM XUẤT WORD MỚI - GIỮ NGUYÊN CẤU TRÚC */
+        /* PRINT & WORD */
+        function printSelected() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Chọn hồ sơ!"); document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); window.print(); }
         function exportToWord() {
-            const checked = document.querySelectorAll('.row-check:checked');
-            if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất Word!");
-
+            const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Chọn hồ sơ!");
             const content = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join('<br style="page-break-before: always">');
-            
-            // CSS header cho file Word để nhận diện khổ A4 và font Times New Roman
-            const header = `
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head><meta charset='utf-8'><title>Giấy đề nghị chi C09</title>
-                <style>
-                    @page Section1 {size:595.3pt 841.9pt; margin:2.0cm 2.0cm 2.0cm 2.0cm; mso-header-margin:35.4pt; mso-footer-margin:35.4pt; mso-paper-source:0;}
-                    div.Section1 {page:Section1;}
-                    body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.35; }
-                    .f-12-bold-upper { font-weight: bold; text-transform: uppercase; font-size: 12pt; }
-                    .f-10-italic { font-style: italic; font-size: 10pt; }
-                    .bold { font-weight: bold; }
-                    .italic { font-style: italic; }
-                    .text-center { text-align: center; }
-                    .text-justify { text-align: justify; }
-                    table { width: 100%; border-collapse: collapse; }
-                    td { vertical-align: top; }
-                </style>
-                </head><body><div class='Section1'>`;
-            
+            const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Giấy đề nghị chi</title><style>@page Section1 {size:595.3pt 841.9pt; margin:2.0cm 2.0cm 2.0cm 2.0cm; mso-header-margin:35.4pt; mso-footer-margin:35.4pt; mso-paper-source:0;} div.Section1 {page:Section1;} body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.35; } .f-12-bold-upper { font-weight: bold; text-transform: uppercase; font-size: 12pt; } .f-10-italic { font-style: italic; font-size: 10pt; } .bold { font-weight: bold; } .italic { font-style: italic; } .text-center { text-align: center; } .text-justify { text-align: justify; } table { width: 100%; border-collapse: collapse; } td { vertical-align: top; }</style></head><body><div class='Section1'>`;
             const footer = "</div></body></html>";
             const sourceHTML = header + content + footer;
-            
             const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
-            const fileName = checked.length === 1 ? `C09_${db.find(x => x.id == checked[0].value).hoTen}.doc` : `Danh_sach_chi_C09.doc`;
-            
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `C09_Export.doc`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
         function getPrintTemplate(r) {
             const nS = r.namSinh ? `, sinh năm ${r.namSinh}` : "", c_S = r.hasNT ? r.cccdThay : (r.cccdSo || "...................."), c_Noi = r.hasNT ? r.noiThay : (r.cccdNoi || "........................................"), c_Ng = r.hasNT ? (r.ngayThay || '..........') : (r.cccdNgay || '..........'), uq = r.hasNT ? (r.giayUQ || "........................................") : "Giấy uỷ quyền (nếu là nhận thay) số:........... ngày ..... tháng ...... năm ....................";
             let rowNT = r.hasNT ? `Người nhận thay: ${r.tenThay || '....................'}<br>Địa chỉ: ${r.dcThay || '....................'}<br>` : "", mH = r.hasFee ? `&nbsp;&nbsp;&nbsp;&nbsp;Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Còn thực nhận: <span class="bold">${Number(r.thucNhan).toLocaleString('vi-VN')}</span> đồng` : `&nbsp;&nbsp;&nbsp;&nbsp;+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng: <span class="bold">${Number(r.soTien).toLocaleString('vi-VN')}</span> đồng`;
-            
-            // LOGIC TÊN CHẤP HÀNH VIÊN: NẾU KHÔNG CÓ THÌ LẤY MẶC ĐỊNH
             const tenCHV = r.chvName || "Nguyễn Công Cường";
-
-            return `<div id="documentRender" class="print-only">
-                <table><tr><td style="width: 55%; font-weight: bold;">Đơn vị: Thi hành án dân sự tỉnh Lâm Đồng</td><td style="width: 45%; font-weight: bold; text-align: center;">Mẫu số: C09-THADS</td></tr><tr><td></td><td class="f-10-italic text-center">(Ban hành kèm theo Thông tư số 04/2023/TT-BTP<br>ngày 14/8/2023 của Bộ Tư pháp)</td></tr></table>
-                <div class="text-center" style="margin-top: 35px; position: relative; margin-bottom: 25px;"><span class="f-12-bold-upper" style="font-size: 14pt;">GIẤY ĐỀ NGHỊ CHI</span><span style="position: absolute; right: 0; font-size: 12pt;">Số:...................</span><div class="italic" style="margin-top: 2px;">Ngày .........tháng....... năm 20...</div></div>
-                <div class="text-center" style="margin-bottom: 25px;">Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng</div>
-                <div class="text-justify">Đề nghị chi cho: <span class="bold">${r.hoTen}</span>${nS}.<br>Địa chỉ: ${r.diaChi}<br>${rowNT}CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}<br>Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}<br>Lý do chi: ${r.lyDo}, gồm các khoản sau:<br>${mH}<br>Viết bằng chữ: <span class="italic">${docSo(r.thucNhan)}</span><br>Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}<br>Hình thức thanh toán: Chuyển khoản./.</div>
-                <table style="margin-top: 30px;"><tr class="text-center bold"><td style="width: 55%;">TL. TRƯỞNG THI HÀNH ÁN DÂN SỰ<br>TRƯỞNG PHÒNG<br>PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14</td><td style="width: 45%;">CHẤP HÀNH VIÊN</td></tr><tr class="text-center bold"><td style="padding-top: 75px;">Qua Đình Thiện</td><td style="padding-top: 75px;">${tenCHV}</td></tr></table></div>`;
+            return `<div id="documentRender" class="print-only"><table><tr><td style="width: 55%; font-weight: bold;">Đơn vị: Thi hành án dân sự tỉnh Lâm Đồng</td><td style="width: 45%; font-weight: bold; text-align: center;">Mẫu số: C09-THADS</td></tr><tr><td></td><td class="f-10-italic text-center">(Ban hành kèm theo Thông tư số 04/2023/TT-BTP<br>ngày 14/8/2023 của Bộ Tư pháp)</td></tr></table><div class="text-center" style="margin-top: 35px; position: relative; margin-bottom: 25px;"><span class="f-12-bold-upper" style="font-size: 14pt;">GIẤY ĐỀ NGHỊ CHI</span><span style="position: absolute; right: 0; font-size: 12pt;">Số:...................</span><div class="italic" style="margin-top: 2px;">Ngày .........tháng....... năm 20...</div></div><div class="text-center" style="margin-bottom: 25px;">Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng</div><div class="text-justify">Đề nghị chi cho: <span class="bold">${r.hoTen}</span>${nS}.<br>Địa chỉ: ${r.diaChi}<br>${rowNT}CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}<br>Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}<br>Lý do chi: ${r.lyDo}, gồm các khoản sau:<br>${mH}<br>Viết bằng chữ: <span class="italic">${docSo(r.thucNhan)}</span><br>Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}<br>Hình thức thanh toán: Chuyển khoản./.</div><table style="margin-top: 30px;"><tr class="text-center bold"><td style="width: 55%;">TL. TRƯỞNG THI HÀNH ÁN DÂN SỰ<br>TRƯỞNG PHÒNG<br>PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14</td><td style="width: 45%;">CHẤP HÀNH VIÊN</td></tr><tr class="text-center bold"><td style="padding-top: 75px;">Qua Đình Thiện</td><td style="padding-top: 75px;">${tenCHV}</td></tr></table></div>`;
         }
 
-        function docSo(n){
-            if(!n || n==0) return ""; const ChuSo=["không","một","hai","ba","bốn","năm","sáu","bảy","tám","chín"];
-            function doc3(n){ let t=Math.floor(n/100), c=Math.floor((n%100)/10), d=n%10, res=""; if(t>0) res+=ChuSo[t]+" trăm "; if(c==0 && d>0) res+=(t>0?"lẻ ":"")+ChuSo[d]; if(c==1) res+="mười "+(d==5?"lăm":(d==0?"":ChuSo[d])); if(c>1) res+=ChuSo[c]+" mươi "+(d==1?"mốt":(d==5?"lăm":(d==0?"":ChuSo[d]))); return res; }
-            let res="", dv=[""," nghìn"," triệu"," tỷ"], i=0, temp=n; do { let m=temp%1000; if(m>0) res=doc3(m)+dv[i]+" "+res; temp=Math.floor(temp/1000); i++; } while(temp>0);
-            let s = res.trim(); return s.charAt(0).toUpperCase() + s.slice(1) + " đồng";
-        }
+        function docSo(n){ if(!n || n==0) return ""; const ChuSo=["không","một","hai","ba","bốn","năm","sáu","bảy","tám","chín"]; function doc3(n){ let t=Math.floor(n/100), c=Math.floor((n%100)/10), d=n%10, res=""; if(t>0) res+=ChuSo[t]+" trăm "; if(c==0 && d>0) res+=(t>0?"lẻ ":"")+ChuSo[d]; if(c==1) res+="mười "+(d==5?"lăm":(d==0?"":ChuSo[d])); if(c>1) res+=ChuSo[c]+" mươi "+(d==1?"mốt":(d==5?"lăm":(d==0?"":ChuSo[d]))); return res; } let res="", dv=[""," nghìn"," triệu"," tỷ"], i=0, temp=n; do { let m=temp%1000; if(m>0) res=doc3(m)+dv[i]+" "+res; temp=Math.floor(temp/1000); i++; } while(temp>0); let s = res.trim(); return s.charAt(0).toUpperCase() + s.slice(1) + " đồng"; }
 
         // IndexedDB setup
         let idbDb, idbRequest = indexedDB.open('c09_thads_v6', 1);
         idbRequest.onupgradeneeded = e => e.target.result.createObjectStore('records', { keyPath: 'id' });
         idbRequest.onsuccess = e => { idbDb = e.target.result; loadData(); };
 
-        async function loadData() {
-            const tx = idbDb.transaction('records', 'readonly');
-            const store = tx.objectStore('records');
-            const req = store.getAll();
-            req.onsuccess = () => { db = req.result || []; renderTable(); };
-        }
-
-        async function saveToIDB(record) {
-            const tx = idbDb.transaction('records', 'readwrite');
-            const store = tx.objectStore('records');
-            await store.put(record);
-        }
-
-        async function deleteFromIDB(id) {
-            const tx = idbDb.transaction('records', 'readwrite');
-            const store = tx.objectStore('records');
-            await store.delete(id);
-        }
+        async function loadData() { const tx = idbDb.transaction('records', 'readonly'); const store = tx.objectStore('records'); const req = store.getAll(); req.onsuccess = () => { db = req.result || []; renderTable(); }; }
+        async function saveToIDB(record) { const tx = idbDb.transaction('records', 'readwrite'); const store = tx.objectStore('records'); await store.put(record); }
+        async function deleteFromIDB(id) { const tx = idbDb.transaction('records', 'readwrite'); const store = tx.objectStore('records'); await store.delete(id); }
     </script>
-<script>
-window.addEventListener('message', function(e) {
-    if (e.data.type === 'GET_DATA_IDB') {
-        const req = indexedDB.open('c09_thads_v6'); // Tên DB gốc của bạn
-        req.onsuccess = function(ev) {
-            const db = ev.target.result;
-            // Kiểm tra nếu store tồn tại
-            if(!db.objectStoreNames.contains('records')) {
-                 window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: []}, '*');
-                 return;
-            }
-            const tx = db.transaction('records', 'readonly');
-            const store = tx.objectStore('records');
-            const getAll = store.getAll();
-            getAll.onsuccess = () => {
-                window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: getAll.result}, '*');
+    <script>
+    window.addEventListener('message', function(e) {
+        if (e.data.type === 'GET_DATA_IDB') {
+            const req = indexedDB.open('c09_thads_v6'); 
+            req.onsuccess = function(ev) {
+                const db = ev.target.result;
+                if(!db.objectStoreNames.contains('records')) { window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: []}, '*'); return; }
+                const tx = db.transaction('records', 'readonly'); const store = tx.objectStore('records');
+                const getAll = store.getAll(); getAll.onsuccess = () => { window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: getAll.result}, '*'); };
             };
-        };
-    }
-    if (e.data.type === 'RESTORE_DATA_IDB') {
-        const items = e.data.payload;
-        if(!items || !Array.isArray(items)) return;
-        const req = indexedDB.open('c09_thads_v6');
-        req.onsuccess = function(ev) {
-            const db = ev.target.result;
-            const tx = db.transaction('records', 'readwrite');
-            const store = tx.objectStore('records');
-            // Xóa cũ nạp mới hoặc ghi đè
-            store.clear().onsuccess = () => {
-                items.forEach(item => store.put(item));
-                setTimeout(()=> location.reload(), 1000);
-            }
-        };
-    }
-});
-</script>
+        }
+        if (e.data.type === 'RESTORE_DATA_IDB') {
+            const items = e.data.payload;
+            if(!items || !Array.isArray(items)) return;
+            const req = indexedDB.open('c09_thads_v6');
+            req.onsuccess = function(ev) {
+                const db = ev.target.result;
+                const tx = db.transaction('records', 'readwrite'); const store = tx.objectStore('records');
+                store.clear().onsuccess = () => { items.forEach(item => store.put(item)); setTimeout(()=> location.reload(), 1000); }
+            };
+        }
+    });
+    </script>
 </body>
 </html>
