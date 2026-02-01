@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Hệ thống Quản lý C09-THADS - V6.3 (Original Print)</title>
+    <title>Hệ thống Quản lý C09-THADS - V6.4 (Final Fix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -21,7 +21,7 @@
         #qrModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; }
         .qr-box { background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); max-width: 280px; width: 90%; }
 
-        /* --- GIỮ NGUYÊN CSS IN ẤN GỐC CỦA BẠN --- */
+        /* --- GIỮ NGUYÊN CSS IN ẤN GỐC --- */
         @media print {
             @page { 
                 size: A4 portrait; 
@@ -539,7 +539,13 @@
             const tx = idbDb.transaction('records', 'readonly');
             const store = tx.objectStore('records');
             const req = store.getAll();
-            req.onsuccess = () => { db = req.result || []; renderTable(); };
+            req.onsuccess = () => { 
+                // --- SỬA LỖI SẮP XẾP TẠI ĐÂY ---
+                // Mặc định IDB trả về theo ID (thời gian) từ cũ -> mới.
+                // Ta đảo ngược lại để cái mới nhất nằm trên cùng.
+                db = (req.result || []).reverse(); 
+                renderTable(); 
+            };
         }
 
         async function saveToIDB(record) {
