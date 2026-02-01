@@ -1,3 +1,4 @@
+<DOCUMENT filename="index.html">
 ﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -65,7 +66,7 @@
     <script>
         // ============================================================
         // LINK API ĐÃ ĐƯỢC CẬP NHẬT
-        const API_URL = "https://script.google.com/macros/s/AKfycbxyRidXEMFY-SM_Q3I0dXEahZ-lMOoWLEN3NTF9E90CAVwbYHXGk4hW7T_vNlSbeIED/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbxcS9ds-E-PsFVNIrwKoORIEmwd66lYeRuslg73S6B_c-dQX-lXMCTiHA6LOtc0fqtE/exec"; 
         // ============================================================
 
         const frames = [document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3')];
@@ -122,22 +123,23 @@
         async function syncToCloud(appName, data) {
             setStatus('syncing', 'Đang đồng bộ...');
             try {
-                // Tạo gói tin chỉ chứa app đang thay đổi để gửi đi
                 const payload = {};
                 payload[appName] = data;
-
-                await fetch(API_URL, {
+                const res = await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Gửi đi mà không cần chờ phản hồi chi tiết
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
-                setStatus('ok', 'Đã lưu mây');
-                setTimeout(() => setStatus('ok', 'Sẵn sàng'), 2000);
+                if (res.ok) {
+                    setStatus('ok', 'Đã lưu mây');
+                    setTimeout(() => setStatus('ok', 'Sẵn sàng'), 2000);
+                } else {
+                    throw new Error('Lỗi lưu');
+                }
             } catch(e) {
                 console.error(e);
-                setStatus('error', 'Lỗi mạng!');
+                setStatus('error', 'Lỗi mạng! Kiểm tra kết nối hoặc API.');
+                alert('Lỗi đồng bộ: ' + e.message + '. Dữ liệu vẫn lưu local.');
             }
         }
 
@@ -156,3 +158,4 @@
     </script>
 </body>
 </html>
+</DOCUMENT>
