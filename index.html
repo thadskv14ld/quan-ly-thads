@@ -3,37 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HỆ THỐNG THADS ĐỒNG BỘ MÂY</title>
+    <title>HỆ THỐNG THADS - CHẾ ĐỘ THỦ CÔNG</title>
     <style>
-        body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; overflow: hidden; }
+        body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; overflow: hidden; background: #0f172a; }
         .header { height: 45px; background: #0f172a; display: flex; align-items: center; padding: 0 10px; border-bottom: 4px solid #334155; }
         .tabs { display: flex; gap: 4px; height: 100%; align-items: flex-end; flex: 1; }
-        .tab { 
-            background: #1e293b; color: #94a3b8; border: none; 
-            padding: 8px 20px; cursor: pointer; font-weight: bold; font-size: 13px;
-            border-radius: 8px 8px 0 0; transition: 0.2s;
-        }
-        .tab:hover { background: #334155; color: white; }
+        .tab { background: #1e293b; color: #94a3b8; border: none; padding: 8px 20px; cursor: pointer; font-weight: bold; font-size: 12px; border-radius: 8px 8px 0 0; }
         .tab.active { background: #f1f5f9; color: #0f172a; height: 38px; }
-        .status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: white; background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; }
-        .led { width: 10px; height: 10px; border-radius: 50%; background: #64748b; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
-        .led.saving { background: #facc15; box-shadow: 0 0 10px #facc15; }
+        .status { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12px; color: white; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; }
+        .led { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; }
         .led.syncing { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
-        .led.ok { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
-        .led.error { background: #ef4444; }
         #container { flex: 1; position: relative; background: #f1f5f9; }
         iframe { width: 100%; height: 100%; border: none; position: absolute; visibility: hidden; }
         iframe.active { visibility: visible; z-index: 10; }
-        #loader { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; justify-content: center; align-items: center; color: white; flex-direction: column; transition: opacity 0.5s; }
     </style>
 </head>
 <body>
-
-    <div id="loader">
-        <h2 style="margin-bottom: 10px;">Đang kết nối Cloud...</h2>
-        <div style="font-size: 13px; color: #94a3b8;">Vui lòng chờ trong giây lát</div>
-    </div>
-
     <div class="header">
         <div class="tabs">
             <button class="tab active" onclick="switchApp(0)">1. BIÊN LAI</button>
@@ -41,11 +26,10 @@
             <button class="tab" onclick="switchApp(2)">3. ĐỀ NGHỊ CHI</button>
         </div>
         <div class="status">
-            <span id="statusText">Đang kết nối...</span>
+            <span id="statusText">Sẵn sàng (Lưu thủ công)</span>
             <div id="led" class="led"></div>
         </div>
     </div>
-
     <div id="container">
         <iframe id="f1" src="app1.html" class="active"></iframe>
         <iframe id="f2" src="app2.html"></iframe>
@@ -56,7 +40,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Cấu hình Firebase của bạn
         const firebaseConfig = {
             apiKey: "AIzaSyAbdpohDAhs010Sqah31Wp6vynmVSwrRsY",
             authDomain: "hethongthads.firebaseapp.com",
@@ -64,78 +47,46 @@
             projectId: "hethongthads",
             storageBucket: "hethongthads.firebasestorage.app",
             messagingSenderId: "63279666579",
-            appId: "1:63279666579:web:3670e6bf283357c79d8466",
-            measurementId: "G-LS6PBDD3YP"
+            appId: "1:63279666579:web:3670e6bf283357c79d8466"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const dbRef = ref(db, 'thads_data');
         const frames = [document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3')];
-        const statusText = document.getElementById('statusText');
-        const led = document.getElementById('led');
-        let saveTimer;
-        let cloudCache = { app1: null, app2: null, app3: null };
+
+        // CHỈ TẢI DỮ LIỆU KHI MỚI MỞ WEB LẦN ĐẦU (TẢI XONG LÀ NGỪNG)
+        onValue(dbRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                if (data.app1) frames[0].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app1) }, '*');
+                if (data.app2) frames[1].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app2) }, '*');
+                if (data.app3) frames[2].contentWindow.postMessage({ type: 'RESTORE_DATA_IDB', payload: JSON.parse(data.app3) }, '*');
+                console.log("Đã nạp dữ liệu từ mây.");
+            }
+        }, { onlyOnce: true }); // <--- QUAN TRỌNG: Chỉ chạy 1 lần duy nhất
+
+        // CHỈ LƯU KHI NHẬN ĐƯỢC LỆNH TỪ NÚT BẤM TRONG APP CON
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'DATA_RETURN' || e.data.type === 'DATA_RETURN_IDB') {
+                const appName = e.data.app;
+                const dataString = JSON.stringify(e.data.data);
+                
+                document.getElementById('led').className = 'led syncing';
+                document.getElementById('statusText').innerText = 'Đang đẩy lên mây...';
+
+                set(child(dbRef, appName), dataString).then(() => {
+                    document.getElementById('led').className = 'led';
+                    document.getElementById('statusText').innerText = 'Đã đồng bộ xong';
+                    setTimeout(() => document.getElementById('statusText').innerText = 'Sẵn sàng', 2000);
+                });
+            }
+        });
 
         window.switchApp = function(index) {
             document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
             frames.forEach((f, i) => f.classList.toggle('active', i === index));
         }
-
-        const dbRef = ref(db, 'thads_data');
-
-        // Lắng nghe dữ liệu từ mây đổ về
-        onValue(dbRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                if(data.app1 && data.app1 !== cloudCache.app1) {
-                    cloudCache.app1 = data.app1;
-                    frames[0].contentWindow.postMessage({type: 'RESTORE_DATA', payload: JSON.parse(data.app1)}, '*');
-                }
-                if(data.app2 && data.app2 !== cloudCache.app2) {
-                    cloudCache.app2 = data.app2;
-                    frames[1].contentWindow.postMessage({type: 'RESTORE_DATA', payload: JSON.parse(data.app2)}, '*');
-                }
-                if(data.app3 && data.app3 !== cloudCache.app3) {
-                    cloudCache.app3 = data.app3;
-                    frames[2].contentWindow.postMessage({type: 'RESTORE_DATA_IDB', payload: JSON.parse(data.app3)}, '*');
-                }
-            }
-            setStatus('ok', 'Sẵn sàng');
-            document.getElementById('loader').style.opacity = '0';
-            setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
-        });
-
-        // Nhận dữ liệu từ App con để đẩy lên mây
-        window.addEventListener('message', (e) => {
-            if(e.data.type === 'DATA_RETURN' || e.data.type === 'DATA_RETURN_IDB') {
-                const appName = e.data.app;
-                const jsonStr = JSON.stringify(e.data.data);
-
-                if (cloudCache[appName] !== jsonStr) {
-                    setStatus('saving', 'Đang đợi lưu...');
-                    clearTimeout(saveTimer);
-                    saveTimer = setTimeout(() => {
-                        cloudCache[appName] = jsonStr;
-                        setStatus('syncing', 'Đang đẩy lên mây...');
-                        set(child(dbRef, appName), jsonStr)
-                            .then(() => setStatus('ok', 'Đã đồng bộ'))
-                            .catch(err => setStatus('error', 'Lỗi lưu!'));
-                    }, 2000);
-                }
-            }
-        });
-
-        function setStatus(state, text) {
-            led.className = 'led ' + state;
-            statusText.innerText = text;
-        }
-
-        // Check dữ liệu mỗi 15 giây
-        setInterval(() => {
-             frames[0].contentWindow.postMessage({type:'GET_DATA'}, '*');
-             frames[1].contentWindow.postMessage({type:'GET_DATA'}, '*');
-             frames[2].contentWindow.postMessage({type:'GET_DATA_IDB'}, '*');
-        }, 15000);
     </script>
 </body>
 </html>
