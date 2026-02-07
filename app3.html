@@ -387,7 +387,7 @@
         function copyRec(id) { const r = db.find(x => x.id === id); fillForm(r); editId = null; isCopyMode = true; document.getElementById('btnSave').innerHTML = `<i data-lucide="copy"></i> LƯU BẢN SAO MỚI`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
         
         function fillForm(r) { 
-            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'lyDo', 'tenThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = r[f] || ""; }); 
+            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'lyDo', 'tenThay', 'namSinhThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = r[f] || ""; }); 
             document.getElementById('coThuPhi').checked = r.hasFee; 
             document.getElementById('coNguoiNhanThay').checked = r.hasNT; 
             renderCHVSelect(r.chvName); 
@@ -406,7 +406,7 @@
             document.getElementById('coNguoiNhanThay').checked = false; 
             handleFeeChange(); 
             toggleNhanThay(); 
-            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'tenThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = (f === 'qdNoi' ? "Thi hành án dân sự tỉnh Lâm Đồng" : (f === 'cccdNoi' || f === 'noiThay' ? "Cục Cảnh sát quản lý hành chính về trật tự xã hội" : (f === 'qdSo' ? "/QĐ-THADS" : ""))); }); 
+            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'tenThay', 'namSinhThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = (f === 'qdNoi' ? "Thi hành án dân sự tỉnh Lâm Đồng" : (f === 'cccdNoi' || f === 'noiThay' ? "Cục Cảnh sát quản lý hành chính về trật tự xã hội" : (f === 'qdSo' ? "/QĐ-THADS" : ""))); }); 
             document.getElementById('lyDo').value = "Chi trả tiền tạm thu theo Quyết định Thi hành án"; 
             document.getElementById('txtDocTien').innerText = "Chưa nhập số tiền..."; 
             renderCHVSelect();
@@ -442,6 +442,7 @@
                 ghiChu: (editId) ? (db.find(x=>x.id===editId).ghiChu || "") : "", 
                 hasNT: document.getElementById('coNguoiNhanThay').checked, 
                 tenThay: document.getElementById('tenThay').value, 
+                namSinhThay: document.getElementById('namSinhThay').value,
                 dcThay: document.getElementById('dcThay').value, 
                 cccdThay: document.getElementById('cccdThay').value, 
                 ngayThay: document.getElementById('ngayThay').value, 
@@ -509,10 +510,14 @@
         function printSelected() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Chọn hồ sơ!"); document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); window.print(); }
         function exportToWord() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất Word!"); const content = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join('<br style="page-break-before: always">'); const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Giấy đề nghị chi C09</title><style>@page Section1 {size:595.3pt 841.9pt; margin:2.0cm 2.0cm 2.0cm 2.0cm; mso-header-margin:35.4pt; mso-footer-margin:35.4pt; mso-paper-source:0;} div.Section1 {page:Section1;} body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.35; } .f-12-bold-upper { font-weight: bold; text-transform: uppercase; font-size: 12pt; } .f-10-italic { font-style: italic; font-size: 10pt; } .bold { font-weight: bold; } .italic { font-style: italic; } .text-center { text-align: center; } .text-justify { text-align: justify; } table { width: 100%; border-collapse: collapse; } td { vertical-align: top; }</style></head><body><div class='Section1'>`; const footer = "</div></body></html>"; const sourceHTML = header + content + footer; const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); const fileName = checked.length === 1 ? `C09_${db.find(x => x.id == checked[0].value).hoTen}.doc` : `Danh_sach_chi_C09.doc`; const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
 
-        /* --- MẪU IN GỐC KHÔNG CHỈNH SỬA --- */
+        /* --- MẪU IN --- */
         function getPrintTemplate(r) {
             const nS = r.namSinh ? `, sinh năm ${r.namSinh}` : "", c_S = r.hasNT ? r.cccdThay : (r.cccdSo || "...................."), c_Noi = r.hasNT ? r.noiThay : (r.cccdNoi || "........................................"), c_Ng = r.hasNT ? (r.ngayThay || '..........') : (r.cccdNgay || '..........'), uq = r.hasNT ? (r.giayUQ || "........................................") : "Giấy uỷ quyền (nếu là nhận thay) số:........... ngày ..... tháng ...... năm ....................";
-            let rowNT = r.hasNT ? `Người nhận thay: ${r.tenThay || '....................'}<br>Địa chỉ: ${r.dcThay || '....................'}<br>` : "", mH = r.hasFee ? `&nbsp;&nbsp;&nbsp;&nbsp;Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Còn thực nhận: <span class="bold">${Number(r.thucNhan).toLocaleString('vi-VN')}</span> đồng` : `&nbsp;&nbsp;&nbsp;&nbsp;+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng: <span class="bold">${Number(r.soTien).toLocaleString('vi-VN')}</span> đồng`;
+            
+            // LOGIC MỚI: Thêm năm sinh người thay nếu có
+            const nsThay = r.namSinhThay ? `, sinh năm ${r.namSinhThay}` : "";
+            
+            let rowNT = r.hasNT ? `Người nhận thay: ${r.tenThay || '....................'}${nsThay}<br>Địa chỉ: ${r.dcThay || '....................'}<br>` : "", mH = r.hasFee ? `&nbsp;&nbsp;&nbsp;&nbsp;Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Còn thực nhận: <span class="bold">${Number(r.thucNhan).toLocaleString('vi-VN')}</span> đồng` : `&nbsp;&nbsp;&nbsp;&nbsp;+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng: <span class="bold">${Number(r.soTien).toLocaleString('vi-VN')}</span> đồng`;
             const tenCHV = r.chvName || "Nguyễn Công Cường";
 
             return `<div id="documentRender" class="print-only">
@@ -520,7 +525,7 @@
                 <div class="text-center" style="margin-top: 35px; position: relative; margin-bottom: 25px;"><span class="f-12-bold-upper" style="font-size: 14pt;">GIẤY ĐỀ NGHỊ CHI</span><span style="position: absolute; right: 0; font-size: 12pt;">Số:...................</span><div class="italic" style="margin-top: 2px;">Ngày .........tháng....... năm 20...</div></div>
                 <div class="text-center" style="margin-bottom: 25px;">Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng</div>
                 <div class="text-justify">Đề nghị chi cho: <span class="bold">${r.hoTen}</span>${nS}.<br>Địa chỉ: ${r.diaChi}<br>${rowNT}CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}<br>Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}<br>Lý do chi: ${r.lyDo}, gồm các khoản sau:<br>${mH}<br>Viết bằng chữ: <span class="italic">${docSo(r.thucNhan)}</span><br>Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}<br>Hình thức thanh toán: Chuyển khoản./.</div>
-                <table style="margin-top: 30px;"><tr class="text-center bold"><td style="width: 55%;">TL. TRƯỞNG THI HÀNH ÁN DÂN SỰ<br>TRƯỞNG PHÒNG<br>PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14</td><td style="width: 45%;">CHẤP HÀNH VIÊN</td></tr><tr class="text-center bold"><td style="padding-top: 75px;">Qua Đình Thiện</td><td style="padding-top: 75px;">${tenCHV}</td></tr></table></div>`;
+                <table style="margin-top: 30px;"><tr class="text-center bold"><td style="width: 55%;">TUQ. TRƯỞNG THI HÀNH ÁN DÂN SỰ<br>TRƯỞNG PHÒNG<br>PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14</td><td style="width: 45%;">CHẤP HÀNH VIÊN</td></tr><tr class="text-center bold"><td style="padding-top: 75px;">Qua Đình Thiện</td><td style="padding-top: 75px;">${tenCHV}</td></tr></table></div>`;
         }
 
         /* HÀM ĐỌC SỐ GỐC */
