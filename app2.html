@@ -24,8 +24,18 @@
             background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white; padding: 15px; text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;
+            position: relative; /* Để đặt nút settings */
         }
         .app-header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Nút Cài đặt Tem ở góc phải header */
+        .header-settings {
+            position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+            color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px;
+        }
+        .header-settings:hover { background: rgba(255,255,255,0.3); }
 
         .container { max-width: 1250px; margin: auto; padding: 0 15px 40px 15px; }
 
@@ -74,15 +84,31 @@
         .app-footer p { margin: 5px 0; }
         .copyright-tag { font-weight: 600; color: #64748b; text-transform: uppercase; }
 
+        /* MODAL CÀI ĐẶT TEM (MỚI) */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-title { font-weight: bold; font-size: 16px; margin-bottom: 15px; color: var(--primary-dark); border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .option-group { margin-bottom: 15px; }
+        .radio-label { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; cursor: pointer; }
+        .radio-label:hover { background: #f8fafc; }
+        .radio-label input { width: auto; margin: 0; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
         /* =========================================
-           2. CẤU TRÚC IN (CSS) - GIỮ NGUYÊN 100%
+           2. CẤU TRÚC IN (CSS)
            ========================================= */
         @media print {
-            * { font-family: "Times New Roman", Times, serif !important; }
-            @page { size: A4; margin: 20mm 15mm 20mm 20mm; }
-            body { background: white; padding: 0; font-size: 12pt; }
-            .no-print { display: none !important; }
-            #printA4Area { display: block !important; padding: 0; }
+            * { -webkit-print-color-adjust: exact; }
+            /* Mặc định ẩn hết UI */
+            .no-print, .modal-overlay { display: none !important; }
+
+            /* LOGIC IN A4 (Mặc định) */
+            body:not(.printing-labels) * { font-family: "Times New Roman", Times, serif !important; }
+            body:not(.printing-labels) { background: white; padding: 0; font-size: 12pt; }
+            body:not(.printing-labels) #printA4Area { display: block !important; padding: 0; }
+            body:not(.printing-labels) @page { size: A4; margin: 20mm 15mm 20mm 20mm; }
+            
+            /* CSS RIÊNG CHO IN A4 */
             .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             .header-table td { vertical-align: top; text-align: center; font-size: 11pt; color: black; white-space: nowrap; }
             .a4-title { text-align: center; font-weight: bold; font-size: 12pt; margin: 25px 0 15px 0; text-transform: uppercase; }
@@ -92,6 +118,43 @@
             .footer-col { width: 48%; text-align: center; }
             .is-direct .barcode-col { display: none !important; }
             #printSenderName { font-weight: bold; margin-top: 60px; font-size: 12pt; }
+
+            /* LOGIC IN TEM (KHI BODY CÓ CLASS 'printing-labels') */
+            body.printing-labels #printA4Area { display: none !important; }
+            body.printing-labels #printLabelArea { display: block !important; }
+            body.printing-labels { background: white; margin: 0; padding: 0; }
+            
+            /* Tem Layout - FIX LỖI MẤT CHỮ */
+            .label-page { 
+                page-break-after: always; 
+                display: flex; 
+                justify-content: center; 
+                align-items: center; 
+                width: 100%; 
+                height: 100%; 
+                overflow: hidden;
+            }
+            .label-border {
+                border: 1px solid black;
+                width: calc(100% - 2mm); 
+                height: calc(100% - 2mm);
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: center; /* Căn giữa dọc */
+                padding: 1mm; /* Padding nhỏ để tận dụng diện tích */
+                position: relative;
+                overflow: hidden; 
+            }
+            .label-content {
+                width: 100%;
+                font-family: Arial, sans-serif !important;
+                line-height: 1.1; /* Dòng sít lại */
+                text-align: justify; 
+                word-wrap: break-word;
+                word-break: break-word; 
+                display: block;
+            }
         }
     </style>
 </head>
@@ -99,6 +162,30 @@
 
 <div class="app-header no-print">
     <h1>QUẢN LÝ VĂN BẢN GỬI - PHÒNG THADS KV 14 - LÂM ĐỒNG</h1>
+    <button class="header-settings" onclick="toggleLabelSettings()">
+        ⚙️ Cài đặt Tem
+    </button>
+</div>
+
+<div id="labelSettingsModal" class="modal-overlay no-print">
+    <div class="modal-box">
+        <div class="modal-title">CẤU HÌNH IN TEM</div>
+        <div class="option-group">
+            <label>Chọn kích thước tem:</label>
+            <label class="radio-label">
+                <input type="radio" name="labelSize" value="76x50" checked>
+                <span>Khổ 76 x 50 mm (Thông dụng)</span>
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="labelSize" value="60x40">
+                <span>Khổ 60 x 40 mm</span>
+            </label>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="toggleLabelSettings()" style="padding: 8px 15px; font-size: 12px;">Đóng</button>
+            <button class="btn btn-post" onclick="toggleLabelSettings()" style="padding: 8px 15px; font-size: 12px;">Lưu</button>
+        </div>
+    </div>
 </div>
 
 <div class="container no-print">
@@ -228,6 +315,8 @@
     </div>
 </div>
 
+<div id="printLabelArea" style="display: none;"></div>
+
 <script>
     let db = JSON.parse(localStorage.getItem('thads_v13')) || [];
     let editingId = null;
@@ -301,42 +390,131 @@
         });
     }
 
-    /* LOGIC IN ẤN - GIỮ NGUYÊN */
+    /* ===========================================
+       CẬP NHẬT LOGIC IN A4 (YÊU CẦU 4.1 & 4.2)
+       =========================================== */
     function printA4() {
         const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
         if(ids.length === 0) return alert("Chọn dòng cần in!");
         const selected = db.filter(i => ids.includes(i.id));
         const isDirect = selected.every(i => i.type === 'DIRECT');
+        
+        // Đảm bảo không dính mode in tem
+        document.body.classList.remove('printing-labels');
+
         document.getElementById('a4MainTitle').innerText = isDirect ? "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO..." : "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO... QUA BƯU ĐIỆN";
         document.getElementById('footerConfirmLabel').innerText = isDirect ? "XÁC NHẬN CỦA BÊN NHẬN" : "XÁC NHẬN CỦA BƯU ĐIỆN";
         if(isDirect) document.body.classList.add('is-direct'); else document.body.classList.remove('is-direct');
+        
+        // 4.2. CHUẨN HÓA NGÀY THÁNG (01, 02...)
         const now = new Date(), isTick = document.getElementById('checkShowDate').checked;
-        document.getElementById('footerDate').innerText = `Liên Hương, ngày ${isTick ? now.getDate() : "…."} tháng ${now.getMonth()+1} năm ${now.getFullYear()}`;
+        const d = String(now.getDate()).padStart(2, '0');
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        document.getElementById('footerDate').innerText = `Liên Hương, ngày ${isTick ? d : "…."} tháng ${m} năm ${now.getFullYear()}`;
+        
         document.getElementById('printSenderName').innerText = document.getElementById('inSender').value;
-        let h = ''; selected.forEach((item, i) => {
+        
+        let h = ''; 
+        selected.forEach((item, i) => {
             const n = item.recs.map(r => `${r.name}${r.year ? ', sinh năm '+r.year : ''}`).join(' và ');
-            h += `<tr><td align="center">${i+1}</td><td><strong>${n}</strong><br>Địa chỉ: ${item.addr}</td><td style="white-space: pre-wrap;">${item.content}</td><td align="center" class="barcode-col"><strong>${item.barcode || ''}</strong></td></tr>`;
+            
+            // --- LOGIC MỚI: KIỂM TRA ĐỊA CHỈ & SĐT ---
+            // Nếu có dữ liệu thì mới hiển thị, ngược lại thì chuỗi rỗng
+            const addrStr = item.addr ? `<br>Địa chỉ: ${item.addr}` : '';
+            const phoneStr = item.phone ? `<br>SĐT: ${item.phone}` : '';
+
+            h += `<tr><td align="center">${i+1}</td><td><strong>${n}</strong>${addrStr}${phoneStr}</td><td style="white-space: pre-wrap;">${item.content}</td><td align="center" class="barcode-col"><strong>${item.barcode || ''}</strong></td></tr>`;
         });
         document.getElementById('a4Body').innerHTML = h; window.print();
     }
 
+    /* ===========================================
+       CÁC HÀM XỬ LÝ TEM (MỚI & ĐỘC LẬP)
+       =========================================== */
+    
+    // Toggle Modal Cài Đặt
+    function toggleLabelSettings() {
+        const m = document.getElementById('labelSettingsModal');
+        m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    // Logic In Tem Mới (Fix lỗi tràn chữ + Căn chỉnh UI)
     function printTem() {
         const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
-        if(ids.length === 0) return alert("Chọn dòng!");
+        if(ids.length === 0) return alert("Chọn dòng cần in tem!");
+        
         const selected = db.filter(i => ids.includes(i.id));
-        let h = '';
+        const size = document.querySelector('input[name="labelSize"]:checked').value; // '76x50' or '60x40'
+        const [w, h] = size.split('x').map(Number); // mm
+
+        // 1. Chuẩn bị vùng chứa tem
+        const container = document.getElementById('printLabelArea');
+        container.innerHTML = '';
+        document.body.classList.add('printing-labels'); // Kích hoạt CSS in tem
+
+        // 2. Tạo style @page động cho khổ giấy tem đã chọn
+        const styleId = 'dynamic-page-style';
+        let styleTag = document.getElementById(styleId);
+        if(styleTag) styleTag.remove();
+        styleTag = document.createElement('style');
+        styleTag.id = styleId;
+        styleTag.innerHTML = `@page { size: ${w}mm ${h}mm; margin: 0; }`; 
+        document.head.appendChild(styleTag);
+
+        // 3. Render HTML từng tem
         selected.forEach(item => {
-            const names = item.recs.map(r => `<strong style="font-size:11.5px">${r.name}</strong> <span style="font-size:10px; font-weight:normal">${r.year ? '('+r.year+')' : ''}</span>`).join(', ');
-            h += `<div style="width:50mm; height:30mm; padding:2mm; box-sizing:border-box; font-family:Arial; line-height:1.1; border:1px solid black; overflow:hidden; page-break-inside:avoid; text-align:justify;">
-                    <div style="font-size:10px; margin-bottom:1mm;">Người nhận: ${names}</div>
-                    ${item.addr ? '<div style="font-size:10.5px; margin-bottom:1mm;">Đ/c: '+item.addr+'</div>' : ''}
-                    ${item.phone ? '<div style="font-size:10.5px;">SĐT: '+item.phone+'</div>' : ''}
-                  </div>`;
+            const namesHTML = item.recs.map(r => `<b>${r.name}</b> ${r.year ? '('+r.year+')' : ''}`).join(', ');
+            
+            // Xây dựng nội dung tem
+            // - Người nhận: size 0.85em
+            // - SĐT: text-align left
+            const html = `
+            <div class="label-page" style="width:${w}mm; height:${h}mm;">
+                <div class="label-border">
+                    <div class="label-content">
+                        <div><span style="font-size: 0.85em">Người nhận:</span> ${namesHTML}</div>
+                        ${item.addr ? `<div><b>Đ/c:</b> ${item.addr}</div>` : ''}
+                        ${item.phone ? `<div style="text-align: left"><b>SĐT:</b> ${item.phone}</div>` : ''}
+                    </div>
+                </div>
+            </div>`;
+            container.innerHTML += html;
         });
-        const w = window.open('', '_blank');
-        w.document.write(`<html><head><style>@page { size: 50mm 30mm; margin: 0; } body { margin: 0; padding: 0; }</style></head><body>${h}
-        <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };<\/script></body></html>`);
-        w.document.close();
+
+        // 4. THUẬT TOÁN CO GIÃN CHỮ MỚI (AGGRESSIVE AUTO-FIT)
+        // Dùng setTimeout để đảm bảo DOM đã render xong chiều cao thực tế
+        setTimeout(() => {
+            const borders = container.querySelectorAll('.label-border');
+            
+            borders.forEach(border => {
+                const content = border.querySelector('.label-content');
+                
+                // Bắt đầu với cỡ chữ 14pt (như bản gốc bạn yêu cầu)
+                let fontSize = 14; 
+                content.style.fontSize = fontSize + 'pt';
+
+                // Lấy chiều cao khả dụng của khung (đã trừ padding)
+                const maxHeight = border.clientHeight;
+                
+                // VÒNG LẶP ÉP CỠ:
+                // Nếu nội dung tràn ra ngoài -> Giảm size
+                // Giới hạn nhỏ nhất là 6pt
+                while ( (content.offsetHeight > maxHeight || content.scrollWidth > border.clientWidth) && fontSize > 6 ) {
+                    fontSize -= 0.5; 
+                    content.style.fontSize = fontSize + 'pt';
+                }
+            });
+
+            // 5. Gọi lệnh in
+            window.print();
+
+            // 6. Dọn dẹp
+            setTimeout(() => {
+                document.body.classList.remove('printing-labels');
+                if(styleTag) styleTag.remove();
+            }, 1000); 
+
+        }, 500); // Tăng thời gian chờ lên 500ms
     }
 
     function editItem(id) {
