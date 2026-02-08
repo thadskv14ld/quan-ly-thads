@@ -30,7 +30,8 @@
         const { useState, useEffect, useMemo } = React;
 
         const LOAI_THU = ["Thu tiền án phí", "Thu phí thi hành án", "Thu tiền phạt", "Thu sung công Nhà nước", "Thu thi hành án theo đơn"];
-        const HINH_THUC = ["Tiền mặt", "Kết chuyển"];
+        // ĐÃ SỬA: Thêm "Chuyển khoản" vào danh sách hình thức
+        const HINH_THUC = ["Tiền mặt", "Chuyển khoản", "Kết chuyển"];
 
         const normalizeDateInput = (str) => {
             if (!str) return "";
@@ -107,7 +108,13 @@
 
             const handleSave = (e) => {
                 if (e) e.preventDefault();
-                const normalizedForm = { ...form, ngayQuyetDinh: normalizeDateInput(form.ngayQuyetDinh) };
+                // ĐÃ SỬA: Đảm bảo soBienLai luôn là chuỗi rỗng nếu không có dữ liệu, tránh undefined hoặc lỗi logic cũ
+                const normalizedForm = { 
+                    ...form, 
+                    soBienLai: form.soBienLai || "", 
+                    ngayQuyetDinh: normalizeDateInput(form.ngayQuyetDinh) 
+                };
+
                 let newData;
                 if (editingId) {
                     newData = data.map(item => item.id === editingId ? { ...item, ...normalizedForm } : item);
