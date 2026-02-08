@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phần mềm Quản lý Biên lai THADS - v3.8 (Stable Sync)</title>
+    <title>Phần mềm Quản lý Biên lai THADS - v4.2 (Dropdown MultiSelect)</title>
     
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -20,6 +20,15 @@
         .label-std { display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem; text-transform: uppercase; }
         .btn-action { padding: 0.25rem; border-radius: 0.25rem; transition: all 0.2s; }
         .day-group-header { background: #f1f5f9; padding: 0.5rem 1rem; font-weight: 700; color: #334155; border-left: 4px solid #2563eb; border-bottom: 1px solid #e2e8f0; }
+        
+        /* Dropdown Style */
+        .dropdown-container { position: relative; width: 100%; }
+        .dropdown-header { display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; border-radius: 0.375rem; padding: 0.5rem 0.75rem; background: white; cursor: pointer; font-size: 13px; }
+        .dropdown-header:hover { border-color: #2563eb; }
+        .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-top: none; border-radius: 0 0 0.375rem 0.375rem; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .dropdown-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; cursor: pointer; font-size: 13px; }
+        .dropdown-item:hover { background-color: #eff6ff; }
+        
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
@@ -27,10 +36,9 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
 
         const LOAI_THU = ["Thu tiền án phí", "Thu phí thi hành án", "Thu tiền phạt", "Thu sung công Nhà nước", "Thu thi hành án theo đơn"];
-        // ĐÃ SỬA: Thêm "Chuyển khoản" vào danh sách hình thức
         const HINH_THUC = ["Tiền mặt", "Chuyển khoản", "Kết chuyển"];
 
         const normalizeDateInput = (str) => {
@@ -56,6 +64,8 @@
             const [editingId, setEditingId] = useState(null);
             const [isCopying, setIsCopying] = useState(false);
             const [searchTerm, setSearchTerm] = useState("");
+            const [isOpenDropdown, setIsOpenDropdown] = useState(false);
+            const dropdownRef = useRef(null);
             
             const [form, setForm] = useState({
                 soQuyetDinh: '', ngayQuyetDinh: '', nguoiNop: '',
@@ -64,35 +74,39 @@
                 soBienLai: '', daNopNSNN: false
             });
 
-            const [filter, setFilter] = useState({ tuNgay: '', denNgay: '', hinhThuc: '', loaiThu: '', nsnnh: 'all' });
+            const [filter, setFilter] = useState({ tuNgay: '', denNgay: '', hinhThuc: '', loaiThu: [] });
+            const [nsnnViewMode, setNsnnViewMode] = useState('pending');
 
-            // 1. KHỞI TẠO: CHỈ TẢI DỮ LIỆU TỪ LOCALSTORAGE, KHÔNG GỬI LÊN MÂY
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                        setIsOpenDropdown(false);
+                    }
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, []);
+
             useEffect(() => {
                 const saved = localStorage.getItem('THADS_DATA_V2.6');
                 if (saved) setData(JSON.parse(saved));
                 setTimeout(() => lucide.createIcons(), 100);
             }, []);
 
-            // 2. LƯU LOCALSTORAGE KHI DỮ LIỆU THAY ĐỔI (NHƯNG KHÔNG GỬI LÊN MÂY Ở ĐÂY ĐỂ TRÁNH GHI ĐÈ)
             useEffect(() => {
-                if(data.length > 0) { // Chỉ lưu nếu có dữ liệu
+                if(data.length > 0) {
                     localStorage.setItem('THADS_DATA_V2.6', JSON.stringify(data));
                 }
                 lucide.createIcons();
             }, [data]);
 
-            // 3. HÀM ĐỒNG BỘ CHỦ ĐỘNG: CHỈ GỌI KHI NGƯỜI DÙNG THAO TÁC
             const syncToCloud = (newData) => {
-                // Cập nhật LocalStorage ngay lập tức
                 localStorage.setItem('THADS_DATA_V2.6', JSON.stringify(newData));
-                
-                // Chuẩn bị dữ liệu gửi đi
                 const exportData = {};
                 for(let i=0; i<localStorage.length; i++){
                     let k = localStorage.key(i);
                     exportData[k] = localStorage.getItem(k);
                 }
-                // Gửi tín hiệu ra index.html
                 window.parent.postMessage({type: 'DATA_RETURN', app: 'app1', data: exportData}, '*');
             };
 
@@ -108,7 +122,6 @@
 
             const handleSave = (e) => {
                 if (e) e.preventDefault();
-                // ĐÃ SỬA: Đảm bảo soBienLai luôn là chuỗi rỗng nếu không có dữ liệu, tránh undefined hoặc lỗi logic cũ
                 const normalizedForm = { 
                     ...form, 
                     soBienLai: form.soBienLai || "", 
@@ -123,7 +136,7 @@
                     newData = [{ ...normalizedForm, id: Date.now(), ghiChu: '' }, ...data];
                 }
                 setData(newData);
-                syncToCloud(newData); // <--- CHỈ ĐỒNG BỘ KHI BẤM LƯU
+                syncToCloud(newData);
                 resetForm();
             };
 
@@ -131,20 +144,20 @@
                 if(confirm("Bạn có chắc muốn xóa biên lai này?")) {
                     const newData = data.filter(i => i.id !== id);
                     setData(newData);
-                    syncToCloud(newData); // <--- CHỈ ĐỒNG BỘ KHI BẤM XÓA
+                    syncToCloud(newData);
                 }
             };
 
             const updateNote = (id, val) => { 
                 const newData = data.map(i => i.id === id ? { ...i, ghiChu: val } : i);
                 setData(newData);
-                syncToCloud(newData); // <--- ĐỒNG BỘ KHI SỬA GHI CHÚ
+                syncToCloud(newData);
             };
 
             const toggleNSNN = (id) => { 
                 const newData = data.map(i => i.id === id ? { ...i, daNopNSNN: !i.daNopNSNN } : i);
                 setData(newData);
-                syncToCloud(newData); // <--- ĐỒNG BỘ KHI CHECK/UNCHECK
+                syncToCloud(newData);
             };
 
             const resetForm = () => {
@@ -154,6 +167,17 @@
 
             const handleEdit = (item) => { setForm(item); setEditingId(item.id); setIsCopying(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
             const handleCopyAction = (item) => { setForm({ ...item, soBienLai: '', id: null, daNopNSNN: false }); setEditingId(null); setIsCopying(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
+            const toggleFilterLoaiThu = (loai) => {
+                setFilter(prev => {
+                    const current = prev.loaiThu;
+                    if (current.includes(loai)) {
+                        return { ...prev, loaiThu: current.filter(l => l !== loai) };
+                    } else {
+                        return { ...prev, loaiThu: [...current, loai] };
+                    }
+                });
+            };
 
             const groupedData = useMemo(() => {
                 const filtered = data.filter(item => Object.values(item).some(v => v?.toString().toLowerCase().includes(searchTerm.toLowerCase())));
@@ -170,21 +194,60 @@
                 return data.filter(item => {
                     const matchTuNgay = filter.tuNgay ? item.ngayThu >= filter.tuNgay : true;
                     const matchDenNgay = filter.denNgay ? item.ngayThu <= filter.denNgay : true;
-                    const matchLoai = filter.loaiThu ? item.loaiThu === filter.loaiThu : true;
+                    const matchLoai = filter.loaiThu.length === 0 ? true : filter.loaiThu.includes(item.loaiThu);
                     const matchHT = filter.hinhThuc ? item.hinhThuc === filter.hinhThuc : true;
-                    let matchNSNN = true;
-                    if (filter.nsnnh === 'done') matchNSNN = (item.daNopNSNN === true);
-                    else if (filter.nsnnh === 'pending') matchNSNN = (!item.daNopNSNN);
-                    return matchTuNgay && matchDenNgay && matchLoai && matchHT && matchNSNN;
+                    return matchTuNgay && matchDenNgay && matchLoai && matchHT;
                 });
             }, [data, filter]);
+
+            const reportNSNN = useMemo(() => {
+                const nsnnBase = data.filter(item => {
+                    const matchTuNgay = filter.tuNgay ? item.ngayThu >= filter.tuNgay : true;
+                    const matchDenNgay = filter.denNgay ? item.ngayThu <= filter.denNgay : true;
+                    const isNSNN = ["Thu tiền án phí", "Thu phí thi hành án", "Thu tiền phạt", "Thu sung công Nhà nước"].includes(item.loaiThu);
+                    return matchTuNgay && matchDenNgay && isNSNN;
+                });
+                return { pending: nsnnBase.filter(i => !i.daNopNSNN), paid: nsnnBase.filter(i => i.daNopNSNN) };
+            }, [data, filter.tuNgay, filter.denNgay]);
+
+            // --- BÁO CÁO MỚI: THU TIỀN ÁN TRÊN 1 NĂM ---
+            const reportOverOneYear = useMemo(() => {
+                return data.filter(item => {
+                    // Chỉ lọc các khoản liên quan đến "thu tiền án"
+                    const isTienAn = item.loaiThu.toLowerCase().includes("án phí") || item.loaiThu.toLowerCase().includes("tiền phạt") || item.loaiThu.toLowerCase().includes("sung công");
+                    if (!isTienAn) return false;
+
+                    // Lọc theo khoảng ngày người dùng chọn trên bộ lọc
+                    const matchTuNgay = filter.tuNgay ? item.ngayThu >= filter.tuNgay : true;
+                    const matchDenNgay = filter.denNgay ? item.ngayThu <= filter.denNgay : true;
+                    if (!matchTuNgay || !matchDenNgay) return false;
+
+                    if (!item.ngayQuyetDinh || !item.ngayThu) return false;
+                    
+                    try {
+                        // Parse ngày quyết định (dd/mm/yyyy)
+                        const p = item.ngayQuyetDinh.split('/');
+                        const qdDate = new Date(p[2], p[1] - 1, p[0]);
+                        // Parse ngày thu (yyyy-mm-dd)
+                        const thuDate = new Date(item.ngayThu);
+                        
+                        if (isNaN(qdDate) || isNaN(thuDate)) return false;
+                        
+                        const diffInDays = Math.floor((thuDate - qdDate) / (1000 * 60 * 60 * 24));
+                        return diffInDays >= 365;
+                    } catch (e) { return false; }
+                });
+            }, [data, filter.tuNgay, filter.denNgay]);
+
+            const activeNSNNList = nsnnViewMode === 'pending' ? reportNSNN.pending : reportNSNN.paid;
+            const nsnnColor = nsnnViewMode === 'pending' ? 'red' : 'green';
 
             return (
                 <div className="min-h-screen flex flex-col text-[13px]">
                     <header className="bg-slate-900 text-white p-4 shadow-lg no-print flex justify-between items-center sticky top-0 z-50">
                         <div className="flex items-center gap-3">
                             <i data-lucide="scale" className="w-8 h-8 text-yellow-500"></i>
-                            <h1 className="font-bold text-xl uppercase tracking-tighter">Quản lý Biên lai THADS v3.8</h1>
+                            <h1 className="font-bold text-xl uppercase tracking-tighter">Quản lý Biên lai THADS v4.2</h1>
                         </div>
                         <div className="flex gap-2">
                             <button onClick={() => setView('MAIN')} className={`px-5 py-2 rounded font-bold transition ${view === 'MAIN' ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800'}`}>NHẬP LIỆU & TRA CỨU</button>
@@ -200,7 +263,6 @@
                                         <i data-lucide={isCopying ? "copy-plus" : editingId ? "edit" : "plus-circle"}></i> 
                                         {isCopying ? "Sao chép dữ liệu" : editingId ? "Sửa biên lai" : "Thông tin thu tiền mới"}
                                     </h2>
-
                                     <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div><label className="label-std">Số Quyết định THA</label><input required className="input-std font-bold" value={form.soQuyetDinh} onChange={e => setForm({...form, soQuyetDinh: e.target.value})} /></div>
                                         <div><label className="label-std">Ngày Quyết định</label><input className="input-std" value={form.ngayQuyetDinh} onChange={e => setForm({...form, ngayQuyetDinh: e.target.value})} onBlur={e => setForm({...form, ngayQuyetDinh: normalizeDateInput(e.target.value)})} placeholder="dd/mm/yyyy" /></div>
@@ -220,7 +282,6 @@
                                         </div>
                                         <div><label className="label-std">Ngày thu tiền</label><input type="date" required className="input-std" value={form.ngayThu} onChange={e => setForm({...form, ngayThu: e.target.value})} /></div>
                                         <div><label className="label-std">Số biên lai</label><input className="input-std font-mono font-bold" value={form.soBienLai} onChange={e => setForm({...form, soBienLai: e.target.value})} /></div>
-
                                         <div className="md:col-span-4 mt-4">
                                             {isCopying ? (
                                                 <div className="flex gap-4">
@@ -233,7 +294,6 @@
                                         </div>
                                     </form>
                                 </div>
-
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                     <div className="p-4 bg-slate-50 border-b flex justify-between items-center">
                                         <h2 className="font-bold text-slate-700 uppercase">Danh sách tra cứu biên lai</h2>
@@ -303,71 +363,113 @@
                                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                                         <div><label className="label-std">Từ ngày</label><input type="date" className="input-std" value={filter.tuNgay} onChange={e => setFilter({...filter, tuNgay: e.target.value})} /></div>
                                         <div><label className="label-std">Đến ngày</label><input type="date" className="input-std" value={filter.denNgay} onChange={e => setFilter({...filter, denNgay: e.target.value})} /></div>
-                                        <div><label className="label-std">Loại thu</label><select className="input-std" value={filter.loaiThu} onChange={e => setFilter({...filter, loaiThu: e.target.value})}><option value="">-- Tất cả --</option>{LOAI_THU.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
-                                        <div><label className="label-std">Hình thức / NSNN</label>
-                                            <div className="flex gap-1">
-                                                <select className="input-std text-[10px]" value={filter.hinhThuc} onChange={e => setFilter({...filter, hinhThuc: e.target.value})}><option value="">-- Tất cả --</option>{HINH_THUC.map(h => <option key={h} value={h}>{h}</option>)}</select>
-                                                <select className="input-std text-[10px]" value={filter.nsnnh} onChange={e => setFilter({...filter, nsnnh: e.target.value})}><option value="all">NSNN</option><option value="done">Đã nộp</option><option value="pending">Chưa nộp</option></select>
+                                        <div className="dropdown-container" ref={dropdownRef}>
+                                            <label className="label-std">Loại thu (Chọn nhiều)</label>
+                                            <div className="dropdown-header" onClick={() => setIsOpenDropdown(!isOpenDropdown)}>
+                                                <span className="truncate text-slate-800 font-medium">{filter.loaiThu.length === 0 ? "--- Tất cả Loại thu ---" : `${filter.loaiThu.length} loại đã chọn`}</span>
+                                                <i data-lucide={isOpenDropdown ? "chevron-up" : "chevron-down"} className="w-4 h-4 text-slate-500"></i>
                                             </div>
+                                            {isOpenDropdown && (
+                                                <div className="dropdown-list">
+                                                    {LOAI_THU.map(l => (
+                                                        <label key={l} className="dropdown-item hover:bg-slate-50"><input type="checkbox" checked={filter.loaiThu.includes(l)} onChange={() => toggleFilterLoaiThu(l)} className="w-4 h-4"/><span className={filter.loaiThu.includes(l) ? "font-bold text-blue-700" : "text-slate-700"}>{l}</span></label>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
+                                        <div><label className="label-std">Hình thức</label><select className="input-std" value={filter.hinhThuc} onChange={e => setFilter({...filter, hinhThuc: e.target.value})}><option value="">-- Tất cả --</option>{HINH_THUC.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
                                         <div className="flex items-end"><button onClick={() => {const ws=XLSX.utils.json_to_sheet(reportData); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "BaoCao"); XLSX.writeFile(wb, "THADS_Export.xlsx")}} className="w-full bg-emerald-600 text-white font-bold py-2 rounded hover:bg-emerald-700 uppercase">Xuất Excel</button></div>
                                     </div>
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
-                                        <p className="text-slate-400 text-xs font-bold uppercase">Tổng thu lọc được</p>
-                                        <p className="text-4xl font-bold mt-2 text-blue-400">{formatMoney(reportData.reduce((s,i)=>s+Number(i.soTien||0),0))} <span className="text-lg">đ</span></p>
-                                    </div>
-                                    <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg border-l-4 border-emerald-500">
-                                        <p className="text-slate-400 text-xs font-bold uppercase">Số lượng biên lai</p>
-                                        <p className="text-4xl font-bold mt-2 text-emerald-400">{reportData.length} <span className="text-lg">bản ghi</span></p>
-                                    </div>
+                                    <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500"><p className="text-slate-400 text-xs font-bold uppercase">Tổng thu lọc được</p><p className="text-4xl font-bold mt-2 text-blue-400">{formatMoney(reportData.reduce((s,i)=>s+Number(i.soTien||0),0))} <span className="text-lg">đ</span></p></div>
+                                    <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg border-l-4 border-emerald-500"><p className="text-slate-400 text-xs font-bold uppercase">Số lượng biên lai</p><p className="text-4xl font-bold mt-2 text-emerald-400">{reportData.length} <span className="text-lg">bản ghi</span></p></div>
                                 </div>
-
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                     <div className="p-4 bg-slate-50 border-b font-bold uppercase text-slate-700">Chi tiết kết quả thống kê</div>
                                     <table className="w-full text-left text-[11px]">
                                         <thead className="bg-slate-100 font-bold uppercase border-b">
-                                            <tr>
-                                                <th className="p-3">Ngày thu</th>
-                                                <th className="p-3">Số/Ngày QĐ</th>
-                                                <th className="p-3">Người nộp</th>
-                                                <th className="p-3">Loại thu</th>
-                                                <th className="p-3">Hình thức</th>
-                                                <th className="p-3 text-right">Số tiền</th>
-                                                <th className="p-3 text-center">Số BL</th>
-                                                <th className="p-3 text-center">NSNN</th>
-                                            </tr>
+                                            <tr><th className="p-3">Ngày thu</th><th className="p-3">Số/Ngày QĐ</th><th className="p-3">Người nộp</th><th className="p-3">Loại thu</th><th className="p-3">Hình thức</th><th className="p-3 text-right">Số tiền</th><th className="p-3 text-center">Số BL</th></tr>
                                         </thead>
                                         <tbody className="divide-y">
                                             {reportData.map(item => (
-                                                <tr key={item.id} className="hover:bg-slate-50">
-                                                    <td className="p-3 font-medium">{item.ngayThu.split('-').reverse().join('/')}</td>
-                                                    <td className="p-3">{item.soQuyetDinh} ({item.ngayQuyetDinh})</td>
-                                                    <td className="p-3 font-bold uppercase">{item.nguoiNop}</td>
-                                                    <td className="p-3">{item.loaiThu}</td>
-                                                    <td className="p-3 italic">{item.hinhThuc}</td>
-                                                    <td className="p-3 text-right font-bold text-red-600">{formatMoney(item.soTien)}</td>
-                                                    <td className="p-3 text-center font-bold">{item.soBienLai || ""}</td>
-                                                    <td className="p-3 text-center">
-                                                        {item.loaiThu !== "Thu thi hành án theo đơn" && (
-                                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${item.daNopNSNN ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                                {item.daNopNSNN ? 'ĐÃ NỘP' : 'CHƯA NỘP'}
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                </tr>
+                                                <tr key={item.id} className="hover:bg-slate-50"><td className="p-3 font-medium">{item.ngayThu.split('-').reverse().join('/')}</td><td className="p-3">{item.soQuyetDinh} ({item.ngayQuyetDinh})</td><td className="p-3 font-bold uppercase">{item.nguoiNop}</td><td className="p-3">{item.loaiThu}</td><td className="p-3 italic">{item.hinhThuc}</td><td className="p-3 text-right font-bold text-red-600">{formatMoney(item.soTien)}</td><td className="p-3 text-center font-bold">{item.soBienLai || ""}</td></tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
+
+                                {/* Báo cáo NSNN (Giữ nguyên) */}
+                                <div className="mt-12 pt-8 border-t-4 border-slate-700">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <div className="flex items-center gap-2"><i data-lucide="landmark" className="w-6 h-6 text-slate-700"></i><h2 className="text-xl font-bold uppercase text-slate-800">Báo cáo chuyên đề: Tình hình nộp NSNN</h2></div>
+                                        <div className="flex items-center gap-2 bg-white p-2 rounded shadow border border-slate-300"><label className="text-xs font-bold uppercase text-slate-600">Trạng thái:</label><select className={`text-sm font-bold border rounded p-1 outline-none ${nsnnViewMode === 'pending' ? 'text-red-600 border-red-300 bg-red-50' : 'text-green-600 border-green-300 bg-green-50'}`} value={nsnnViewMode} onChange={(e) => setNsnnViewMode(e.target.value)}><option value="pending">🚫 CHƯA NỘP NSNN</option><option value="done">✅ ĐÃ NỘP NSNN</option></select></div>
+                                    </div>
+                                    <div className={`rounded-xl border overflow-hidden flex flex-col ${nsnnColor === 'red' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                                        <div className={`p-4 border-b flex justify-between items-center ${nsnnColor === 'red' ? 'bg-red-100 border-red-200 text-red-800' : 'bg-green-100 border-green-200 text-green-800'}`}><div className="font-bold uppercase flex items-center gap-2"><i data-lucide={nsnnColor === 'red' ? "alert-circle" : "check-circle-2"} className="w-4 h-4"></i> Danh sách {nsnnViewMode === 'pending' ? 'Cần nộp' : 'Đã nộp'}</div><div className="font-bold text-lg">{formatMoney(activeNSNNList.reduce((s,i)=>s+Number(i.soTien||0),0))} đ</div></div>
+                                        <div className="overflow-x-auto max-h-[400px]">
+                                            <table className="w-full text-left text-[11px]">
+                                                <thead className={`font-bold uppercase sticky top-0 ${nsnnColor === 'red' ? 'bg-red-200 text-red-900' : 'bg-green-200 text-green-900'}`}>
+                                                    <tr><th className="p-3 w-10">STT</th><th className="p-3">Người nộp</th><th className="p-3">Loại thu</th><th className="p-3 text-right">Số tiền</th></tr>
+                                                </thead>
+                                                <tbody className={`divide-y ${nsnnColor === 'red' ? 'divide-red-200' : 'divide-green-200'}`}>
+                                                    {activeNSNNList.map((item, idx) => (
+                                                        <tr key={item.id} className={`hover:bg-opacity-50 ${nsnnColor === 'red' ? 'hover:bg-red-100' : 'hover:bg-green-100'}`}><td className="p-3 text-center">{idx + 1}</td><td className="p-3"><div className="font-bold uppercase text-xs">{item.nguoiNop}</div><div className="text-[10px] text-slate-500">{item.ngayThu.split('-').reverse().join('/')} - {item.soQuyetDinh}</div></td><td className="p-3">{item.loaiThu}</td><td className={`p-3 text-right font-bold ${nsnnColor === 'red' ? 'text-red-600' : 'text-green-700'}`}>{formatMoney(item.soTien)}</td></tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* BÁO CÁO MỚI: THU TIỀN ÁN TRÊN 1 NĂM (Bắt buộc theo yêu cầu) */}
+                                <div className="mt-12 pt-8 border-t-4 border-amber-600">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <div className="flex items-center gap-2"><i data-lucide="history" className="w-6 h-6 text-amber-700"></i><h2 className="text-xl font-bold uppercase text-amber-800">BÁO CÁO THU TIỀN ÁN TRÊN 1 NĂM</h2></div>
+                                        <div className="text-xs font-bold text-slate-500 uppercase italic">* Điều kiện: (Ngày Thu - Ngày QĐ) ≥ 365 ngày</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+                                        <div className="bg-amber-50 p-4 border-b border-amber-100 flex justify-between items-center">
+                                            <span className="font-bold text-amber-900 uppercase">Danh sách chi tiết</span>
+                                            <span className="bg-amber-600 text-white px-3 py-1 rounded-full font-bold">{formatMoney(reportOverOneYear.reduce((s,i)=>s+Number(i.soTien||0),0))} đ</span>
+                                        </div>
+                                        <div className="overflow-x-auto max-h-[500px]">
+                                            <table className="w-full text-left text-[11px]">
+                                                <thead className="bg-slate-50 font-bold uppercase text-slate-700 border-b">
+                                                    <tr>
+                                                        <th className="p-3 w-10">STT</th>
+                                                        <th className="p-3">Tên vụ / Người nộp</th>
+                                                        <th className="p-3">Số quyết định</th>
+                                                        <th className="p-3">Ngày quyết định</th>
+                                                        <th className="p-3">Ngày nộp tiền</th>
+                                                        <th className="p-3 text-right">Số tiền đã nộp</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y">
+                                                    {reportOverOneYear.map((item, idx) => (
+                                                        <tr key={item.id} className="hover:bg-amber-50">
+                                                            <td className="p-3 text-center font-medium text-slate-400">{idx + 1}</td>
+                                                            <td className="p-3 font-bold uppercase text-slate-800">{item.nguoiNop}</td>
+                                                            <td className="p-3 font-mono">{item.soQuyetDinh}</td>
+                                                            <td className="p-3">{item.ngayQuyetDinh}</td>
+                                                            <td className="p-3 font-medium">{item.ngayThu.split('-').reverse().join('/')}</td>
+                                                            <td className="p-3 text-right font-bold text-red-600 text-xs">{formatMoney(item.soTien)}</td>
+                                                        </tr>
+                                                    ))}
+                                                    {reportOverOneYear.length === 0 && (
+                                                        <tr><td colSpan="6" className="p-10 text-center text-slate-400 italic">Không tìm thấy khoản thu nào trên 1 năm trong kỳ báo cáo này.</td></tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Kết thúc báo cáo mới */}
+
                             </div>
                         )}
                     </main>
-                    <footer className="bg-white border-t p-4 text-center text-[10px] text-slate-400 no-print font-bold uppercase">
-                        Hệ thống Nghiệp vụ THADS v3.8 - Stable Sync
-                    </footer>
+                    <footer className="bg-white border-t p-4 text-center text-[10px] text-slate-400 no-print font-bold uppercase">Hệ thống Nghiệp vụ THADS v4.2 - Dropdown MultiSelect</footer>
                 </div>
             );
         }
