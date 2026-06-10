@@ -271,48 +271,58 @@
         location.reload();
     }
 
-    // ===========================================
-    // HÀM RENDER ĐÃ ĐƯỢC TỐI ƯU TÌM KIẾM
-    // ===========================================
+    // ========================================================
+    // CHỨC NĂNG TÌM KIẾM ĐÃ ĐƯỢC TỐI ƯU TOÀN DIỆN (SỬA ĐỔI CHÍNH)
+    // ========================================================
+    let searchTimeout = null;
     function renderTable() {
-        const q = document.getElementById('searchInput').value.toLowerCase();
-        const tbody = document.getElementById('dataTableBody'); 
+        // Hủy bỏ lượt tìm kiếm trước đó nếu bạn vẫn đang gõ liên tục
+        clearTimeout(searchTimeout);
         
-        const filtered = db.filter(i => 
-            i.recs.some(r => r.name.toLowerCase().includes(q)) || 
-            i.addr.toLowerCase().includes(q) || 
-            i.content.toLowerCase().includes(q) || 
-            (i.barcode && i.barcode.toLowerCase().includes(q))
-        );
-        
-        const groups = filtered.reduce((acc, i) => { acc[i.day] = acc[i.day] || []; acc[i.day].push(i); return acc; }, {});
-        
-        let htmlContent = ''; 
-        
-        Object.keys(groups).reverse().forEach(day => {
-            htmlContent += `<tr><td colspan="6"><div style="background:#e0e7ff; color:#3730a3; padding:5px 15px; border-radius:20px; font-weight:700; font-size:12px; margin:15px 0 10px 0; display:inline-block;">📅 Ngày ${day}</div></td></tr>`;
+        // Trì hoãn xử lý quét dữ liệu 100 mili giây để bàn phím và ký tự hiển thị lên ô tìm kiếm ngay lập tức
+        searchTimeout = setTimeout(() => {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const tbody = document.getElementById('dataTableBody'); 
             
-            groups[day].reverse().forEach(item => {
-                const names = item.recs.map(r => `<strong>${r.name}</strong> ${r.year ? '('+r.year+')' : ''}`).join('<br>');
-                const badge = item.type === 'POST' ? '<span style="color:#2563eb; font-weight:700;">Bưu điện</span>' : '<span style="color:#16a34a; font-weight:700;">Trực tiếp</span>';
+            // Lọc dữ liệu chính xác theo logic của bạn
+            const filtered = db.filter(i => 
+                i.recs.some(r => r.name.toLowerCase().includes(q)) || 
+                i.addr.toLowerCase().includes(q) || 
+                i.content.toLowerCase().includes(q) || 
+                (i.barcode && i.barcode.toLowerCase().includes(q))
+            );
+            
+            const groups = filtered.reduce((acc, i) => { acc[i.day] = acc[i.day] || []; acc[i.day].push(i); return acc; }, {});
+            
+            // BIẾN TẠM: Gom toàn bộ HTML trong bộ nhớ máy tính trước
+            let htmlContent = ''; 
+            
+            Object.keys(groups).reverse().forEach(day => {
+                htmlContent += `<tr><td colspan="6"><div style="background:#e0e7ff; color:#3730a3; padding:5px 15px; border-radius:20px; font-weight:700; font-size:12px; margin:15px 0 10px 0; display:inline-block;">📅 Ngày ${day}</div></td></tr>`;
                 
-                htmlContent += `
-                    <tr>
-                        <td align="center"><input type="checkbox" class="row-cb" value="${item.id}"></td>
-                        <td align="center">${badge}</td>
-                        <td>${names}<br><small style="color:#64748b">🏠 ${item.addr}</small></td>
-                        <td style="white-space: pre-wrap;">${item.content}</td>
-                        <td align="center"><strong style="color:#ef4444;">${item.barcode || '-'}</strong></td>
-                        <td class="action-btns">
-                            <button class="btn-icon" onclick="editItem(${item.id})">✏️</button>
-                            <button class="btn-icon" onclick="makeCopy(${item.id})">📋</button>
-                            <button class="btn-icon" onclick="deleteItem(${item.id})">🗑️</button>
-                        </td>
-                    </tr>`;
+                groups[day].reverse().forEach(item => {
+                    const names = item.recs.map(r => `<strong>${r.name}</strong> ${r.year ? '('+r.year+')' : ''}`).join('<br>');
+                    const badge = item.type === 'POST' ? '<span style="color:#2563eb; font-weight:700;">Bưu điện</span>' : '<span style="color:#16a34a; font-weight:700;">Trực tiếp</span>';
+                    
+                    htmlContent += `
+                        <tr>
+                            <td align="center"><input type="checkbox" class="row-cb" value="${item.id}"></td>
+                            <td align="center">${badge}</td>
+                            <td>${names}<br><small style="color:#64748b">🏠 ${item.addr}</small></td>
+                            <td style="white-space: pre-wrap;">${item.content}</td>
+                            <td align="center"><strong style="color:#ef4444;">${item.barcode || '-'}</strong></td>
+                            <td class="action-btns">
+                                <button class="btn-icon" onclick="editItem(${item.id})">✏️</button>
+                                <button class="btn-icon" onclick="makeCopy(${item.id})">📋</button>
+                                <button class="btn-icon" onclick="deleteItem(${item.id})">🗑️</button>
+                            </td>
+                        </tr>`;
+                });
             });
-        });
-        
-        tbody.innerHTML = htmlContent;
+            
+            // Đổ toàn bộ chuỗi HTML vào giao diện 1 lần duy nhất, triệt tiêu 100% hiện tượng đơ lag
+            tbody.innerHTML = htmlContent;
+        }, 100); 
     }
 
     /* LOGIC IN ẤN - GIỮ NGUYÊN */
