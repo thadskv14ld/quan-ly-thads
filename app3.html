@@ -508,7 +508,168 @@
         function updateCount() { const count = document.querySelectorAll('.row-check:checked').length; document.getElementById('countSelected').innerText = count; document.getElementById('masterCheck').checked = (count > 0 && count === document.querySelectorAll('.row-check').length); }
         function toggleMaster(m) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = m.checked); updateCount(); }
         function printSelected() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Chọn hồ sơ!"); document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); window.print(); }
-        function exportToWord() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất Word!"); const content = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join('<br style="page-break-before: always">'); const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Giấy đề nghị chi C09</title><style>@page Section1 {size:595.3pt 841.9pt; margin:2.0cm 2.0cm 2.0cm 2.0cm; mso-header-margin:35.4pt; mso-footer-margin:35.4pt; mso-paper-source:0;} div.Section1 {page:Section1;} body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.35; } .f-12-bold-upper { font-weight: bold; text-transform: uppercase; font-size: 12pt; } .f-10-italic { font-style: italic; font-size: 10pt; } .bold { font-weight: bold; } .italic { font-style: italic; } .text-center { text-align: center; } .text-justify { text-align: justify; } table { width: 100%; border-collapse: collapse; } td { vertical-align: top; }</style></head><body><div class='Section1'>`; const footer = "</div></body></html>"; const sourceHTML = header + content + footer; const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); const fileName = checked.length === 1 ? `C09_${db.find(x => x.id == checked[0].value).hoTen}.doc` : `Danh_sach_chi_C09.doc`; const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+        
+        function exportToWord() {
+            const checked = document.querySelectorAll('.row-check:checked');
+            if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất Word!");
+
+            const escapeXml = (unsafe) => (unsafe || "").toString().replace(/[<>&'"]/g, c => {
+                switch (c) {
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '&': return '&amp;';
+                    case '\'': return '&apos;';
+                    case '"': return '&quot;';
+                }
+            });
+
+            let xmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\n<w:body>\n`;
+
+            Array.from(checked).forEach((cb, index) => {
+                const r = db.find(x => x.id == cb.value);
+                const nS = r.namSinh ? `, sinh năm ${r.namSinh}` : "";
+                const c_S = r.hasNT ? r.cccdThay : (r.cccdSo || "....................");
+                const c_Noi = r.hasNT ? r.noiThay : (r.cccdNoi || "........................................");
+                const c_Ng = r.hasNT ? (r.ngayThay || '..........') : (r.cccdNgay || '..........');
+                const uq = r.hasNT ? (escapeXml(r.giayUQ) || "........................................") : "Giấy uỷ quyền (nếu là nhận thay) số:........... ngày ..... tháng ...... năm ....................";
+                const nsThay = r.namSinhThay ? `, sinh năm ${r.namSinhThay}` : "";
+
+                // Đã chỉnh sửa hàm addPara để hỗ trợ canh lề và canh giữa mà không làm phá cấu trúc logic
+                const addPara = (runs, pageBreak = false, alignCenter = false) => {
+                    let align = alignCenter ? 'center' : 'both';
+                    let indent = alignCenter ? '' : '<w:ind w:firstLine="720"/>';
+                    let p = `<w:p><w:pPr><w:jc w:val="${align}"/><w:spacing w:line="264" w:lineRule="auto" w:after="0"/>${indent}${pageBreak ? '<w:pageBreakBefore/>' : ''}</w:pPr>`;
+                    runs.forEach(run => {
+                        p += `<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="28"/><w:szCs w:val="28"/>`;
+                        if (run.b) p += `<w:b/>`;
+                        if (run.i) p += `<w:i/>`;
+                        p += `</w:rPr><w:t xml:space="preserve">${escapeXml(run.t)}</w:t></w:r>`;
+                    });
+                    p += `</w:p>\n`;
+                    xmlContent += p;
+                };
+
+                const isFirst = index === 0;
+
+                // Thay đổi 1: Canh giữa và xuống dòng cho phần Kính gửi
+                addPara([{t: "Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng"}], !isFirst, true);
+                addPara([{t: ""}]); // Dòng trống
+                
+                addPara([{t: "Đề nghị chi cho: "}, {t: r.hoTen, b: true}, {t: nS}]);
+                addPara([{t: `Địa chỉ: ${r.diaChi}.`}]);
+                
+                if (r.hasNT) {
+                    addPara([{t: `Người nhận thay: ${r.tenThay || '....................'}${nsThay}`}]);
+                    addPara([{t: `Địa chỉ: ${r.dcThay || '....................'}.`}]);
+                }
+                
+                addPara([{t: `CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}`}]);
+                
+                // Thay đổi 2: Sửa lỗi lặp chữ Tài khoản số
+                addPara([{t: `Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}`}]);
+                
+                addPara([{t: `Lý do chi: ${r.lyDo}, gồm các khoản sau:`}]);
+
+                if (r.hasFee) {
+                    addPara([{t: `+ Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng`}]);
+                    addPara([{t: `+ Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng`}]);
+                    addPara([{t: `Tổng cộng thực nhận: ${Number(r.thucNhan).toLocaleString('vi-VN')} đồng`}]);
+                } else {
+                    addPara([{t: `+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng`}]);
+                    addPara([{t: `Tổng cộng: ${Number(r.soTien).toLocaleString('vi-VN')} đồng`}]);
+                }
+
+                addPara([{t: `Viết bằng chữ: `}, {t: docSo(r.thucNhan), i: true}]);
+                addPara([{t: `Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}`}]);
+            });
+
+            xmlContent += `<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>\n</w:body>\n</w:document>`;
+
+            const files = {
+                "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/></Types>`,
+                "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+                "word/_rels/document.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/></Relationships>`,
+                "word/document.xml": xmlContent,
+                "word/styles.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:eastAsia="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="28"/><w:szCs w:val="28"/><w:lang w:val="vi-VN"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:line="264" w:lineRule="auto" w:after="0"/><w:ind w:firstLine="720"/><w:jc w:val="both"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style></w:styles>`,
+                "word/settings.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:zoom w:percent="100"/><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/></w:settings>`,
+                "word/fontTable.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:font w:name="Times New Roman"><w:panose1 w:val="02020603050405020304"/><w:charset w:val="00"/><w:family w:val="roman"/><w:pitch w:val="variable"/></w:font></w:fonts>`
+            };
+
+            const createZip = (filesObj) => {
+                let zipData = [], centralDir = [], offset = 0;
+                const encoder = new TextEncoder();
+                const write32 = (v) => [v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff];
+                const write16 = (v) => [v & 0xff, (v >> 8) & 0xff];
+                
+                const crcTable = new Uint32Array(256);
+                for(let i=0; i<256; i++) {
+                    let c = i;
+                    for(let j=0; j<8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                    crcTable[i] = c;
+                }
+                const crc32 = (data) => {
+                    let crc = 0xFFFFFFFF;
+                    for(let i=0; i<data.length; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ data[i]) & 0xFF];
+                    return (crc ^ 0xFFFFFFFF) >>> 0;
+                };
+
+                for (const [name, content] of Object.entries(filesObj)) {
+                    const nameBytes = encoder.encode(name);
+                    const dataBytes = encoder.encode(content);
+                    const crc = crc32(dataBytes);
+                    const size = dataBytes.length;
+
+                    const header = [
+                        0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                        0x00, 0x00, 0x00, 0x00, ...write32(crc), ...write32(size), ...write32(size),
+                        ...write16(nameBytes.length), 0x00, 0x00
+                    ];
+                    zipData.push(new Uint8Array(header), nameBytes, dataBytes);
+
+                    const cdir = [
+                        0x50, 0x4b, 0x01, 0x02, 0x14, 0x00, 0x14, 0x00, 0x00, 0x00, 
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...write32(crc), ...write32(size), ...write32(size),
+                        ...write16(nameBytes.length), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...write32(offset)
+                    ];
+                    centralDir.push(new Uint8Array(cdir), nameBytes);
+                    offset += header.length + nameBytes.length + dataBytes.length;
+                }
+
+                let cdSize = 0; centralDir.forEach(b => cdSize += b.length);
+                const numFiles = Object.keys(filesObj).length;
+                const eocd = [
+                    0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00,
+                    ...write16(numFiles), ...write16(numFiles), ...write32(cdSize), ...write32(offset), 0x00, 0x00
+                ];
+
+                const result = new Uint8Array(offset + cdSize + eocd.length);
+                let pos = 0;
+                const append = (arr) => { result.set(arr, pos); pos += arr.length; };
+                zipData.forEach(append);
+                centralDir.forEach(append);
+                append(new Uint8Array(eocd));
+                
+                return result;
+            };
+
+            try {
+                const zipBuffer = createZip(files);
+                const zipBlob = new Blob([zipBuffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+                const fileName = checked.length === 1 ? `C09_${db.find(x => x.id == checked[0].value).hoTen}.docx` : `Danh_sach_chi_C09.docx`;
+                
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(zipBlob);
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            } catch (error) {
+                console.error(error);
+                alert("Lỗi tạo file Word: " + error.message);
+            }
+        }
 
         /* --- MẪU IN --- */
         function getPrintTemplate(r) {
@@ -525,7 +686,7 @@
                 <div class="text-center" style="margin-top: 35px; position: relative; margin-bottom: 25px;"><span class="f-12-bold-upper" style="font-size: 14pt;">GIẤY ĐỀ NGHỊ CHI</span><span style="position: absolute; right: 0; font-size: 12pt;">Số:...................</span><div class="italic" style="margin-top: 2px;">Ngày .........tháng....... năm 20...</div></div>
                 <div class="text-center" style="margin-bottom: 25px;">Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng</div>
                 <div class="text-justify">Đề nghị chi cho: <span class="bold">${r.hoTen}</span>${nS}.<br>Địa chỉ: ${r.diaChi}<br>${rowNT}CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}<br>Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}<br>Lý do chi: ${r.lyDo}, gồm các khoản sau:<br>${mH}<br>Viết bằng chữ: <span class="italic">${docSo(r.thucNhan)}</span><br>Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}<br>Hình thức thanh toán: Chuyển khoản./.</div>
-                <table style="margin-top: 30px;"><tr class="text-center bold"><td style="width: 55%;">TL.TRƯỞNG THI HÀNH ÁN DÂN SỰ<br>TRƯỞNG PHÒNG<br>PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14</td><td style="width: 45%;">CHẤP HÀNH VIÊN</td></tr><tr class="text-center bold"><td style="padding-top: 75px;">Qua Đình Thiện</td><td style="padding-top: 75px;">${tenCHV}</td></tr></table></div>`;
+                <table style="margin-top: 30px;"><tr class="text-center bold"><td style="width: 55%;">TUQ. TRƯỞNG THI HÀNH ÁN DÂN SỰ<br>TRƯỞNG PHÒNG<br>PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14</td><td style="width: 45%;">CHẤP HÀNH VIÊN</td></tr><tr class="text-center bold"><td style="padding-top: 75px;">Qua Đình Thiện</td><td style="padding-top: 75px;">${tenCHV}</td></tr></table></div>`;
         }
 
         /* HÀM ĐỌC SỐ GỐC */
@@ -545,9 +706,6 @@
             const store = tx.objectStore('records');
             const req = store.getAll();
             req.onsuccess = () => { 
-                // --- SỬA LỖI SẮP XẾP TẠI ĐÂY ---
-                // Mặc định IDB trả về theo ID (thời gian) từ cũ -> mới.
-                // Ta đảo ngược lại để cái mới nhất nằm trên cùng.
                 db = (req.result || []).reverse(); 
                 renderTable(); 
             };
@@ -597,5 +755,3 @@
     </script>
 </body>
 </html>
-
-
