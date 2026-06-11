@@ -272,19 +272,15 @@
     }
 
     // ========================================================
-    // CHỨC NĂNG TÌM KIẾM ĐÃ ĐƯỢC TỐI ƯU TOÀN DIỆN (SỬA ĐỔI CHÍNH)
+    // CHỨC NĂNG TÌM KIẾM ĐÃ ĐƯỢC TỐI ƯU TOÀN DIỆN
     // ========================================================
     let searchTimeout = null;
     function renderTable() {
-        // Hủy bỏ lượt tìm kiếm trước đó nếu bạn vẫn đang gõ liên tục
         clearTimeout(searchTimeout);
-        
-        // Trì hoãn xử lý quét dữ liệu 100 mili giây để bàn phím và ký tự hiển thị lên ô tìm kiếm ngay lập tức
         searchTimeout = setTimeout(() => {
             const q = document.getElementById('searchInput').value.toLowerCase();
             const tbody = document.getElementById('dataTableBody'); 
             
-            // Lọc dữ liệu chính xác theo logic của bạn
             const filtered = db.filter(i => 
                 i.recs.some(r => r.name.toLowerCase().includes(q)) || 
                 i.addr.toLowerCase().includes(q) || 
@@ -294,7 +290,6 @@
             
             const groups = filtered.reduce((acc, i) => { acc[i.day] = acc[i.day] || []; acc[i.day].push(i); return acc; }, {});
             
-            // BIẾN TẠM: Gom toàn bộ HTML trong bộ nhớ máy tính trước
             let htmlContent = ''; 
             
             Object.keys(groups).reverse().forEach(day => {
@@ -304,11 +299,16 @@
                     const names = item.recs.map(r => `<strong>${r.name}</strong> ${r.year ? '('+r.year+')' : ''}`).join('<br>');
                     const badge = item.type === 'POST' ? '<span style="color:#2563eb; font-weight:700;">Bưu điện</span>' : '<span style="color:#16a34a; font-weight:700;">Trực tiếp</span>';
                     
+                    // THÊM SỐ ĐIỆN THOẠI VÀO UI DANH SÁCH TẠI ĐÂY
                     htmlContent += `
                         <tr>
                             <td align="center"><input type="checkbox" class="row-cb" value="${item.id}"></td>
                             <td align="center">${badge}</td>
-                            <td>${names}<br><small style="color:#64748b">🏠 ${item.addr}</small></td>
+                            <td>
+                                ${names}<br>
+                                <small style="color:#64748b">🏠 ${item.addr}</small>
+                                ${item.phone ? `<br><small style="color:#ef4444; font-weight:600;">📞 SĐT: ${item.phone}</small>` : ''}
+                            </td>
                             <td style="white-space: pre-wrap;">${item.content}</td>
                             <td align="center"><strong style="color:#ef4444;">${item.barcode || '-'}</strong></td>
                             <td class="action-btns">
@@ -320,12 +320,11 @@
                 });
             });
             
-            // Đổ toàn bộ chuỗi HTML vào giao diện 1 lần duy nhất, triệt tiêu 100% hiện tượng đơ lag
             tbody.innerHTML = htmlContent;
         }, 100); 
     }
 
-    /* LOGIC IN ẤN - GIỮ NGUYÊN */
+    /* LOGIC IN ẤN A4 ĐÃ THÊM SĐT */
     function printA4() {
         const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
         if(ids.length === 0) return alert("Chọn dòng cần in!");
@@ -339,26 +338,31 @@
         document.getElementById('printSenderName').innerText = document.getElementById('inSender').value;
         let h = ''; selected.forEach((item, i) => {
             const n = item.recs.map(r => `${r.name}${r.year ? ', sinh năm '+r.year : ''}`).join(' và ');
-            h += `<tr><td align="center">${i+1}</td><td><strong>${n}</strong><br>Địa chỉ: ${item.addr}</td><td style="white-space: pre-wrap;">${item.content}</td><td align="center" class="barcode-col"><strong>${item.barcode || ''}</strong></td></tr>`;
+            // THÊM SĐT VÀO IN A4
+            const phoneText = item.phone ? `<br>SĐT: ${item.phone}` : '';
+            h += `<tr><td align="center">${i+1}</td><td><strong>${n}</strong><br>Địa chỉ: ${item.addr}${phoneText}</td><td style="white-space: pre-wrap;">${item.content}</td><td align="center" class="barcode-col"><strong>${item.barcode || ''}</strong></td></tr>`;
         });
         document.getElementById('a4Body').innerHTML = h; window.print();
     }
 
+    /* LOGIC IN TEM CHUẨN 75x50 FONT TIMES NEW ROMAN */
     function printTem() {
         const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
         if(ids.length === 0) return alert("Chọn dòng!");
         const selected = db.filter(i => ids.includes(i.id));
         let h = '';
         selected.forEach(item => {
-            const names = item.recs.map(r => `<strong style="font-size:11.5px">${r.name}</strong> <span style="font-size:10px; font-weight:normal">${r.year ? '('+r.year+')' : ''}</span>`).join(', ');
-            h += `<div style="width:50mm; height:30mm; padding:2mm; box-sizing:border-box; font-family:Arial; line-height:1.1; border:1px solid black; overflow:hidden; page-break-inside:avoid; text-align:justify;">
-                    <div style="font-size:10px; margin-bottom:1mm;">Người nhận: ${names}</div>
-                    ${item.addr ? '<div style="font-size:10.5px; margin-bottom:1mm;">Đ/c: '+item.addr+'</div>' : ''}
-                    ${item.phone ? '<div style="font-size:10.5px;">SĐT: '+item.phone+'</div>' : ''}
+            const names = item.recs.map(r => `<strong style="font-size:16px">${r.name}</strong> <span style="font-size:14px; font-weight:normal">${r.year ? '('+r.year+')' : ''}</span>`).join(', ');
+            // Thiết lập đúng 75x50mm, đổi font sang Times New Roman, loại bỏ viền đen
+            h += `<div style="width:75mm; height:50mm; padding:4mm; box-sizing:border-box; font-family:'Times New Roman', Times, serif; line-height:1.4; overflow:hidden; page-break-inside:avoid; text-align:justify;">
+                    <div style="font-size:15px; margin-bottom:2mm;">Người nhận: ${names}</div>
+                    ${item.addr ? '<div style="font-size:15px; margin-bottom:2mm;">Đ/c: '+item.addr+'</div>' : ''}
+                    ${item.phone ? '<div style="font-size:15px;">SĐT: '+item.phone+'</div>' : ''}
                   </div>`;
         });
         const w = window.open('', '_blank');
-        w.document.write(`<html><head><style>@page { size: 50mm 30mm; margin: 0; } body { margin: 0; padding: 0; }</style></head><body>${h}
+        // @page thiết lập chuẩn 75mm 50mm
+        w.document.write(`<html><head><style>@page { size: 75mm 50mm; margin: 0; } body { margin: 0; padding: 0; }</style></head><body>${h}
         <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };<\/script></body></html>`);
         w.document.close();
     }
@@ -393,9 +397,6 @@
 
     function resetForm() { location.reload(); }
     
-    // ===========================================
-    // HÀM XÓA ĐÃ CẬP NHẬT ĐỒNG BỘ MÂY
-    // ===========================================
     function deleteItem(id) { 
         if(confirm("Xóa dòng này?")) { 
             db = db.filter(i => i.id !== id); 
@@ -414,7 +415,6 @@
 <script>
 window.addEventListener('message', function(e) {
     if (e.data.type === 'GET_DATA') {
-        // Chỉ lấy key 'thads_v13' theo đúng logic app này
         const val = localStorage.getItem('thads_v13');
         const data = val ? {'thads_v13': val} : {};
         window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: data}, '*');
