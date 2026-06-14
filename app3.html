@@ -68,7 +68,7 @@
                     <h2 class="font-bold text-slate-700 uppercase text-sm">Thông tin người thụ hưởng</h2>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-2"><label>Họ và tên / Tổ chức (*)</label><input type="text" id="hoTen" class="req w-full border-2 border-slate-100 p-2 rounded text-sm uppercase font-bold outline-none focus:border-blue-500"></div>
+                    <div class="md:col-span-2"><label>Họ và tên / Tổ chức (*)</label><input type="text" id="hoTen" class="req w-full border-2 border-slate-100 p-2 rounded text-sm font-bold outline-none focus:border-blue-500"></div>
                     <div><label>Năm sinh</label><input type="number" id="namSinh" class="w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
                     <div class="md:col-span-3"><label>Địa chỉ (*)</label><input type="text" id="diaChi" class="req w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
                 </div>
@@ -305,19 +305,43 @@
         });
         /* --- END LOGIC CHV --- */
         
-        const BANK_MAP = { 
-            "Vietcombank": "VCB", "Ngoại thương": "VCB",
-            "Vietinbank": "CTG", "Công thương": "CTG",
-            "BIDV": "BIDV", "Đầu tư và Phát triển": "BIDV",
-            "Agribank": "VBA", "Nông nghiệp": "VBA",
-            "MBBank": "MB", "Quân đội": "MB",
-            "Techcombank": "TCB", "Kỹ thương": "TCB",
-            "Sacombank": "STB", "Sài Gòn Thương Tín": "STB",
-            "VPBank": "VPB", "Thịnh Vượng": "VPB",
-            "ACB": "ACB", "Á Châu": "ACB",
-            "TPBank": "TPB", "Tiên Phong": "TPB",
-            "VIB": "VIB", "Quốc tế": "VIB"
-        };
+        const EXTENDED_BANK_MAP = [
+            { code: "VBA", keywords: ["agribank", "nong nghiep"] },
+            { code: "VCB", keywords: ["vietcombank", "vcb", "ngoai thuong"] },
+            { code: "BIDV", keywords: ["bidv", "dau tu va phat trien"] },
+            { code: "CTG", keywords: ["vietinbank", "ctg", "cong thuong"] },
+            { code: "MB", keywords: ["mbbank", "mb", "quan doi"] },
+            { code: "TCB", keywords: ["techcombank", "tcb", "ky thuong"] },
+            { code: "STB", keywords: ["sacombank", "stb", "sai gon thuong tin"] },
+            { code: "VPB", keywords: ["vpbank", "vpb", "thinh vuong"] },
+            { code: "ACB", keywords: ["acb", "a chau"] },
+            { code: "TPB", keywords: ["tpbank", "tpb", "tien phong"] },
+            { code: "VIB", keywords: ["vib", "quoc te"] },
+            { code: "NAB", keywords: ["nam a", "nab"] },
+            { code: "OCB", keywords: ["ocb", "phuong dong"] },
+            { code: "SHB", keywords: ["shb", "sai gon ha noi"] },
+            { code: "NCB", keywords: ["ncb", "quoc dan"] },
+            { code: "HDB", keywords: ["hdbank", "hdb", "phat trien tp"] },
+            { code: "ABB", keywords: ["abbank", "abb", "an binh"] },
+            { code: "PVCB", keywords: ["pvcombank", "dai chung"] },
+            { code: "BAB", keywords: ["bac a", "bab"] },
+            { code: "BVB", keywords: ["baoviet", "bao viet"] },
+            { code: "KLB", keywords: ["kien long", "kienlong"] },
+            { code: "VBB", keywords: ["vietbank", "viet nam thuong tin"] },
+            { code: "SGB", keywords: ["saigonbank", "sai gon cong thuong"] },
+            { code: "EIB", keywords: ["eximbank", "eib", "xuat nhap khau"] },
+            { code: "LPB", keywords: ["lpbank", "lien viet", "lienviet"] },
+            { code: "SEAB", keywords: ["seabank", "dong nam a"] },
+            { code: "MSB", keywords: ["msb", "hang hai"] },
+            { code: "CBB", keywords: ["cbbank", "xay dung"] },
+            { code: "GPB", keywords: ["gpbank", "dau khi"] },
+            { code: "OCEB", keywords: ["oceanbank", "dai duong"] },
+            { code: "VRB", keywords: ["vrb", "viet nga"] },
+            { code: "SCB", keywords: ["scb", "sai gon"] },
+            { code: "DAB", keywords: ["dong a", "donga"] },
+            { code: "VAB", keywords: ["viet a", "vieta"] },
+            { code: "VCCB", keywords: ["ban viet", "bvbank", "banviet"] }
+        ];
 
         let searchTimeout;
         function debounceRender() { clearTimeout(searchTimeout); searchTimeout = setTimeout(renderTable, 500); }
@@ -328,9 +352,19 @@
             const r = db.find(x => x.id === id);
             if (!r.stk || !r.nganHang) { alert("Thiếu STK hoặc Ngân hàng!"); return; }
             let bankCode = "";
-            const inputBank = r.nganHang.toLowerCase();
-            for (let key in BANK_MAP) { if (inputBank.includes(key.toLowerCase())) { bankCode = BANK_MAP[key]; break; } }
+            const removeAccents = (str) => { 
+                return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase(); 
+            };
+            const inputBank = removeAccents(r.nganHang);
+            
+            for (let bank of EXTENDED_BANK_MAP) { 
+                if (bank.keywords.some(kw => inputBank.includes(kw))) { 
+                    bankCode = bank.code; 
+                    break; 
+                } 
+            }
             if (!bankCode) bankCode = r.nganHang.split(' ')[0];
+
             document.getElementById('qrImageDisplay').src = `https://img.vietqr.io/image/${bankCode}-${r.stk}-compact2.jpg?label=KIEM%20TRA%20TK`;
             document.getElementById('qrStkDisplay').innerText = r.stk;
             document.getElementById('qrModal').style.display = 'flex';
@@ -365,7 +399,7 @@
                     const stColor = r.isPaid ? 'text-teal-500' : 'text-red-500';
                     tr.innerHTML = `
                         <td class="p-3"><input type="checkbox" class="row-check" value="${r.id}" onchange="updateCount()"></td>
-                        <td class="p-3"><div class="font-bold uppercase text-slate-800 text-xs">${r.hoTen}</div><div class="text-[11px] text-slate-500 mt-1 leading-tight">${r.lyDo}</div></td>
+                        <td class="p-3"><div class="font-bold text-slate-800 text-xs">${r.hoTen}</div><div class="text-[11px] text-slate-500 mt-1 leading-tight">${r.lyDo}</div></td>
                         <td class="p-3"><div class="font-bold text-blue-700 text-xs">${r.qdSo}</div><div class="text-[10px] text-slate-400">(${r.qdNgay || '...'})</div></td>
                         <td class="p-3 text-right font-bold text-slate-800 text-xs">${Number(r.soTien).toLocaleString('vi-VN')}</td>
                         <td class="p-3 text-center" id="cell-status-${r.id}"><div class="font-black text-[11px] cursor-pointer ${stColor}" onclick="handleStatusToggle(${r.id})">${r.isPaid ? 'ĐÃ CHI' : 'CHƯA CHI'}</div><div class="text-[10px] font-bold text-teal-800">${r.paidDate || ''}</div></td>
@@ -581,6 +615,7 @@
 
                 addPara([{t: `Viết bằng chữ: `}, {t: docSo(r.thucNhan), i: true}]);
                 addPara([{t: `Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}`}]);
+                addPara([{t: `Hình thức thanh toán: Chuyển khoản./.`}]);
             });
 
             xmlContent += `<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>\n</w:body>\n</w:document>`;
@@ -656,7 +691,7 @@
             try {
                 const zipBuffer = createZip(files);
                 const zipBlob = new Blob([zipBuffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-                const fileName = checked.length === 1 ? `C09_${db.find(x => x.id == checked[0].value).hoTen}.docx` : `Danh_sach_chi_C09.docx`;
+                const fileName = checked.length === 1 ? `C09_${db.find(x => x.id == checked[0].value).hoTen}_${(db.find(x => x.id == checked[0].value).qdSo || "").split('/')[0]}.docx` : `Danh_sach_chi_C09.docx`;
                 
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(zipBlob);
