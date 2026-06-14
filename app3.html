@@ -409,6 +409,7 @@
                             <button onclick="copyRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-amber-600"><i data-lucide="copy" class="w-4 h-4"></i></button>
                             <button onclick="delRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-300 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                             <button onclick="showQR(${r.id})" class="p-1.5 bg-slate-100 rounded text-purple-600 hover:bg-purple-600 hover:text-white"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
+                            <button onclick="exportSingleWord(${r.id})" title="Tải file Word" class="p-1.5 bg-slate-100 rounded text-blue-700 hover:bg-blue-700 hover:text-white"><i data-lucide="download" class="w-4 h-4"></i></button>
                         </div></td>`;
                     fragment.appendChild(tr);
                 });
@@ -543,6 +544,27 @@
         function toggleMaster(m) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = m.checked); updateCount(); }
         function printSelected() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Chọn hồ sơ!"); document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); window.print(); }
         
+        function exportSingleWord(id) {
+            // Tạm lưu trạng thái check hiện tại
+            const checkboxes = document.querySelectorAll('.row-check');
+            const originalStates = [];
+            
+            checkboxes.forEach(cb => {
+                originalStates.push({ el: cb, checked: cb.checked });
+                // Chỉ check dòng hiện tại
+                cb.checked = (cb.value == id);
+            });
+            
+            // Tận dụng lại hàm xuất Word gốc mà không cần chỉnh sửa logic sinh XML
+            exportToWord();
+            
+            // Trả lại trạng thái check ban đầu
+            originalStates.forEach(state => {
+                state.el.checked = state.checked;
+            });
+            updateCount();
+        }
+
         function exportToWord() {
             const checked = document.querySelectorAll('.row-check:checked');
             if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất Word!");
