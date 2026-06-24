@@ -21,7 +21,7 @@
         #qrModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; }
         .qr-box { background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); max-width: 280px; width: 90%; }
 
-        /* --- GIỮ NGUYÊN CSS IN ẤN GỐC --- */
+        /* --- GIỮ NGUYÊN CSS IN ÁN GỐC --- */
         @media print {
             @page { 
                 size: A4 portrait; 
@@ -207,9 +207,6 @@
                     <button onclick="printSelected()" class="bg-green-600 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-green-700 uppercase">
                         <i data-lucide="printer" class="w-4 h-4"></i> In đã chọn (<span id="countSelected">0</span>)
                     </button>
-                    <button onclick="exportDsChi()" class="bg-purple-600 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-purple-700 uppercase">
-                        <i data-lucide="list" class="w-4 h-4"></i> Xuất danh sách chi
-                    </button>
                     <button onclick="exportToWord()" class="bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-blue-800 uppercase">
                         <i data-lucide="file-text" class="w-4 h-4"></i> Xuất Word
                     </button>
@@ -313,7 +310,6 @@
             { code: "VCB", keywords: ["vietcombank", "vcb", "ngoai thuong"] },
             { code: "BIDV", keywords: ["bidv", "dau tu va phat trien"] },
             { code: "CTG", keywords: ["vietinbank", "ctg", "cong thuong"] },
-            { code: "MB", keywords: ["mbbank", "mb", "quan doi"] },
             { code: "TCB", keywords: ["techcombank", "tcb", "ky thuong"] },
             { code: "STB", keywords: ["sacombank", "stb", "sai gon thuong tin"] },
             { code: "VPB", keywords: ["vpbank", "vpb", "thinh vuong"] },
@@ -343,7 +339,8 @@
             { code: "SCB", keywords: ["scb", "sai gon"] },
             { code: "DAB", keywords: ["dong a", "donga"] },
             { code: "VAB", keywords: ["viet a", "vieta"] },
-            { code: "VCCB", keywords: ["ban viet", "bvbank", "banviet"] }
+            { code: "VCCB", keywords: ["ban viet", "bvbank", "banviet"] },
+            { code: "MB", keywords: ["mbbank", "mb", "quan doi"] }
         ];
 
         let searchTimeout;
@@ -361,7 +358,7 @@
             const inputBank = removeAccents(r.nganHang);
             
             for (let bank of EXTENDED_BANK_MAP) { 
-                if (bank.keywords.some(kw => inputBank.includes(kw))) { 
+                if (bank.keywords.some(kw => new RegExp("\\b" + kw + "\\b").test(inputBank))) { 
                     bankCode = bank.code; 
                     break; 
                 } 
@@ -566,101 +563,6 @@
                 state.el.checked = state.checked;
             });
             updateCount();
-        }
-
-        /* --- XUẤT DANH SÁCH CHI --- */
-        function exportDsChi() {
-            const checked = document.querySelectorAll('.row-check:checked');
-            if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất danh sách chi!");
-
-            let totalTien = 0;
-            let rowsHtml = '';
-            
-            Array.from(checked).forEach((cb, index) => {
-                const r = db.find(x => x.id == cb.value);
-                totalTien += Number(r.soTien) || 0;
-                
-                const ngay = r.qdNgay ? ` ngày ${r.qdNgay}` : "";
-                const soQd = r.qdSo ? r.qdSo : "";
-                const lyDoFormated = (r.lyDo || '').replace(/\n/g, '<br>');
-                
-                rowsHtml += `
-                    <tr>
-                        <td style="border: 1px solid black; padding: 5px; text-align: center;">${index + 1}</td>
-                        <td style="border: 1px solid black; padding: 5px;">${soQd}${ngay}</td>
-                        <td style="border: 1px solid black; padding: 5px; text-align: center;">1</td>
-                        <td style="border: 1px solid black; padding: 5px;">${lyDoFormated}</td>
-                        <td style="border: 1px solid black; padding: 5px;">${r.hoTen || ''}</td>
-                        <td style="border: 1px solid black; padding: 5px; text-align: right;">${Number(r.soTien).toLocaleString('vi-VN')}</td>
-                    </tr>
-                `;
-            });
-
-            rowsHtml += `
-                <tr>
-                    <td style="border: 1px solid black; padding: 5px; font-weight: bold; text-align: center;">Tổng cộng: ${checked.length} hồ sơ</td>
-                    <td style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: bold;">${checked.length}</td>
-                    <td style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: right; font-weight: bold;">${totalTien.toLocaleString('vi-VN')}</td>
-                </tr>
-            `;
-
-            const htmlContent = `
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head>
-                    <meta charset='utf-8'>
-                    <title>Danh sách hồ sơ chi</title>
-                    <style>
-                        @page {
-                            size: 29.7cm 21cm;
-                            mso-page-orientation: landscape;
-                            margin: 2cm 2cm 2cm 2cm;
-                        }
-                        body { font-family: 'Times New Roman', serif; font-size: 13pt; }
-                        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-                        th, td { border: 1px solid black; padding: 8px; vertical-align: top; }
-                        th { font-weight: bold; text-align: center; }
-                    </style>
-                </head>
-                <body>
-                    <div style="width: 100%; font-weight: bold; font-size: 13pt; text-align: left;">
-                        <div style="display: inline-block; text-align: center;">
-                            THI HÀNH ÁN DÂN SỰ TỈNH LÂM ĐỒNG<br>
-                            PHÒNG THADS KHU VỰC 14
-                        </div>
-                    </div>
-                    <div style="text-align: center; font-weight: bold; font-size: 16pt; margin-top: 30px; margin-bottom: 20px;">
-                        DANH SÁCH HỒ SƠ CHI
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>STT</th>
-                                <th>Số QĐ THA/Ngày tháng năm QĐ</th>
-                                <th>Số lượng</th>
-                                <th>Nội dung chi</th>
-                                <th>Đương sự/ Người được chi</th>
-                                <th>Số tiền</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rowsHtml}
-                        </tbody>
-                    </table>
-                </body>
-                </html>
-            `;
-
-            const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'Danh_sach_chi.doc';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
         }
 
         function exportToWord() {
