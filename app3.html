@@ -305,42 +305,43 @@
         });
         /* --- END LOGIC CHV --- */
         
+        // ĐÃ CẬP NHẬT: Thêm chuẩn số BIN quốc gia để chống lỗi VietQR tự động fallback về MB Bank
         const EXTENDED_BANK_MAP = [
-            { code: "VBA", keywords: ["agribank", "nong nghiep"] },
-            { code: "VCB", keywords: ["vietcombank", "vcb", "ngoai thuong"] },
-            { code: "BIDV", keywords: ["bidv", "dau tu va phat trien"] },
-            { code: "CTG", keywords: ["vietinbank", "ctg", "cong thuong"] },
-            { code: "TCB", keywords: ["techcombank", "tcb", "ky thuong"] },
-            { code: "STB", keywords: ["sacombank", "stb", "sai gon thuong tin"] },
-            { code: "VPB", keywords: ["vpbank", "vpb", "thinh vuong"] },
-            { code: "ACB", keywords: ["acb", "a chau"] },
-            { code: "TPB", keywords: ["tpbank", "tpb", "tien phong"] },
-            { code: "VIB", keywords: ["vib", "quoc te"] },
-            { code: "NAB", keywords: ["nam a", "nab"] },
-            { code: "OCB", keywords: ["ocb", "phuong dong"] },
-            { code: "SHB", keywords: ["shb", "sai gon ha noi"] },
-            { code: "NCB", keywords: ["ncb", "quoc dan"] },
-            { code: "HDB", keywords: ["hdbank", "hdb", "phat trien tp"] },
-            { code: "ABB", keywords: ["abbank", "abb", "an binh"] },
-            { code: "PVCB", keywords: ["pvcombank", "dai chung"] },
-            { code: "BAB", keywords: ["bac a", "bab"] },
-            { code: "BVB", keywords: ["baoviet", "bao viet"] },
-            { code: "KLB", keywords: ["kien long", "kienlong"] },
-            { code: "VBB", keywords: ["vietbank", "viet nam thuong tin"] },
-            { code: "SGB", keywords: ["saigonbank", "sai gon cong thuong"] },
-            { code: "EIB", keywords: ["eximbank", "eib", "xuat nhap khau"] },
-            { code: "LPB", keywords: ["lpbank", "lien viet", "lienviet"] },
-            { code: "SEAB", keywords: ["seabank", "dong nam a"] },
-            { code: "MSB", keywords: ["msb", "hang hai"] },
-            { code: "CBB", keywords: ["cbbank", "xay dung"] },
-            { code: "GPB", keywords: ["gpbank", "dau khi"] },
-            { code: "OCEB", keywords: ["oceanbank", "dai duong"] },
-            { code: "VRB", keywords: ["vrb", "viet nga"] },
-            { code: "SCB", keywords: ["scb", "sai gon"] },
-            { code: "DAB", keywords: ["dong a", "donga"] },
-            { code: "VAB", keywords: ["viet a", "vieta"] },
-            { code: "VCCB", keywords: ["ban viet", "bvbank", "banviet"] },
-            { code: "MB", keywords: ["mbbank", "mb", "quan doi"] }
+            { code: "VBA", bin: "970405", keywords: ["agribank", "nong nghiep", "vba"] },
+            { code: "VCB", bin: "970436", keywords: ["vietcombank", "vcb", "ngoai thuong"] },
+            { code: "BIDV", bin: "970418", keywords: ["bidv", "dau tu va phat trien"] },
+            { code: "CTG", bin: "970415", keywords: ["vietinbank", "ctg", "cong thuong", "vietin"] },
+            { code: "TCB", bin: "970407", keywords: ["techcombank", "tcb", "ky thuong"] },
+            { code: "STB", bin: "970403", keywords: ["sacombank", "stb", "sai gon thuong tin"] },
+            { code: "VPB", bin: "970432", keywords: ["vpbank", "vpb", "thinh vuong"] },
+            { code: "ACB", bin: "970416", keywords: ["acb", "a chau"] },
+            { code: "TPB", bin: "970423", keywords: ["tpbank", "tpb", "tien phong"] },
+            { code: "VIB", bin: "970441", keywords: ["vib", "quoc te"] },
+            { code: "NAB", bin: "970428", keywords: ["nam a", "nab"] },
+            { code: "OCB", bin: "970448", keywords: ["ocb", "phuong dong"] },
+            { code: "SHB", bin: "970443", keywords: ["shb", "sai gon ha noi"] },
+            { code: "NCB", bin: "970419", keywords: ["ncb", "quoc dan"] },
+            { code: "HDB", bin: "970437", keywords: ["hdbank", "hdb", "phat trien tp"] },
+            { code: "ABB", bin: "970425", keywords: ["abbank", "abb", "an binh"] },
+            { code: "PVCB", bin: "970412", keywords: ["pvcombank", "dai chung"] },
+            { code: "BAB", bin: "970409", keywords: ["bac a", "bab"] },
+            { code: "BVB", bin: "970438", keywords: ["baoviet", "bao viet"] },
+            { code: "KLB", bin: "970452", keywords: ["kien long", "kienlong"] },
+            { code: "VBB", bin: "970433", keywords: ["vietbank", "viet nam thuong tin"] },
+            { code: "SGB", bin: "970400", keywords: ["saigonbank", "sai gon cong thuong"] },
+            { code: "EIB", bin: "970431", keywords: ["eximbank", "eib", "xuat nhap khau"] },
+            { code: "LPB", bin: "970449", keywords: ["lpbank", "lien viet", "lienviet"] },
+            { code: "SEAB", bin: "970440", keywords: ["seabank", "dong nam a"] },
+            { code: "MSB", bin: "970426", keywords: ["msb", "hang hai"] },
+            { code: "CBB", bin: "970444", keywords: ["cbbank", "xay dung"] },
+            { code: "GPB", bin: "970408", keywords: ["gpbank", "dau khi"] },
+            { code: "OCEB", bin: "970414", keywords: ["oceanbank", "dai duong"] },
+            { code: "VRB", bin: "970421", keywords: ["vrb", "viet nga"] },
+            { code: "SCB", bin: "970429", keywords: ["scb", "sai gon"] },
+            { code: "DAB", bin: "970406", keywords: ["dong a", "donga"] },
+            { code: "VAB", bin: "970427", keywords: ["viet a", "vieta"] },
+            { code: "VCCB", bin: "970454", keywords: ["ban viet", "bvbank", "banviet"] },
+            { code: "MB", bin: "970422", keywords: ["mbbank", "mb", "quan doi"] }
         ];
 
         let searchTimeout;
@@ -350,22 +351,39 @@
 
         function showQR(id) {
             const r = db.find(x => x.id === id);
-            if (!r.stk || !r.nganHang) { alert("Thiếu STK hoặc Ngân hàng!"); return; }
+            if (!r.stk || (!r.nganHang && !r.maNH)) { alert("Thiếu STK hoặc Ngân hàng!"); return; }
+            
             let bankCode = "";
             const removeAccents = (str) => { 
-                return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase(); 
+                return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase() : ""; 
             };
-            const inputBank = removeAccents(r.nganHang);
             
+            const inputBank = removeAccents(r.nganHang);
+            const inputMaNH = removeAccents(r.maNH);
+
             for (let bank of EXTENDED_BANK_MAP) { 
-                if (bank.keywords.some(kw => new RegExp("\\b" + kw + "\\b").test(inputBank))) { 
-                    bankCode = bank.code; 
+                const matchName = bank.keywords.some(kw => new RegExp("\\b" + kw + "\\b").test(inputBank));
+                const matchMaNH = inputMaNH && (bank.code.toLowerCase() === inputMaNH || bank.bin === inputMaNH || bank.keywords.includes(inputMaNH));
+                
+                if (matchName || matchMaNH) { 
+                    bankCode = bank.bin || bank.code; 
                     break; 
                 } 
             }
-            if (!bankCode) bankCode = r.nganHang.split(' ')[0];
+            
+            if (!bankCode) {
+                bankCode = r.maNH ? r.maNH.trim() : (r.nganHang ? r.nganHang.split(' ')[0] : "");
+            }
 
-            document.getElementById('qrImageDisplay').src = `https://img.vietqr.io/image/${bankCode}-${r.stk}-compact2.jpg?label=KIEM%20TRA%20TK`;
+            console.log("=== DEBUG TẠO QR ===");
+            console.log("Ngân hàng gốc:", r.nganHang);
+            console.log("Mã NH lưu:", r.maNH);
+            console.log("Mã NH nhận diện (BIN/Code):", bankCode);
+
+            const qrUrl = `https://img.vietqr.io/image/${bankCode}-${r.stk}-compact2.jpg?label=KIEM%20TRA%20TK`;
+            console.log("URL QR cuối:", qrUrl);
+
+            document.getElementById('qrImageDisplay').src = qrUrl;
             document.getElementById('qrStkDisplay').innerText = r.stk;
             document.getElementById('qrModal').style.display = 'flex';
         }
