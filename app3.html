@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Hệ thống Quản lý C09-THADS - V6.4 (Final Fix)</title>
+    <title>Hệ thống Quản lý C06-THADS - V7.0 (Biểu mẫu 06/2026)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -23,20 +23,21 @@
 
         /* --- GIỮ NGUYÊN CSS IN ÁN GỐC --- */
         @media print {
+            * {
+                font-family: "Times New Roman", Times, serif !important;
+            }
             @page { 
                 size: A4 portrait; 
                 margin: 2cm 2cm 2cm 2cm; 
             }
-            body { background: white; margin: 0; padding: 0; }
+            body { background: white; margin: 0; padding: 0; color: black; }
             .no-print { display: none !important; }
             .print-only { display: block !important; page-break-after: always; }
             
             #documentRender { 
                 width: 100%; 
-                font-family: "Times New Roman", Times, serif !important; 
                 font-size: 12pt !important; 
                 line-height: 1.35; 
-                color: black; 
             }
             .f-12-bold-upper { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
             .f-10-italic { font-size: 10pt; font-style: italic; }
@@ -56,7 +57,7 @@
         <div class="bg-slate-900 text-white p-4 rounded-lg flex justify-between items-center shadow-lg">
             <div class="flex items-center gap-2">
                 <i data-lucide="clipboard-list" class="text-orange-500"></i>
-                <h1 class="text-lg font-bold tracking-tighter uppercase">QUẢN LÝ NGHIỆP VỤ C09-THADS</h1>
+                <h1 class="text-lg font-bold tracking-tighter uppercase">QUẢN LÝ NGHIỆP VỤ C06-THADS</h1>
             </div>
             <button onclick="resetForm()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-bold uppercase">Tạo hồ sơ mới</button>
         </div>
@@ -130,6 +131,7 @@
                     <div><label>Ngân hàng & Chi nhánh</label><input type="text" id="nganHang" class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
                     <div><label>Mã Ngân hàng</label><input type="text" id="maNH" class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
                 </div>
+
                 <div><label>Giấy uỷ quyền / Biên bản (Số - ngày - tháng - năm)</label><input type="text" id="giayUQ" placeholder="Số... ngày... tháng... năm..." class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -181,7 +183,19 @@
                     </div>
                 </div>
 
-                <div class="md:col-span-2"><label>Lý do chi (*)</label><textarea id="lyDo" class="req w-full border-2 border-slate-100 p-2 rounded text-sm h-[70px]">Chi trả tiền tạm thu theo Quyết định Thi hành án</textarea></div>
+                <div><label>Số Biên lai thu tiền</label><input type="text" id="blSo" class="w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
+                <div>
+                    <label>Ngày Biên lai</label>
+                    <div class="date-input-container">
+                        <input type="text" id="blNgay" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="w-full border-2 border-slate-100 p-2 rounded text-sm">
+                        <i data-lucide="calendar" class="w-4 h-4 picker-icon"></i>
+                        <input type="date" class="hidden-picker" onchange="syncPicker(this, 'blNgay')">
+                    </div>
+                </div>
+                
+                <div><label>Số tiền Biên lai</label><input type="text" id="blTien" oninput="handleMoneyInputOnly(this)" placeholder="0" class="w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
+
+                <div class="md:col-span-2"><label>Nội dung chi (*)</label><textarea id="lyDo" class="req w-full border-2 border-slate-100 p-2 rounded text-sm h-[70px]">Chi trả tiền tạm thu theo Quyết định Thi hành án</textarea></div>
             </div>
 
             <div id="formActions" class="mt-8 flex justify-center gap-4">
@@ -207,6 +221,9 @@
                     <button onclick="printSelected()" class="bg-green-600 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-green-700 uppercase">
                         <i data-lucide="printer" class="w-4 h-4"></i> In đã chọn (<span id="countSelected">0</span>)
                     </button>
+                    <button onclick="exportDsChi()" class="bg-purple-600 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-purple-700 uppercase">
+                        <i data-lucide="list" class="w-4 h-4"></i> Xuất danh sách chi
+                    </button>
                     <button onclick="exportToWord()" class="bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-blue-800 uppercase">
                         <i data-lucide="file-text" class="w-4 h-4"></i> Xuất Word
                     </button>
@@ -217,7 +234,7 @@
                 <thead class="bg-slate-800 text-[10px] uppercase font-black text-white border-b">
                     <tr>
                         <th class="p-3 w-8"><input type="checkbox" id="masterCheck" onchange="toggleMaster(this)"></th>
-                        <th class="p-3 w-1/4">Người thụ hưởng / Lý do</th>
+                        <th class="p-3 w-1/4">Người thụ hưởng / Nội dung chi</th>
                         <th class="p-3">Số Quyết định</th>
                         <th class="p-3 text-right">Số tiền</th>
                         <th class="p-3 text-center">Trạng thái</th>
@@ -302,6 +319,37 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             renderCHVSelect();
+            
+            // Handle smart date formatting on blur
+            document.addEventListener('focusout', function(e) {
+                if (e.target && e.target.tagName === 'INPUT' && e.target.hasAttribute('placeholder') && e.target.getAttribute('placeholder') === 'dd/mm/yyyy') {
+                    let val = e.target.value.trim();
+                    if (!val) return;
+                    
+                    if (/^\d{1,2}$/.test(val)) {
+                        let d = parseInt(val, 10);
+                        if (d >= 1 && d <= 31) {
+                            let now = new Date();
+                            let mm = (now.getMonth() + 1).toString().padStart(2, '0');
+                            let yyyy = now.getFullYear();
+                            let dd = d.toString().padStart(2, '0');
+                            e.target.value = `${dd}/${mm}/${yyyy}`;
+                        }
+                    } else if (val.includes('/')) {
+                        let parts = val.split('/');
+                        if (parts.length === 3) {
+                            let d = parseInt(parts[0], 10);
+                            let m = parseInt(parts[1], 10);
+                            let y = parts[2];
+                            if (!isNaN(d) && !isNaN(m) && y.length === 4) {
+                                let dd = d.toString().padStart(2, '0');
+                                let mm = m.toString().padStart(2, '0');
+                                e.target.value = `${dd}/${mm}/${y}`;
+                            }
+                        }
+                    }
+                }
+            });
         });
         /* --- END LOGIC CHV --- */
         
@@ -349,6 +397,11 @@
 
         function handleQDFocus(el) { if (el.value === "/QĐ-THADS") el.setSelectionRange(0, 0); }
 
+        function handleMoneyInputOnly(e) {
+            let val = e.value.replace(/\D/g, "");
+            e.value = val ? new Intl.NumberFormat('vi-VN').format(val) : "";
+        }
+
         function showQR(id) {
             const r = db.find(x => x.id === id);
             if (!r.stk || (!r.nganHang && !r.maNH)) { alert("Thiếu STK hoặc Ngân hàng!"); return; }
@@ -375,13 +428,7 @@
                 bankCode = r.maNH ? r.maNH.trim() : (r.nganHang ? r.nganHang.split(' ')[0] : "");
             }
 
-            console.log("=== DEBUG TẠO QR ===");
-            console.log("Ngân hàng gốc:", r.nganHang);
-            console.log("Mã NH lưu:", r.maNH);
-            console.log("Mã NH nhận diện (BIN/Code):", bankCode);
-
             const qrUrl = `https://img.vietqr.io/image/${bankCode}-${r.stk}-compact2.jpg?label=KIEM%20TRA%20TK`;
-            console.log("URL QR cuối:", qrUrl);
 
             document.getElementById('qrImageDisplay').src = qrUrl;
             document.getElementById('qrStkDisplay').innerText = r.stk;
@@ -440,7 +487,7 @@
         function copyRec(id) { const r = db.find(x => x.id === id); fillForm(r); editId = null; isCopyMode = true; document.getElementById('btnSave').innerHTML = `<i data-lucide="copy"></i> LƯU BẢN SAO MỚI`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
         
         function fillForm(r) { 
-            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'lyDo', 'tenThay', 'namSinhThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = r[f] || ""; }); 
+            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'lyDo', 'tenThay', 'namSinhThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ', 'blSo', 'blNgay', 'blTien'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = r[f] || ""; }); 
             document.getElementById('coThuPhi').checked = r.hasFee; 
             document.getElementById('coNguoiNhanThay').checked = r.hasNT; 
             renderCHVSelect(r.chvName); 
@@ -459,14 +506,13 @@
             document.getElementById('coNguoiNhanThay').checked = false; 
             handleFeeChange(); 
             toggleNhanThay(); 
-            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'tenThay', 'namSinhThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = (f === 'qdNoi' ? "Thi hành án dân sự tỉnh Lâm Đồng" : (f === 'cccdNoi' || f === 'noiThay' ? "Cục Cảnh sát quản lý hành chính về trật tự xã hội" : (f === 'qdSo' ? "/QĐ-THADS" : ""))); }); 
+            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'tenThay', 'namSinhThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ', 'blSo', 'blNgay', 'blTien'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = (f === 'qdNoi' ? "Thi hành án dân sự tỉnh Lâm Đồng" : (f === 'cccdNoi' || f === 'noiThay' ? "Cục Cảnh sát quản lý hành chính về trật tự xã hội" : (f === 'qdSo' ? "/QĐ-THADS" : ""))); }); 
             document.getElementById('lyDo').value = "Chi trả tiền tạm thu theo Quyết định Thi hành án"; 
             document.getElementById('txtDocTien').innerText = "Chưa nhập số tiền..."; 
             renderCHVSelect();
             lucide.createIcons(); 
         }
 
-        /* --- HÀM LƯU ĐÃ ĐƯỢC CHÈN LỆNH ĐỒNG BỘ MÀ KHÔNG ẢNH HƯỞNG LOGIC GỐC --- */
         async function saveData() { 
             if (!validateForm()) return; 
             
@@ -504,7 +550,10 @@
                 qdSo: document.getElementById('qdSo').value, 
                 qdNgay: document.getElementById('qdNgay').value, 
                 qdNoi: document.getElementById('qdNoi').value,
-                chvName: document.getElementById('chvSelect').value
+                chvName: document.getElementById('chvSelect').value,
+                blSo: document.getElementById('blSo').value,
+                blNgay: document.getElementById('blNgay').value,
+                blTien: document.getElementById('blTien').value
             }; 
 
             if (editId) {
@@ -513,25 +562,27 @@
                 db.unshift(data); 
             }
 
-            // 1. Lưu vào IDB máy
             await saveToIDB(data);
-
-            // 2. GỬI ĐỒNG BỘ
             window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
-
             resetForm();
             renderTable();
         }
 
-        function formatDateInput(el) { let val = el.value.replace(/\D/g, ""); if (val.length === 8) el.value = val.slice(0, 2) + "/" + val.slice(2, 4) + "/" + val.slice(4, 8); }
+        function formatDateInput(el) { 
+            let current = el.value.replace(/[^\d/]/g, "");
+            if (current !== el.value) el.value = current;
+            let val = el.value.replace(/\D/g, ""); 
+            if (val.length === 8 && !el.value.includes('/')) {
+                el.value = val.slice(0, 2) + "/" + val.slice(2, 4) + "/" + val.slice(4, 8); 
+            }
+        }
         function syncPicker(picker, textId) { if (!picker.value) return; const [y, m, d] = picker.value.split('-'); document.getElementById(textId).value = `${d}/${m}/${y}`; }
         function isValidDate(dateStr) { return /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/.test(dateStr); }
-        function validateForm() { let isValid = true; document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error')); document.querySelectorAll('.req').forEach(el => { if (!el.value.trim() || el.value === "/QĐ-THADS") { el.classList.add('input-error'); isValid = false; } }); ['qdNgay', 'cccdNgay', 'ngayThay'].forEach(id => { const el = document.getElementById(id); if (el && el.value.trim() && !isValidDate(el.value)) { el.classList.add('input-error'); isValid = false; } }); return isValid; }
+        function validateForm() { let isValid = true; document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error')); document.querySelectorAll('.req').forEach(el => { if (!el.value.trim() || el.value === "/QĐ-THADS") { el.classList.add('input-error'); isValid = false; } }); ['qdNgay', 'cccdNgay', 'ngayThay', 'blNgay'].forEach(id => { const el = document.getElementById(id); if (el && el.value.trim() && !isValidDate(el.value)) { el.classList.add('input-error'); isValid = false; } }); return isValid; }
         function toggleNhanThay() { const checked = document.getElementById('coNguoiNhanThay').checked; document.getElementById('formNhanThay').style.display = checked ? 'block' : 'none'; document.getElementById('formNguoiNhan').style.display = checked ? 'none' : 'grid'; }
         function handleFeeChange() { document.getElementById('boxTiLePhi').style.display = document.getElementById('coThuPhi').checked ? 'flex' : 'none'; handleMoneyChange(document.getElementById('soTien')); }
         function handleMoneyChange(e) { let val = e.value.replace(/\D/g, ""); e.value = val ? new Intl.NumberFormat('vi-VN').format(val) : ""; const hasFee = document.getElementById('coThuPhi').checked, tiLe = document.querySelector('input[name="tiLePhi"]:checked').value; const tongTien = parseInt(val) || 0, phi = hasFee ? Math.round(tongTien * tiLe / 100) : 0, thucNhan = tongTien - phi; document.getElementById('phiHienThi').value = hasFee ? new Intl.NumberFormat('vi-VN').format(phi) : "---"; document.getElementById('txtDocTien').innerText = val ? docSo(thucNhan) : "Chưa nhập số tiền..."; }
         
-        /* CẬP NHẬT CÁC HÀM PHỤ ĐỂ ĐỒNG BỘ */
         function handleStatusToggle(id) { const r = db.find(x => x.id === id); if (r.isPaid) { if(confirm("Chuyển về trạng thái CHƯA CHI?")) updateStatus(id, false, ""); } else { document.getElementById(`cell-status-${id}`).innerHTML = `<div class="flex flex-col items-center gap-1"><div class="date-input-container"><input type="text" id="tempDate-${id}" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="text-[10px] border p-1 rounded w-24"><input type="date" class="hidden-picker" style="width:20px" onchange="syncPicker(this, 'tempDate-${id}')"></div><div class="flex gap-1"><button onclick="confirmPaid(${id})" class="bg-teal-600 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Lưu</button><button onclick="renderTable()" class="bg-slate-400 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Hủy</button></div></div>`; } }
         function confirmPaid(id) { const d = document.getElementById(`tempDate-${id}`).value; if(!isValidDate(d)) return alert("Vui lòng nhập đúng định dạng dd/mm/yyyy!"); updateStatus(id, true, d); }
         async function updateStatus(id, isPaid, date) { 
@@ -563,24 +614,112 @@
         function printSelected() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Chọn hồ sơ!"); document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); window.print(); }
         
         function exportSingleWord(id) {
-            // Tạm lưu trạng thái check hiện tại
             const checkboxes = document.querySelectorAll('.row-check');
             const originalStates = [];
-            
             checkboxes.forEach(cb => {
                 originalStates.push({ el: cb, checked: cb.checked });
-                // Chỉ check dòng hiện tại
                 cb.checked = (cb.value == id);
             });
-            
-            // Tận dụng lại hàm xuất Word gốc mà không cần chỉnh sửa logic sinh XML
             exportToWord();
-            
-            // Trả lại trạng thái check ban đầu
             originalStates.forEach(state => {
                 state.el.checked = state.checked;
             });
             updateCount();
+        }
+
+        /* --- TÍNH NĂNG XUẤT DANH SÁCH CHI TỪ APP GỐC --- */
+        function exportDsChi() {
+            const checked = document.querySelectorAll('.row-check:checked');
+            if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất danh sách chi!");
+
+            let totalTien = 0;
+            let rowsHtml = '';
+            
+            Array.from(checked).forEach((cb, index) => {
+                const r = db.find(x => x.id == cb.value);
+                totalTien += Number(r.soTien) || 0;
+                
+                const ngay = r.qdNgay ? ` ngày ${r.qdNgay}` : "";
+                const soQd = r.qdSo ? r.qdSo : "";
+                const lyDoFormated = (r.lyDo || '').replace(/\n/g, '<br>');
+                
+                rowsHtml += `
+                    <tr>
+                        <td style="border: 1px solid black; padding: 5px; text-align: center;">${index + 1}</td>
+                        <td style="border: 1px solid black; padding: 5px;">${soQd}${ngay}</td>
+                        <td style="border: 1px solid black; padding: 5px; text-align: center;">1</td>
+                        <td style="border: 1px solid black; padding: 5px;">${lyDoFormated}</td>
+                        <td style="border: 1px solid black; padding: 5px;">${r.hoTen || ''}${r.diaChi ? '<br>Địa chỉ: ' + r.diaChi : ''}</td>
+                        <td style="border: 1px solid black; padding: 5px; text-align: right;">${Number(r.soTien).toLocaleString('vi-VN')}</td>
+                    </tr>
+                `;
+            });
+
+            rowsHtml += `
+                <tr>
+                    <td style="border: 1px solid black; padding: 5px; font-weight: bold; text-align: center;">Tổng cộng: ${checked.length} hồ sơ</td>
+                    <td style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: bold;">${checked.length}</td>
+                    <td style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: right; font-weight: bold;">${totalTien.toLocaleString('vi-VN')}</td>
+                </tr>
+            `;
+
+            const htmlContent = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>Danh sách hồ sơ chi</title>
+                    <style>
+                        @page {
+                            size: 29.7cm 21cm;
+                            mso-page-orientation: landscape;
+                            margin: 2cm 2cm 2cm 2cm;
+                        }
+                        body { font-family: 'Times New Roman', serif; font-size: 13pt; }
+                        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+                        th, td { border: 1px solid black; padding: 8px; vertical-align: top; }
+                        th { font-weight: bold; text-align: center; }
+                    </style>
+                </head>
+                <body>
+                    <div style="width: 100%; font-weight: bold; font-size: 13pt; text-align: left;">
+                        <div style="display: inline-block; text-align: center;">
+                            THI HÀNH ÁN DÂN SỰ TỈNH LÂM ĐỒNG<br>
+                            PHÒNG THADS KHU VỰC 14
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-weight: bold; font-size: 16pt; margin-top: 30px; margin-bottom: 20px;">
+                        DANH SÁCH HỒ SƠ CHI
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Số QĐ THA/Ngày tháng năm QĐ</th>
+                                <th>Số lượng</th>
+                                <th>Nội dung chi</th>
+                                <th>Đương sự/ Người được chi</th>
+                                <th>Số tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Danh_sach_chi.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
         }
 
         function exportToWord() {
@@ -599,6 +738,22 @@
 
             let xmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\n<w:body>\n`;
 
+            const addRawXml = (xmlStr) => { xmlContent += xmlStr; };
+
+            const addPara = (runs, pageBreak = false, alignCenter = false, noIndent = false) => {
+                let align = alignCenter ? 'center' : 'both';
+                let indent = alignCenter || noIndent ? '' : '<w:ind w:firstLine="720"/>';
+                let p = `<w:p><w:pPr><w:jc w:val="${align}"/><w:spacing w:line="264" w:lineRule="auto" w:after="0"/>${indent}${pageBreak ? '<w:pageBreakBefore/>' : ''}</w:pPr>`;
+                runs.forEach(run => {
+                    p += `<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="28"/><w:szCs w:val="28"/>`;
+                    if (run.b) p += `<w:b/>`;
+                    if (run.i) p += `<w:i/>`;
+                    p += `</w:rPr><w:t xml:space="preserve">${escapeXml(run.t)}</w:t></w:r>`;
+                });
+                p += `</w:p>\n`;
+                xmlContent += p;
+            };
+
             Array.from(checked).forEach((cb, index) => {
                 const r = db.find(x => x.id == cb.value);
                 const nS = r.namSinh ? `, sinh năm ${r.namSinh}` : "";
@@ -607,27 +762,15 @@
                 const c_Ng = r.hasNT ? (r.ngayThay || '..........') : (r.cccdNgay || '..........');
                 const uq = r.hasNT ? (escapeXml(r.giayUQ) || "........................................") : "Giấy uỷ quyền (nếu là nhận thay) số:........... ngày ..... tháng ...... năm ....................";
                 const nsThay = r.namSinhThay ? `, sinh năm ${r.namSinhThay}` : "";
-
-                // Đã chỉnh sửa hàm addPara để hỗ trợ canh lề và canh giữa mà không làm phá cấu trúc logic
-                const addPara = (runs, pageBreak = false, alignCenter = false) => {
-                    let align = alignCenter ? 'center' : 'both';
-                    let indent = alignCenter ? '' : '<w:ind w:firstLine="720"/>';
-                    let p = `<w:p><w:pPr><w:jc w:val="${align}"/><w:spacing w:line="264" w:lineRule="auto" w:after="0"/>${indent}${pageBreak ? '<w:pageBreakBefore/>' : ''}</w:pPr>`;
-                    runs.forEach(run => {
-                        p += `<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="28"/><w:szCs w:val="28"/>`;
-                        if (run.b) p += `<w:b/>`;
-                        if (run.i) p += `<w:i/>`;
-                        p += `</w:rPr><w:t xml:space="preserve">${escapeXml(run.t)}</w:t></w:r>`;
-                    });
-                    p += `</w:p>\n`;
-                    xmlContent += p;
-                };
-
                 const isFirst = index === 0;
 
-                // Thay đổi 1: Canh giữa và xuống dòng cho phần Kính gửi
-                addPara([{t: "Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng"}], !isFirst, true);
-                addPara([{t: ""}]); // Dòng trống
+                if (!isFirst) {
+                    addRawXml(`<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>`);
+                }
+
+                // Thân văn bản (đã loại bỏ Tiêu đề, Mẫu biểu và phần Ngày tháng)
+                addPara([{t: "Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng", b: true}], false, true);
+                addPara([{t: ""}]);
                 
                 addPara([{t: "Đề nghị chi cho: "}, {t: r.hoTen, b: true}, {t: nS}]);
                 addPara([{t: `Địa chỉ: ${r.diaChi}.`}]);
@@ -638,11 +781,9 @@
                 }
                 
                 addPara([{t: `CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}`}]);
-                
-                // Thay đổi 2: Sửa lỗi lặp chữ Tài khoản số
                 addPara([{t: `Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}`}]);
-                
-                addPara([{t: `Lý do chi: ${r.lyDo}, gồm các khoản sau:`}]);
+                addPara([{t: `Hình thức thanh toán: Chuyển khoản`}]);
+                addPara([{t: `Nội dung chi: ${r.lyDo}, gồm các khoản sau:`}]);
 
                 if (r.hasFee) {
                     addPara([{t: `+ Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng`}]);
@@ -655,7 +796,20 @@
 
                 addPara([{t: `Viết bằng chữ: `}, {t: docSo(r.thucNhan), i: true}]);
                 addPara([{t: `Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}`}]);
-                addPara([{t: `Hình thức thanh toán: Chuyển khoản./.`}]);
+                
+                // Khối Biên lai
+                if (r.blSo || r.blNgay || (r.blTien && r.blTien != 0)) {
+                    let tienStr = r.blTien ? `${r.blTien} đồng` : "";
+                    let parts = [];
+                    if(r.blSo) parts.push(`số ${r.blSo}`);
+                    if(r.blNgay) parts.push(`ngày ${r.blNgay}`);
+                    if(r.blTien && r.blTien != 0) parts.push(`số tiền ${tienStr}`);
+                    addPara([{t: `(Biên lai thu tiền: ${parts.join(', ')})`}]);
+                } else {
+                    addPara([{t: `(Biên lai thu tiền: số, ngày, tháng, năm, số tiền .........................)`}]);
+                }
+
+                // Phần ký tên (đã được loại bỏ hoàn toàn trong chức năng xuất Word)
             });
 
             xmlContent += `<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>\n</w:body>\n</w:document>`;
@@ -731,7 +885,7 @@
             try {
                 const zipBuffer = createZip(files);
                 const zipBlob = new Blob([zipBuffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-                const fileName = checked.length === 1 ? `C09_${db.find(x => x.id == checked[0].value).hoTen}_${(db.find(x => x.id == checked[0].value).qdSo || "").split('/')[0]}.docx` : `Danh_sach_chi_C09.docx`;
+                const fileName = checked.length === 1 ? `C06_${db.find(x => x.id == checked[0].value).hoTen}_${(db.find(x => x.id == checked[0].value).qdSo || "").split('/')[0]}.docx` : `Danh_sach_chi_C06.docx`;
                 
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(zipBlob);
@@ -746,25 +900,50 @@
             }
         }
 
-        /* --- MẪU IN --- */
         function getPrintTemplate(r) {
             const nS = r.namSinh ? `, sinh năm ${r.namSinh}` : "", c_S = r.hasNT ? r.cccdThay : (r.cccdSo || "...................."), c_Noi = r.hasNT ? r.noiThay : (r.cccdNoi || "........................................"), c_Ng = r.hasNT ? (r.ngayThay || '..........') : (r.cccdNgay || '..........'), uq = r.hasNT ? (r.giayUQ || "........................................") : "Giấy uỷ quyền (nếu là nhận thay) số:........... ngày ..... tháng ...... năm ....................";
-            
-            // LOGIC MỚI: Thêm năm sinh người thay nếu có
             const nsThay = r.namSinhThay ? `, sinh năm ${r.namSinhThay}` : "";
             
-            let rowNT = r.hasNT ? `Người nhận thay: ${r.tenThay || '....................'}${nsThay}<br>Địa chỉ: ${r.dcThay || '....................'}<br>` : "", mH = r.hasFee ? `&nbsp;&nbsp;&nbsp;&nbsp;Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Còn thực nhận: <span class="bold">${Number(r.thucNhan).toLocaleString('vi-VN')}</span> đồng` : `&nbsp;&nbsp;&nbsp;&nbsp;+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng: <span class="bold">${Number(r.soTien).toLocaleString('vi-VN')}</span> đồng`;
+            let rowNT = r.hasNT ? `Người nhận thay: ${r.tenThay || '....................'}${nsThay}<br>Địa chỉ: ${r.dcThay || '....................'}<br>` : "", mH = r.hasFee ? `&nbsp;&nbsp;&nbsp;&nbsp;+ Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;+ Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng thực nhận: <span class="bold">${Number(r.thucNhan).toLocaleString('vi-VN')}</span> đồng` : `&nbsp;&nbsp;&nbsp;&nbsp;+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng: <span class="bold">${Number(r.soTien).toLocaleString('vi-VN')}</span> đồng`;
             const tenCHV = r.chvName || "Nguyễn Công Cường";
 
+            let blStr = "";
+            if (r.blSo || r.blNgay || (r.blTien && r.blTien != 0)) {
+                let tienStr = r.blTien ? `${r.blTien} đồng` : "";
+                let parts = [];
+                if(r.blSo) parts.push(`số ${r.blSo}`);
+                if(r.blNgay) parts.push(`ngày ${r.blNgay}`);
+                if(r.blTien && r.blTien != 0) parts.push(`số tiền ${tienStr}`);
+                
+                blStr = `(Biên lai thu tiền: ${parts.join(', ')})`;
+            } else {
+                blStr = `(Biên lai thu tiền: số, ngày, tháng, năm, số tiền .........................)`;
+            }
+
             return `<div id="documentRender" class="print-only">
-                <table><tr><td style="width: 55%; font-weight: bold;">Đơn vị: Thi hành án dân sự tỉnh Lâm Đồng</td><td style="width: 45%; font-weight: bold; text-align: center;">Mẫu số: C09-THADS</td></tr><tr><td></td><td class="f-10-italic text-center">(Ban hành kèm theo Thông tư số 04/2023/TT-BTP<br>ngày 14/8/2023 của Bộ Tư pháp)</td></tr></table>
+                <table><tr><td style="width: 55%; font-weight: bold;">Đơn vị: Thi hành án dân sự tỉnh Lâm Đồng</td><td style="width: 45%; font-weight: bold; text-align: center;">Mẫu số: C06-THADS</td></tr><tr><td></td><td class="f-10-italic text-center">(Ban hành kèm theo Thông tư số 06/2026/TT-BTP<br>ngày 16/5/2026 của Bộ trưởng Bộ Tư pháp)</td></tr></table>
                 <div class="text-center" style="margin-top: 35px; position: relative; margin-bottom: 25px;"><span class="f-12-bold-upper" style="font-size: 14pt;">GIẤY ĐỀ NGHỊ CHI</span><span style="position: absolute; right: 0; font-size: 12pt;">Số:...................</span><div class="italic" style="margin-top: 2px;">Ngày .........tháng....... năm 20...</div></div>
-                <div class="text-center" style="margin-bottom: 25px;">Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng</div>
-                <div class="text-justify">Đề nghị chi cho: <span class="bold">${r.hoTen}</span>${nS}.<br>Địa chỉ: ${r.diaChi}<br>${rowNT}CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}<br>Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}<br>Lý do chi: ${r.lyDo}, gồm các khoản sau:<br>${mH}<br>Viết bằng chữ: <span class="italic">${docSo(r.thucNhan)}</span><br>Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}<br>Hình thức thanh toán: Chuyển khoản./.</div>
-                <table style="margin-top: 30px;"><tr class="text-center bold"><td style="width: 55%;">TL. TRƯỞNG THI HÀNH ÁN DÂN SỰ<br>TRƯỞNG PHÒNG<br>PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14</td><td style="width: 45%;">CHẤP HÀNH VIÊN</td></tr><tr class="text-center bold"><td style="padding-top: 75px;">Qua Đình Thiện</td><td style="padding-top: 75px;">${tenCHV}</td></tr></table></div>`;
+                <div class="text-center bold">Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng</div><br>
+                <div class="text-justify">Đề nghị chi cho: <span class="bold">${r.hoTen}</span>${nS}.<br>Địa chỉ: ${r.diaChi}<br>${rowNT}CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}<br>Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}<br>Hình thức thanh toán: Chuyển khoản<br>Nội dung chi: ${r.lyDo}, gồm các khoản sau:<br>${mH}<br>Viết bằng chữ: <span class="italic">${docSo(r.thucNhan)}</span><br>Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}<br>${blStr}</div>
+                <table style="margin-top: 30px;">
+                    <tr class="text-center">
+                        <td style="width: 55%;">
+                            <div class="bold" style="margin: 0; padding: 0; line-height: 1;">Thủ trưởng đơn vị hoặc</div>
+                            <div class="bold" style="margin: 0; padding: 0; line-height: 1;">người được ủy quyền</div>
+                            <div class="italic" style="font-weight: normal; margin-top: 4px;">(Ký, họ tên)</div>
+                        </td>
+                        <td style="width: 45%;">
+                            <div class="bold" style="margin: 0; padding: 0; line-height: 1;">Chấp hành viên</div>
+                            <div class="italic" style="font-weight: normal; margin-top: 4px;">(Ký, họ tên)</div>
+                        </td>
+                    </tr>
+                    <tr class="text-center bold">
+                        <td style="padding-top: 75px;">Qua Đình Thiện</td>
+                        <td style="padding-top: 75px;">${tenCHV}</td>
+                    </tr>
+                </table></div>`;
         }
 
-        /* HÀM ĐỌC SỐ GỐC */
         function docSo(n){
             if(!n || n==0) return ""; const ChuSo=["không","một","hai","ba","bốn","năm","sáu","bảy","tám","chín"];
             function doc3(n){ let t=Math.floor(n/100), c=Math.floor((n%100)/10), d=n%10, res=""; if(t>0) res+=ChuSo[t]+" trăm "; if(c==0 && d>0) res+=(t>0?"lẻ ":"")+ChuSo[d]; if(c==1) res+="mười "+(d==5?"lăm":(d==0?"":ChuSo[d])); if(c>1) res+=ChuSo[c]+" mươi "+(d==1?"mốt":(d==5?"lăm":(d==0?"":ChuSo[d]))); return res; }
@@ -798,7 +977,6 @@
             await store.delete(id);
         }
 
-        /* HÀM NHẬN DỮ LIỆU ĐỒNG BỘ */
         window.addEventListener('message', function(e) {
             if (e.data.type === 'GET_DATA_IDB') {
                 const req = indexedDB.open('c09_thads_v6');
@@ -821,7 +999,6 @@
                     const store = tx.objectStore('records');
                     store.clear().onsuccess = () => {
                         items.forEach(item => store.put(item));
-                        // Reload nhanh
                         setTimeout(()=> location.reload(), 100);
                     }
                 };
