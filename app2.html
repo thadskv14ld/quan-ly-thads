@@ -24,8 +24,23 @@
             background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white; padding: 15px; text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;
+            position: relative;
         }
-        .app-header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .app-header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; }
+
+        /* NÚT CÀI ĐẶT */
+        .settings-btn {
+            background: rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 6px 14px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.3); transition: all 0.2s;
+        }
+        .settings-btn:hover { background: rgba(255, 255, 255, 0.3); }
+        .settings-dropdown {
+            display: none; position: absolute; right: 15px; top: 52px; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 200px; z-index: 1000; border: 1px solid #e2e8f0; overflow: hidden; text-align: left;
+        }
+        .settings-dropdown.active { display: block; }
+        .settings-dropdown button {
+            width: 100%; text-align: left; padding: 12px 15px; background: none; border: none; font-size: 14px; color: #334155; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-weight: 500;
+        }
+        .settings-dropdown button:hover { background: #f8fafc; color: var(--primary); }
 
         .container { max-width: 1250px; margin: auto; padding: 0 15px 40px 15px; }
 
@@ -51,6 +66,22 @@
         .receiver-row { display: grid; grid-template-columns: 1fr 120px 40px; gap: 10px; margin-bottom: 10px; }
         
         .btn-add { background: white; border: 1px dashed var(--primary); color: var(--primary); width: 100%; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+        /* QUẢN LÝ NGƯỜI GỬI */
+        .sender-dropdown {
+            display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 50; max-height: 250px; overflow-y: auto; margin-top: 5px;
+        }
+        .sender-dropdown.active { display: block; }
+        .sender-item {
+            padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; font-weight: 500; color: #1e293b;
+        }
+        .sender-item:hover { background: #f8fafc; color: var(--primary); }
+        .sender-actions { display: flex; gap: 5px; }
+        .sender-actions button { background: #f1f5f9; border: none; cursor: pointer; font-size: 13px; color: #64748b; border-radius: 4px; padding: 4px 8px; }
+        .sender-actions button:hover { color: white; background: var(--primary); }
+        .sender-actions button.btn-del:hover { background: #ef4444; }
+        .sender-add-btn { padding: 12px; text-align: center; color: var(--primary); font-weight: 600; cursor: pointer; background: #eff6ff; font-size: 13px; border-top: 1px solid #e2e8f0; position: sticky; bottom: 0; }
+        .sender-add-btn:hover { background: #dbeafe; }
 
         .action-area { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px; display: flex; justify-content: center; gap: 15px; }
         .btn { border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; }
@@ -99,6 +130,14 @@
 
 <div class="app-header no-print">
     <h1>QUẢN LÝ VĂN BẢN GỬI - PHÒNG THADS KV 14 - LÂM ĐỒNG</h1>
+    <div style="position: absolute; right: 15px; top: 12px;">
+        <div class="settings-btn" onclick="toggleSettings()">⚙️ Cài đặt</div>
+        <div id="settingsDropdown" class="settings-dropdown">
+            <button onclick="exportData()">📥 Xuất dữ liệu</button>
+            <button onclick="document.getElementById('importFile').click()">📤 Cập nhật dữ liệu</button>
+            <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(event)">
+        </div>
+    </div>
 </div>
 
 <div class="container no-print">
@@ -136,7 +175,16 @@
             <div class="form-row row-3-cols">
                 <div><label>SỐ ĐIỆN THOẠI</label><input type="text" id="inPhone" oninput="this.classList.remove('is-copy')"></div>
                 <div><label>MÃ VẠCH BƯU ĐIỆN</label><input type="text" id="inBarcode" oninput="this.classList.remove('is-copy')"></div>
-                <div><label>NGƯỜI GỬI (KÝ TÊN)</label><input type="text" id="inSender" style="font-weight: bold; color: #1e40af;"></div>
+                <div>
+                    <label>NGƯỜI GỬI (KÝ TÊN)</label>
+                    <div style="position: relative;" id="senderWrapper">
+                        <input type="text" id="inSender" placeholder="Chọn hoặc nhập tên..." style="font-weight: bold; color: #1e40af;" onclick="toggleSenderDropdown()" oninput="filterSenderList()" autocomplete="off">
+                        <div id="senderDropdown" class="sender-dropdown">
+                            <div id="senderList"></div>
+                            <div class="sender-add-btn" onclick="addSender()">+ THÊM TÊN MỚI</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="form-row">
@@ -243,7 +291,7 @@
     }
 
     // ===========================================
-    // HÀM LƯU DỮ LIỆU ĐÃ SỬA LỖI VÀ ĐỒNG BỘ
+    // HÀM LƯU DỮ LIỆU ĐÃ SỬA LỖI ĐỒNG BỘ VÀ MERGE
     // ===========================================
     function saveData(type) {
         const names = document.querySelectorAll('.in-name'), years = document.querySelectorAll('.in-year');
@@ -251,28 +299,190 @@
         names.forEach((n, i) => { if(n.value.trim()) recs.push({name: n.value.trim(), year: years[i].value}) });
         if(recs.length === 0) return alert("Vui lòng nhập người nhận!");
 
+        // 1. Luôn kéo lại DB mới nhất trước khi xử lý lưu để tránh ghi đè làm mất dữ liệu của máy khác
+        let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
+
         const data = {
             id: editingId || Date.now(), type: type, recs: recs,
             addr: document.getElementById('inAddr').value,
             phone: document.getElementById('inPhone').value,
             content: document.getElementById('inContent').value,
             barcode: document.getElementById('inBarcode').value,
-            day: editingId ? db.find(x => x.id === editingId).day : new Date().toLocaleDateString('vi-VN')
+            day: editingId ? (latestDb.find(x => x.id === editingId)?.day || new Date().toLocaleDateString('vi-VN')) : new Date().toLocaleDateString('vi-VN')
         };
-        if(editingId) db[db.findIndex(x => x.id === editingId)] = data; else db.push(data);
         
-        // 1. Lưu vào máy
+        // 2. Thực hiện MERGE bản ghi
+        if(editingId) {
+            let idx = latestDb.findIndex(x => x.id === editingId);
+            if (idx !== -1) {
+                latestDb[idx] = data; // Cập nhật nếu đã có
+            } else {
+                latestDb.push(data); // Thêm mới nếu bị khuyết
+            }
+        } else {
+            latestDb.push(data); // Thêm dòng mới
+        }
+        
+        // 3. Cập nhật biến global và lưu
+        db = latestDb;
         localStorage.setItem('thads_v13', JSON.stringify(db));
         localStorage.setItem('thads_last_sender', document.getElementById('inSender').value);
         
-        // 2. GỬI TÍN HIỆU ĐỒNG BỘ LÊN MÂY
+        // 4. Gửi tín hiệu đồng bộ lên mây
         window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
 
         location.reload();
     }
 
     // ========================================================
-    // CHỨC NĂNG TÌM KIẾM ĐÃ ĐƯỢC TỐI ƯU TOÀN DIỆN
+    // TÍNH NĂNG XUẤT / NHẬP DỮ LIỆU & CÀI ĐẶT
+    // ========================================================
+    function toggleSettings() {
+        document.getElementById('settingsDropdown').classList.toggle('active');
+    }
+
+    function exportData() {
+        let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
+        let dataStr = JSON.stringify(latestDb, null, 2);
+        let blob = new Blob([dataStr], { type: 'application/json' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = 'thads_backup_' + new Date().getTime() + '.json';
+        a.click();
+    }
+
+    function importData(event) {
+        let file = event.target.files[0];
+        if(!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let importedData = JSON.parse(e.target.result);
+                if(!Array.isArray(importedData)) throw new Error("Format lỗi");
+                
+                let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
+                let dbMap = new Map();
+                
+                // Lấy toàn bộ dữ liệu hiện tại
+                latestDb.forEach(item => dbMap.set(item.id, item));
+                
+                // MERGE: Ghi đè nếu trùng ID, thêm vào nếu là ID mới, giữ nguyên các ID cũ
+                importedData.forEach(item => {
+                    dbMap.set(item.id, item);
+                });
+                
+                latestDb = Array.from(dbMap.values());
+                db = latestDb; // Cập nhật ra toàn cục
+                
+                localStorage.setItem('thads_v13', JSON.stringify(db));
+                window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
+                
+                alert("Đã cập nhật (Merge) dữ liệu thành công!");
+                location.reload();
+            } catch(err) {
+                alert("File dữ liệu không hợp lệ!");
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = ''; // Xóa value để có thể nạp lại file cũ nếu cần
+    }
+
+    // ========================================================
+    // TÍNH NĂNG QUẢN LÝ NGƯỜI GỬI (SENDER MANAGER)
+    // ========================================================
+    let senders = JSON.parse(localStorage.getItem('thads_senders')) || [];
+
+    function toggleSenderDropdown(forceClose = false) {
+        const dropdown = document.getElementById('senderDropdown');
+        if (forceClose) {
+            dropdown.classList.remove('active');
+        } else {
+            dropdown.classList.toggle('active');
+            renderSenderList();
+        }
+    }
+
+    function renderSenderList(filterText = '') {
+        const list = document.getElementById('senderList');
+        list.innerHTML = '';
+        const filtered = senders.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div style="padding:10px; color:#94a3b8; text-align:center; font-size:13px;">Không tìm thấy người gửi</div>';
+            return;
+        }
+
+        filtered.forEach(sender => {
+            const div = document.createElement('div');
+            div.className = 'sender-item';
+            div.innerHTML = `
+                <span onclick="selectSender('${sender.name}')" style="flex: 1;">${sender.name}</span>
+                <div class="sender-actions">
+                    <button type="button" onclick="editSender(${sender.id}, event)" title="Sửa tên">✏️</button>
+                    <button type="button" class="btn-del" onclick="deleteSender(${sender.id}, event)" title="Xóa tên">✕</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function filterSenderList() {
+        const val = document.getElementById('inSender').value;
+        renderSenderList(val);
+        document.getElementById('senderDropdown').classList.add('active');
+    }
+
+    function selectSender(name) {
+        document.getElementById('inSender').value = name;
+        toggleSenderDropdown(true);
+    }
+
+    function addSender() {
+        const name = prompt("Nhập tên người gửi mới:");
+        if (name && name.trim() !== '') {
+            senders.push({ id: Date.now(), name: name.trim() });
+            localStorage.setItem('thads_senders', JSON.stringify(senders));
+            renderSenderList(document.getElementById('inSender').value);
+        }
+    }
+
+    function editSender(id, event) {
+        event.stopPropagation();
+        const sender = senders.find(s => s.id === id);
+        if (sender) {
+            const newName = prompt("Sửa tên người gửi:", sender.name);
+            if (newName && newName.trim() !== '') {
+                sender.name = newName.trim();
+                localStorage.setItem('thads_senders', JSON.stringify(senders));
+                renderSenderList(document.getElementById('inSender').value);
+            }
+        }
+    }
+
+    function deleteSender(id, event) {
+        event.stopPropagation();
+        if (confirm("Xóa người gửi này khỏi danh sách?")) {
+            senders = senders.filter(s => s.id !== id);
+            localStorage.setItem('thads_senders', JSON.stringify(senders));
+            renderSenderList(document.getElementById('inSender').value);
+        }
+    }
+
+    // Đóng dropdown khi click ra ngoài
+    document.addEventListener('click', function(e) {
+        const senderWrapper = document.getElementById('senderWrapper');
+        if (senderWrapper && !senderWrapper.contains(e.target)) toggleSenderDropdown(true);
+        
+        const settingsDropdown = document.getElementById('settingsDropdown');
+        const settingsBtn = document.querySelector('.settings-btn');
+        if (settingsDropdown && settingsBtn && !settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
+            settingsDropdown.classList.remove('active');
+        }
+    });
+
+    // ========================================================
+    // TÌM KIẾM, IN ẤN VÀ CHỨC NĂNG BẢNG (GIỮ NGUYÊN)
     // ========================================================
     let searchTimeout = null;
     function renderTable() {
@@ -299,7 +509,6 @@
                     const names = item.recs.map(r => `<strong>${r.name}</strong> ${r.year ? '('+r.year+')' : ''}`).join('<br>');
                     const badge = item.type === 'POST' ? '<span style="color:#2563eb; font-weight:700;">Bưu điện</span>' : '<span style="color:#16a34a; font-weight:700;">Trực tiếp</span>';
                     
-                    // THÊM SỐ ĐIỆN THOẠI VÀO UI DANH SÁCH TẠI ĐÂY
                     htmlContent += `
                         <tr>
                             <td align="center"><input type="checkbox" class="row-cb" value="${item.id}"></td>
@@ -324,7 +533,6 @@
         }, 100); 
     }
 
-    /* LOGIC IN ẤN A4 ĐÃ THÊM SĐT */
     function printA4() {
         const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
         if(ids.length === 0) return alert("Chọn dòng cần in!");
@@ -338,14 +546,12 @@
         document.getElementById('printSenderName').innerText = document.getElementById('inSender').value;
         let h = ''; selected.forEach((item, i) => {
             const n = item.recs.map(r => `${r.name}${r.year ? ', sinh năm '+r.year : ''}`).join(' và ');
-            // THÊM SĐT VÀO IN A4
             const phoneText = item.phone ? `<br>SĐT: ${item.phone}` : '';
             h += `<tr><td align="center">${i+1}</td><td><strong>${n}</strong><br>Địa chỉ: ${item.addr}${phoneText}</td><td style="white-space: pre-wrap;">${item.content}</td><td align="center" class="barcode-col"><strong>${item.barcode || ''}</strong></td></tr>`;
         });
         document.getElementById('a4Body').innerHTML = h; window.print();
     }
 
-    /* LOGIC IN TEM CHUẨN 75x50 FONT TIMES NEW ROMAN */
     function printTem() {
         const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
         if(ids.length === 0) return alert("Chọn dòng!");
@@ -353,7 +559,6 @@
         let h = '';
         selected.forEach(item => {
             const names = item.recs.map(r => `<strong style="font-size:16px">${r.name}</strong> <span style="font-size:14px; font-weight:normal">${r.year ? '('+r.year+')' : ''}</span>`).join(', ');
-            // Thiết lập đúng 75x50mm, đổi font sang Times New Roman, loại bỏ viền đen
             h += `<div style="width:75mm; height:50mm; padding:4mm; box-sizing:border-box; font-family:'Times New Roman', Times, serif; line-height:1.4; overflow:hidden; page-break-inside:avoid; text-align:justify;">
                     <div style="font-size:15px; margin-bottom:2mm;">Người nhận: ${names}</div>
                     ${item.addr ? '<div style="font-size:15px; margin-bottom:2mm;">Đ/c: '+item.addr+'</div>' : ''}
@@ -361,7 +566,6 @@
                   </div>`;
         });
         const w = window.open('', '_blank');
-        // @page thiết lập chuẩn 75mm 50mm
         w.document.write(`<html><head><style>@page { size: 75mm 50mm; margin: 0; } body { margin: 0; padding: 0; }</style></head><body>${h}
         <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };<\/script></body></html>`);
         w.document.close();
@@ -399,10 +603,12 @@
     
     function deleteItem(id) { 
         if(confirm("Xóa dòng này?")) { 
-            db = db.filter(i => i.id !== id); 
-            localStorage.setItem('thads_v13', JSON.stringify(db)); 
+            // Luôn fetch DB mới nhất trước khi xóa để đồng bộ MERGE
+            let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
+            latestDb = latestDb.filter(i => i.id !== id); 
+            db = latestDb; // Cập nhật ra toàn cục
             
-            // GỬI TÍN HIỆU XÓA LÊN MÂY
+            localStorage.setItem('thads_v13', JSON.stringify(db)); 
             window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
 
             renderTable(); 
@@ -410,7 +616,11 @@
     }
     
     function toggleAll() { const s = document.getElementById('selectAll').checked; document.querySelectorAll('.row-cb').forEach(c => c.checked = s); }
-    window.onload = () => { renderTable(); document.getElementById('inSender').value = localStorage.getItem('thads_last_sender') || ''; };
+    
+    window.onload = () => { 
+        renderTable(); 
+        document.getElementById('inSender').value = localStorage.getItem('thads_last_sender') || ''; 
+    };
 </script>
 <script>
 window.addEventListener('message', function(e) {
