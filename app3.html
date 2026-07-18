@@ -59,7 +59,23 @@
                 <i data-lucide="clipboard-list" class="text-orange-500"></i>
                 <h1 class="text-lg font-bold tracking-tighter uppercase">QUẢN LÝ NGHIỆP VỤ C06-THADS</h1>
             </div>
-            <button onclick="resetForm()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-bold uppercase">Tạo hồ sơ mới</button>
+            
+            <!-- CẬP NHẬT: Thay thế nút Tạo hồ sơ mới bằng Menu Cài đặt -->
+            <div class="relative">
+                <button onclick="toggleSettingsMenu(event)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-bold uppercase flex items-center gap-2">
+                    ⚙️ Cài đặt
+                </button>
+                <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-xl z-[9999] border border-slate-200 overflow-hidden text-slate-800">
+                    <button onclick="exportDataApp()" class="w-full text-left px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 border-b flex items-center gap-2">
+                        📥 XUẤT DỮ LIỆU
+                    </button>
+                    <button onclick="document.getElementById('importFileInput').click()" class="w-full text-left px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2">
+                        📤 CẬP NHẬT DỮ LIỆU
+                    </button>
+                </div>
+            </div>
+            <!-- Input ẩn để chọn file cập nhật dữ liệu -->
+            <input type="file" id="importFileInput" class="hidden" accept=".json" onchange="importDataApp(event)">
         </div>
 
         <div id="mainForm" class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
@@ -266,6 +282,114 @@
         let editId = null;
         let isCopyMode = false;
 
+        /* --- XỬ LÝ MENU CÀI ĐẶT & XUẤT/NHẬP DỮ LIỆU --- */
+        function toggleSettingsMenu(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('settingsMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('settingsMenu');
+            if (menu && !menu.classList.contains('hidden') && !event.target.closest('#settingsMenu')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        function exportDataApp() {
+            const dataToExport = {
+                version: "7.0",
+                exportDate: new Date().toISOString(),
+                records: db,
+                chvList: chvList
+            };
+            const dataStr = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `DuLieu_C06_THADS_${new Date().getTime()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toggleSettingsMenu();
+        }
+
+        function importDataApp(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    let importedRecords = [];
+
+                    if (Array.isArray(importedData)) {
+                        importedRecords = importedData;
+                    } else if (importedData && importedData.records) {
+                        importedRecords = importedData.records;
+                        // Phục hồi thêm danh sách CHV
+                        if (importedData.chvList && Array.isArray(importedData.chvList)) {
+                            importedData.chvList.forEach(chv => {
+                                if (!chvList.includes(chv)) {
+                                    chvList.push(chv);
+                                }
+                            });
+                            saveCHVList();
+                        }
+                    } else {
+                        alert("File dữ liệu không đúng định dạng!");
+                        return;
+                    }
+
+                    if (!Array.isArray(importedRecords)) {
+                        alert("Không tìm thấy dữ liệu hồ sơ hợp lệ trong file!");
+                        return;
+                    }
+
+                    let updateCount = 0;
+                    let addCount = 0;
+
+                    const tx = idbDb.transaction('records', 'readwrite');
+                    const store = tx.objectStore('records');
+
+                    for (const record of importedRecords) {
+                        const existingIndex = db.findIndex(x => x.id === record.id);
+                        if (existingIndex !== -1) {
+                            db[existingIndex] = record;
+                            updateCount++;
+                        } else {
+                            db.push(record);
+                            addCount++;
+                        }
+                        // put sẽ tự động cập nhật nếu trùng ID hoặc thêm mới nếu chưa có
+                        store.put(record);
+                    }
+
+                    tx.oncomplete = () => {
+                        loadData(); // Tải lại toàn bộ để sắp xếp hiển thị chuẩn
+                        alert(`Cập nhật thành công!\n- Thêm mới: ${addCount} hồ sơ\n- Cập nhật đè (trùng ID): ${updateCount} hồ sơ`);
+                        window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
+                    };
+
+                    tx.onerror = (err) => {
+                        console.error("Lỗi khi lưu vào IDB:", err);
+                        alert("Đã xảy ra lỗi khi ghi dữ liệu!");
+                    };
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Lỗi đọc file: " + error.message);
+                }
+                
+                event.target.value = ''; // Xóa input để có thể chọn lại file cũ nếu muốn
+            };
+            reader.readAsText(file);
+            toggleSettingsMenu();
+        }
+
         /* --- LOGIC CHV --- */
         const STORAGE_KEY_CHV = 'chv_list_store_v1';
         let chvList = JSON.parse(localStorage.getItem(STORAGE_KEY_CHV)) || ["Nguyễn Công Cường"]; 
@@ -353,7 +477,6 @@
         });
         /* --- END LOGIC CHV --- */
         
-        // ĐÃ CẬP NHẬT: Thêm chuẩn số BIN quốc gia để chống lỗi VietQR tự động fallback về MB Bank
         const EXTENDED_BANK_MAP = [
             { code: "VBA", bin: "970405", keywords: ["agribank", "nong nghiep", "vba"] },
             { code: "VCB", bin: "970436", keywords: ["vietcombank", "vcb", "ngoai thuong"] },
@@ -627,7 +750,6 @@
             updateCount();
         }
 
-        /* --- TÍNH NĂNG XUẤT DANH SÁCH CHI TỪ APP GỐC --- */
         function exportDsChi() {
             const checked = document.querySelectorAll('.row-check:checked');
             if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất danh sách chi!");
@@ -768,7 +890,6 @@
                     addRawXml(`<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>`);
                 }
 
-                // Thân văn bản (đã loại bỏ Tiêu đề, Mẫu biểu và phần Ngày tháng)
                 addPara([{t: "Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng", b: true}], false, true);
                 addPara([{t: ""}]);
                 
@@ -797,7 +918,6 @@
                 addPara([{t: `Viết bằng chữ: `}, {t: docSo(r.thucNhan), i: true}]);
                 addPara([{t: `Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}`}]);
                 
-                // Khối Biên lai
                 if (r.blSo || r.blNgay || (r.blTien && r.blTien != 0)) {
                     let tienStr = r.blTien ? `${r.blTien} đồng` : "";
                     let parts = [];
@@ -808,8 +928,6 @@
                 } else {
                     addPara([{t: `(Biên lai thu tiền: số, ngày, tháng, năm, số tiền .........................)`}]);
                 }
-
-                // Phần ký tên (đã được loại bỏ hoàn toàn trong chức năng xuất Word)
             });
 
             xmlContent += `<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>\n</w:body>\n</w:document>`;
