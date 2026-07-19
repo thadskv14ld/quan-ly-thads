@@ -21,12 +21,12 @@
 <body>
     <div class="header">
         <div class="tabs">
-            <button class="tab active" onclick="switchApp(0)">1. BIÊN LAI</button>
+            <button class="tab active" onclick="switchApp(0)">1. CHUYỂN KHOẢN</button>
             <button class="tab" onclick="switchApp(1)">2. BƯU ĐIỆN</button>
             <button class="tab" onclick="switchApp(2)">3. ĐỀ NGHỊ CHI</button>
         </div>
         <div class="status">
-            <span id="statusText">Sẵn sàng (Lưu thủ công)</span>
+            <span id="statusText">Sẵn sàng</span>
             <div id="led" class="led"></div>
         </div>
     </div>
@@ -38,7 +38,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, child, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAbdpohDAhs010Sqah31Wp6vynmVSwrRsY",
@@ -55,31 +55,83 @@
         const dbRef = ref(db, 'thads_data');
         const frames = [document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3')];
 
-        // CHỈ TẢI DỮ LIỆU KHI MỚI MỞ WEB LẦN ĐẦU (TẢI XONG LÀ NGỪNG)
+        // 1. KẾT NỐI REAL-TIME (Live Sync): Đã bỏ onlyOnce để tự động cập nhật khi có thay đổi
         onValue(dbRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                if (data.app1) frames[0].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app1) }, '*');
-                if (data.app2) frames[1].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app2) }, '*');
-                if (data.app3) frames[2].contentWindow.postMessage({ type: 'RESTORE_DATA_IDB', payload: JSON.parse(data.app3) }, '*');
-                console.log("Đã nạp dữ liệu từ mây.");
+                try {
+                    if (data.app1) frames[0].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app1) }, '*');
+                    if (data.app2) frames[1].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app2) }, '*');
+                    if (data.app3) frames[2].contentWindow.postMessage({ type: 'RESTORE_DATA_IDB', payload: JSON.parse(data.app3) }, '*');
+                } catch(e) { console.error("Lỗi parse dữ liệu từ Firebase:", e); }
             }
-        }, { onlyOnce: true }); // <--- QUAN TRỌNG: Chỉ chạy 1 lần duy nhất
+        });
 
-        // CHỈ LƯU KHI NHẬN ĐƯỢC LỆNH TỪ NÚT BẤM TRONG APP CON
-        window.addEventListener('message', (e) => {
+        // 2. NHẬN LỆNH LƯU
+        window.addEventListener('message', async (e) => {
             if (e.data.type === 'DATA_RETURN' || e.data.type === 'DATA_RETURN_IDB') {
                 const appName = e.data.app;
-                const dataString = JSON.stringify(e.data.data);
-                
-                document.getElementById('led').className = 'led syncing';
-                document.getElementById('statusText').innerText = 'Đang đẩy lên mây...';
+                const led = document.getElementById('led');
+                const statusText = document.getElementById('statusText');
+                led.className = 'led syncing';
+                statusText.innerText = 'Đang đồng bộ...';
 
-                set(child(dbRef, appName), dataString).then(() => {
-                    document.getElementById('led').className = 'led';
-                    document.getElementById('statusText').innerText = 'Đã đồng bộ xong';
-                    setTimeout(() => document.getElementById('statusText').innerText = 'Sẵn sàng', 2000);
-                });
+                try {
+                    if (appName === 'app1') {
+                        // TRANSACTION - Đảm bảo an toàn tuyệt đối cho APP 1
+                        await runTransaction(child(dbRef, appName), (currentData) => {
+                            let localData = [];
+                            try { localData = JSON.parse(e.data.data['thads_v5']); } catch(err) { return; }
+                            
+                            let cloudData = [];
+                            if (currentData) {
+                                try {
+                                    const parsed = JSON.parse(currentData);
+                                    cloudData = parsed['thads_v5'] ? JSON.parse(parsed['thads_v5']) : [];
+                                } catch(err) { cloudData = []; }
+                            }
+
+                            // Merge logic: Map ID
+                            let mergedMap = new Map();
+                            cloudData.forEach(item => mergedMap.set(String(item.id), item));
+
+                            localData.forEach(localItem => {
+                                let id = String(localItem.id);
+                                if (mergedMap.has(id)) {
+                                    let cloudItem = mergedMap.get(id);
+                                    // Merge theo từng trường: Lấy local nhưng giữ lại giá trị nếu local bị trống/undefined
+                                    let mergedItem = { ...cloudItem, ...localItem };
+                                    Object.keys(cloudItem).forEach(key => {
+                                        if ((localItem[key] === undefined || localItem[key] === "") && cloudItem[key]) {
+                                            mergedItem[key] = cloudItem[key];
+                                        }
+                                    });
+                                    mergedMap.set(id, mergedItem);
+                                } else {
+                                    mergedMap.set(id, localItem);
+                                }
+                            });
+
+                            // Sort an toàn
+                            let mergedArray = Array.from(mergedMap.values()).sort((a, b) => {
+                                let valA = a.id, valB = b.id;
+                                if (!isNaN(valA) && !isNaN(valB)) return Number(valB) - Number(valA);
+                                return String(valB).localeCompare(String(valA));
+                            });
+
+                            return JSON.stringify({ 'thads_v5': JSON.stringify(mergedArray) });
+                        });
+                    } else {
+                        // GIỮ NGUYÊN SET() CHO APP 2 & 3
+                        await set(child(dbRef, appName), JSON.stringify(e.data.data));
+                    }
+                    led.className = 'led';
+                    statusText.innerText = 'Sẵn sàng';
+                } catch (error) {
+                    console.error("Lỗi đồng bộ:", error);
+                    led.className = 'led';
+                    statusText.innerText = 'Lỗi!';
+                }
             }
         });
 
