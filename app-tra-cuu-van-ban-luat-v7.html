@@ -1,0 +1,1216 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Văn bản luật THADS</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* Layout: thanh bên hẹp chỉ có một mục "Văn bản luật THADS" ở góc trên trái;
+   cột phải gồm thẻ tiêu đề, thẻ tìm kiếm với chip văn bản, rồi hai thẻ Mục lục | Nội dung. */
+:root{
+  --bg:#ffffff; --card:#ffffff; --ink:#1a2233; --muted:#667189; --line:#e0e5ef;
+  --soft:#f4f6fb; --sel:#e8edf6; --accent:#c0392b; --accent-ink:#ffffff; --accent-soft:#fbeceb;
+  --mark:#ffe49a; --shadow:0 1px 2px rgba(26,34,51,.06),0 8px 24px rgba(26,34,51,.05);
+  --font-ui:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-doc:"Times New Roman",Tinos,"Liberation Serif",Georgia,serif;
+  --fs:17px;
+  --ok:#1e7d4f;--ok-soft:#e3f4ea;--warn:#8a5a00;--warn-soft:#fff2d1;--bad:#b42318;--bad-soft:#fdeceb;
+  --c-luat:#c0392b;--c-nd:#1565c0;--c-tt:#c25a00;--c-ot:#6d4aa8;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;background:#ffffff;color-scheme:light}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0;-webkit-font-smoothing:antialiased;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{height:100%;display:flex;flex-direction:column;padding-block:12px}
+.main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.eyebrow{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+.topbar{display:flex;flex-direction:column;gap:8px;padding:8px 12px 10px}
+.card.topbar{background:#dde5f1;border-color:#c5d1e4;box-shadow:0 1px 2px rgba(26,34,51,.06),0 6px 18px rgba(60,80,120,.10)}
+.toprow{display:flex;align-items:flex-start;gap:10px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.searchbox{flex:none;width:100%;min-width:0;display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:0 14px;background:var(--card)}
+.searchbox svg{color:var(--accent);flex:none}
+.searchbox input{flex:1;min-width:0;border:0;background:transparent;padding:9px 0;font-size:15px;outline:none}
+.searchbox input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
+.searchbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.searchbox .clr{border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;padding:4px 6px}
+.chips{flex:1 1 auto;display:flex;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;gap:6px;justify-content:flex-start;min-width:0}
+.chip{flex:none;white-space:nowrap;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:7px 14px;font-weight:600;font-size:13.5px;box-shadow:0 1px 2px rgba(26,34,51,.05)}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip.add{border-style:dashed;color:var(--accent);background:transparent;box-shadow:none}
+.cols{flex:1;min-height:0;display:grid;grid-template-columns:minmax(260px,380px) minmax(0,1fr);gap:14px}
+.cols.collapsed{grid-template-columns:64px minmax(0,1fr)}
+.pane{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.pane-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.pane-h h2{margin:0;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;text-transform:uppercase;min-width:0;line-height:1.3}
+.pane-h h2 svg{color:var(--accent);flex:none}
+.sq{width:38px;height:34px;border:0;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.sq svg{transition:transform .2s}
+.collapsed .sq svg{transform:rotate(180deg)}
+.collapsed .toc-body,.collapsed .pane-h h2 span{display:none}
+.collapsed .pane-h{padding:12px 13px;justify-content:center;border-bottom:0}
+.collapsed .pane-h h2{display:none}
+.scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+.toc-body{display:flex;flex-direction:column;min-height:0;flex:1}
+.selwrap{padding:12px 14px;border-bottom:1px solid var(--line)}
+.select{width:100%;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 14px;font-weight:700;text-transform:uppercase;font-size:13.5px;color:var(--ink)}
+.toc{padding:12px 14px 18px;display:flex;flex-direction:column;gap:8px}
+.tdoc{margin:8px 4px 0;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.tdoc:first-child{margin-top:0}
+.tch{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;border:1px solid var(--line);
+  background:var(--soft);border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;text-transform:uppercase}
+.tch svg{flex:none;color:var(--accent);transition:transform .15s}
+.tch[aria-expanded="true"] svg{transform:rotate(90deg)}
+.tarts{display:flex;flex-direction:column;gap:2px;padding:4px 0 8px}
+.tart{display:block;width:100%;text-align:left;border:0;border-left:3px solid transparent;background:transparent;border-radius:9px;padding:9px 12px;font-size:14px;color:var(--ink);line-height:1.4}
+.tart:hover{background:var(--soft)}
+.tart[aria-current="true"]{background:var(--sel);border-left-color:var(--accent);font-weight:600}
+.rres{border:1px solid var(--line)}
+.tart .rtag{display:block;margin-bottom:2px}
+.empty{padding:28px 18px;color:var(--muted);text-align:center}
+.seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:9px;padding:8px 16px;font-weight:700;font-size:14.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line)}
+.tgrp{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.setwrap{position:relative;flex:none;margin-left:auto}
+.setbtn{padding:8px 10px}
+.pop{position:absolute;right:0;top:calc(100% + 8px);width:min(380px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow),0 12px 40px rgba(0,0,0,.18);z-index:40;padding:8px}
+.pop-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;border:0;background:transparent;border-radius:10px;padding:10px 12px;font-weight:700;font-size:14px}
+.pop-item:hover{background:var(--soft)}
+.pop-item small{font-weight:400;color:var(--muted);font-size:12.5px;line-height:1.4}
+.pop-sec{margin:10px 12px 4px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.drow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:10px}
+.drow:hover{background:var(--soft)}
+.dtx{min-width:0}.dtx b{display:block;font-size:13.5px}
+.dtx small{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dact{display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end;max-width:58%}
+.tag{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:2px 8px;white-space:nowrap}
+.tbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 12px;font-weight:700;font-size:14px}
+.tbtn:hover{border-color:var(--accent)}
+.tbtn:disabled{opacity:.45;cursor:not-allowed}
+.fsgrp{display:inline-flex;border:1px solid var(--line);border-radius:9px;background:var(--soft);padding:2px;gap:2px}
+.fsgrp button{border:0;background:transparent;border-radius:7px;padding:4px 11px;font-weight:700;font-size:14px}
+.fsgrp .a{color:var(--accent)}
+.doc{padding:22px clamp(16px,4vw,44px) 40px;font-family:var(--font-doc);font-size:var(--fs);line-height:1.62}
+.dochead{text-align:center;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:6px;font-family:var(--font-ui)}
+.dochead h2{margin:0;color:var(--accent);font-size:clamp(16px,2vw,21px);font-weight:800;text-transform:uppercase;text-wrap:balance}
+.dochead p{margin:6px 0 0;color:var(--muted);font-size:15.5px}
+.dochead .row{margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.mini{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:4px 10px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.mini.danger{color:var(--accent);border-color:var(--accent)}
+.banner{margin:14px 0 0;padding:10px 14px;border-radius:12px;background:var(--accent-soft);color:var(--ink);font-family:var(--font-ui);font-size:13.5px;text-align:left}
+.banner button{border:0;background:transparent;color:var(--accent);font-weight:700;text-decoration:underline;padding:0}
+.chap{margin:30px 0 0;padding:0 0 10px;color:var(--accent);font-family:var(--font-ui);font-size:1.05em;font-weight:800;line-height:1.4;text-transform:uppercase;text-align:center;border-bottom:2px solid var(--line);text-wrap:balance;overflow-wrap:anywhere;word-break:normal}
+.copy{flex:none;text-align:center;font-size:11.5px;line-height:1.3;color:var(--muted);padding:6px 8px 0;opacity:.85}
+.muc{margin:18px 0 0;padding-left:3.4em;font-family:var(--font-ui);font-weight:700;font-size:.95em;text-transform:uppercase}
+.art{padding:16px 0 18px;border-bottom:1px solid var(--line);scroll-margin-top:8px}
+.art:last-child{border-bottom:0}
+.art.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{background:var(--accent-soft)}100%{background:transparent}}
+.arth{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-left:3.4em}
+.arth h3{margin:0 0 6px;font-family:var(--font-ui);font-size:1em;font-weight:800;line-height:1.4}
+.cp{flex:none;border:0;background:transparent;color:var(--muted);padding:4px;border-radius:6px}
+.cp:hover{color:var(--accent)}
+.art p{margin:0 0 .35em;text-align:justify;text-indent:3.4em}
+.art p.pt{padding-left:0}
+.art p b{font-weight:700}
+.nextprev{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:20px;font-family:var(--font-ui)}
+.nextprev.top{margin:0 0 6px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.rpos{flex:1;text-align:center;font-weight:700;font-size:14px;min-width:0}
+.rcount{padding:4px 4px 2px;color:var(--muted);font-size:13.5px}
+.rnote{padding:9px 12px;border-radius:10px;background:var(--accent-soft);font-size:13px;line-height:1.45}
+.rtag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}
+.more{width:100%;margin-top:4px}
+.more small{font-weight:500;color:var(--muted)}
+mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-weight:600;font-size:13.5px;z-index:60;box-shadow:var(--shadow)}
+.setbtn{position:relative}
+.setbtn.dot::after{content:"";position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid var(--card)}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 11px;font-family:var(--font-ui);font-size:12.5px;font-weight:700;border:1px solid currentColor;line-height:1.3}
+.badge.ok{color:var(--ok);background:var(--ok-soft)}
+.badge.warn{color:var(--warn);background:var(--warn-soft)}
+.badge.bad{color:var(--bad);background:var(--bad-soft)}
+.badge.unk{color:var(--muted);background:var(--soft)}
+.vstat{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 12px;font-family:var(--font-ui);font-size:13px;color:var(--muted)}
+.vrows{margin:12px auto 0;max-width:760px;display:grid;gap:4px;text-align:left;font-size:13.5px;color:var(--muted)}
+.vrows b{color:var(--ink)}
+.vrows a{color:var(--accent);word-break:break-all}
+.sd{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:1px;box-shadow:0 0 0 1.5px var(--card)}
+.sd.ok{background:var(--ok)}.sd.warn{background:#e0a100}.sd.bad{background:var(--bad)}
+.banner.issues{background:var(--warn-soft)}
+.banner.issues summary{cursor:pointer;font-weight:700}
+.banner.issues ul{margin:8px 0 0;padding-left:20px;max-height:220px;overflow:auto}
+.warnbox{border:1px solid var(--warn);background:var(--warn-soft);border-radius:12px;padding:10px 14px;font-size:13px;max-height:190px;overflow:auto}
+.warnbox ul{margin:6px 0 0;padding-left:20px}
+.loadmore{text-align:center;padding:16px 0 28px;font-family:var(--font-ui)}
+.art p.hit{background:var(--accent-soft);border-radius:6px;box-shadow:-6px 0 0 var(--accent-soft),6px 0 0 var(--accent-soft)}
+.k-luat{--kc:var(--c-luat)}.k-nd{--kc:var(--c-nd)}.k-tt{--kc:var(--c-tt)}.k-ot{--kc:var(--c-ot)}
+.rtag,.tdoc,.eyebrow.kcol{color:var(--kc,var(--accent))}
+.tart.rres,.tart.rres[aria-current="true"]{border:1px solid var(--line);border-left:1px solid var(--line)}
+.rres[aria-current="true"]{background:var(--sel)}
+.chip.rord{display:inline-flex;align-items:center;gap:2px;padding:3px 4px 3px 8px;cursor:grab}
+.chip.rord .lbl{padding:4px 6px}
+.chip.rord button{border:0;background:var(--soft);color:var(--ink);border-radius:7px;min-width:30px;height:30px;font-size:14px;font-weight:700}
+.chip.rord button:hover{background:var(--sel)}
+.chip.rord.dragging{opacity:.4}
+.chip.rord.dropt{outline:2px dashed var(--accent);outline-offset:2px}
+.chip.done{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);border-style:solid}
+/* Hộp thoại thêm văn bản */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.55);display:grid;place-items:center;padding:16px}
+.sheet{width:min(720px,100%);max-height:calc(100% - 8px);display:flex;flex-direction:column;background:var(--card);border-radius:18px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.sheet-h h2{margin:0;font-size:18px;font-weight:800}
+.sheet-b{padding:16px 20px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.sheet-f{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--line)}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 16px;font-weight:700}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.drop{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1.5px dashed var(--line);border-radius:12px;padding:14px;background:var(--soft);color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.lbl{font-weight:700;font-size:13px;margin-bottom:4px;display:block}
+textarea,.in{width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 12px;font-size:14px}
+textarea{min-height:170px;resize:vertical;font-family:var(--font-doc);font-size:15px;line-height:1.5}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.g2 .full{grid-column:1/-1}
+.stat{font-size:13.5px;color:var(--muted);min-height:20px}
+.stat b{color:var(--ink)}
+.stat.warn{color:var(--accent)}
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{height:auto}
+  .main{min-height:auto}
+  .cols,.cols.collapsed{display:flex;flex-direction:column}
+  .pane{overflow:visible}
+  .scroll{overflow:visible}
+  .toc-body{max-height:56vh;overflow:auto}
+  .collapsed .toc-body{display:none}
+  .collapsed .pane-h h2{display:flex}
+  .collapsed .pane-h h2 span{display:inline}
+  .collapsed .pane-h{justify-content:space-between;border-bottom:0}
+  .chips{justify-content:flex-start}
+  .topbar{position:relative}
+  .setwrap{position:static}
+  .pop{left:8px;right:8px;width:auto}
+  .g2{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){.art.flash{animation:none}.sq svg,.tch svg{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <section class="card topbar" aria-label="Lọc văn bản và tìm kiếm">
+      <div class="toprow">
+      <div class="chips" id="chips"></div>
+      <div class="setwrap">
+        <button class="tbtn setbtn" id="setbtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="pop" aria-label="Cài đặt" title="Cài đặt"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h9M16 6h5M3 12h3M10 12h11M3 18h11M18 18h3"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg><span class="sr">Cài đặt</span></button>
+        <div class="pop" id="pop" hidden>
+          <button class="pop-item" type="button" data-act="add">Thêm văn bản luật<small>Từ file Word (.docx), PDF, .txt, hoặc dán nội dung</small></button>
+          <button class="pop-item" type="button" data-act="reorder">Sắp xếp thứ tự văn bản<small>Đưa văn bản hay tra lên đầu danh sách</small></button>
+          <div class="pop-sec">Quản lý văn bản</div>
+          <div id="doclist"></div>
+          <div class="pop-sec">Lưu cố định (khuyên dùng)</div>
+          <button class="pop-item" type="button" id="emb">Tải file ứng dụng đã nhúng văn bản (.html)<small id="embnote"></small></button>
+          <div class="pop-sec">Sao lưu</div>
+          <button class="pop-item" type="button" id="exp">Sao chép dữ liệu đã thêm (JSON)<small>Dán vào Ghi chú để lưu. Dán lại vào “Thêm văn bản luật” để khôi phục.</small></button>
+        </div>
+      </div>
+      </div>
+      <div class="searchbox">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" autocomplete="off" placeholder="Tra cứu điều luật, nghị định, thông tư…" aria-label="Tra cứu">
+        <button class="clr" id="qclr" type="button" aria-label="Xóa từ khóa" hidden>×</button>
+      </div>
+    </section>
+
+    <div class="cols" id="cols">
+      <section class="card pane" aria-label="Mục lục và kết quả tìm kiếm">
+        <div class="pane-h">
+          <h2 id="toch"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H19v-5"/></svg><span>Mục lục</span></h2>
+          <button class="sq" id="tocbtn" type="button" aria-label="Thu gọn hoặc mở mục lục"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
+        </div>
+        <div class="toc-body">
+          <div class="selwrap"><select class="select" id="chsel" aria-label="Lọc theo chương"></select></div>
+          <div class="scroll"><div class="toc" id="toc"></div></div>
+        </div>
+      </section>
+
+      <section class="card pane" aria-label="Nội dung">
+        <div class="tools">
+          <div class="seg" role="group" aria-label="Chế độ xem">
+            <button type="button" data-mode="full" aria-pressed="true">Toàn văn</button>
+            <button type="button" data-mode="single" aria-pressed="false">Từng điều</button>
+          </div>
+          <div class="tgrp">
+            <div class="fsgrp" role="group" aria-label="Cỡ chữ"><button type="button" class="a" data-fs="-1" aria-label="Giảm cỡ chữ">A</button><button type="button" data-fs="1" aria-label="Tăng cỡ chữ">A+</button></div>
+            <button class="tbtn" type="button" id="cpall"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>Sao chép</button>
+            <button class="tbtn" type="button" id="cplink"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Link</button>
+          </div>
+        </div>
+        <div class="scroll" id="content"></div>
+      </section>
+    </div>
+  </main>
+  <footer class="copy">© Mai Đức Lên – Người viết phần mềm</footer>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mt">
+    <div class="sheet-h"><h2 id="mt">Thêm văn bản</h2><button class="clr" id="mx" type="button" aria-label="Đóng" style="border:0;background:transparent;font-size:24px;line-height:1;color:var(--muted)">×</button></div>
+    <div class="sheet-b">
+      <div class="drop" id="drop">
+        <input type="file" id="file" accept=".docx,.pdf,.txt,.md,.json" hidden>
+        <button class="btn" type="button" id="pick">Chọn file Word (.docx), PDF hoặc .txt</button>
+        <span>hoặc kéo thả file vào đây, hoặc dán nội dung vào ô bên dưới</span>
+      </div>
+      <div id="txtwrap">
+        <label class="lbl" for="txt">Nội dung văn bản</label>
+        <textarea id="txt" placeholder="Chương I&#10;QUY ĐỊNH CHUNG&#10;Điều 1. Phạm vi điều chỉnh&#10;1. …&#10;a) …"></textarea>
+      </div>
+      <div class="g2">
+        <div><label class="lbl" for="f-kind">Loại văn bản</label>
+          <select class="in" id="f-kind"><option>Luật</option><option>Nghị quyết</option><option>Nghị định</option><option>Quyết định</option><option>Thông tư liên tịch</option><option>Thông tư</option><option>Văn bản khác</option></select></div>
+        <div><label class="lbl" for="f-num">Số hiệu</label><input class="in" id="f-num" placeholder="Ví dụ: 123/2020/NĐ-CP"></div>
+        <div><label class="lbl" for="f-date">Ngày ban hành</label><input class="in" id="f-date" placeholder="dd/mm/yyyy"></div>
+        <div><label class="lbl" for="f-chip">Tên hiển thị trên nút lọc</label><input class="in" id="f-chip" placeholder="Tên ngắn, ví dụ: Nghị định 123/2020"></div>
+        <div class="full"><label class="lbl" for="f-title">Tiêu đề đầy đủ</label><input class="in" id="f-title" placeholder="Tiêu đề đầy đủ của văn bản"></div>
+      </div>
+      <div class="lbl" style="margin:6px 0 -4px;color:var(--accent)">Thông tin hiệu lực và nguồn</div>
+      <div class="g2">
+        <div><label class="lbl" for="f-status">Tình trạng hiệu lực</label>
+          <select class="in" id="f-status"><option value="">Chưa xác minh</option><option value="con">Còn hiệu lực</option><option value="mot">Hết hiệu lực một phần</option><option value="het">Hết hiệu lực</option><option value="chua">Chưa có hiệu lực</option></select></div>
+        <div><label class="lbl" for="f-eff">Ngày có hiệu lực</label><input class="in" id="f-eff" placeholder="dd/mm/yyyy"></div>
+        <div class="full"><label class="lbl" for="f-amend">Văn bản sửa đổi, bổ sung (nếu có)</label><input class="in" id="f-amend" placeholder="Ví dụ: Luật số …/…/QH15 sửa đổi Điều …"></div>
+        <div class="full"><label class="lbl" for="f-repl">Văn bản thay thế hoặc làm hết hiệu lực (nếu có)</label><input class="in" id="f-repl" placeholder="Ví dụ: Nghị định số …/…/NĐ-CP"></div>
+        <div class="full"><label class="lbl" for="f-src">Nguồn lấy văn bản</label><input class="in" id="f-src" placeholder="Ví dụ: Công báo số …, hoặc dán đường dẫn https://…"></div>
+        <div><label class="lbl" for="f-upd">Ngày đối chiếu hiệu lực</label><input class="in" id="f-upd" placeholder="dd/mm/yyyy"></div>
+      </div>
+      <div class="stat" id="stat" aria-live="polite"></div>
+      <div class="warnbox" id="warn" hidden></div>
+    </div>
+    <div class="sheet-f"><button class="btn" type="button" id="cancel">Hủy</button><button class="btn primary" type="button" id="save" disabled>Lưu văn bản</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+'use strict';
+/* Bản chụp nguyên trạng trang khi vừa mở, dùng để tạo file đã nhúng văn bản */
+const HTML0='<!doctype html>\n'+document.documentElement.outerHTML;
+/* ===== Dữ liệu dựng sẵn. Văn bản thật sẽ được thêm vào đây hoặc nhập bằng nút "+ Thêm văn bản". ===== */
+const BUILTIN = /*DATA_START*/[
+  { id:'luat-106', sample:true, kind:'Luật', chip:'Luật THADS', number:'106/2025/QH15', date:'05/12/2025',
+    title:'Luật Thi hành án dân sự',
+    chapters:[{ title:'CHƯƠNG I: QUY ĐỊNH CHUNG', articles:[
+      { n:'1', title:'Phạm vi điều chỉnh', body:[
+        'Luật này quy định nguyên tắc, trình tự, thủ tục thi hành bản án, quyết định, phán quyết theo quy định của pháp luật (sau đây gọi chung là bản án, quyết định); tổ chức, hoạt động của hệ thống thi hành án dân sự, Chấp hành viên, văn phòng thi hành án dân sự, Thừa hành viên; quyền, nghĩa vụ của người được thi hành án, người phải thi hành án, người có quyền lợi, nghĩa vụ liên quan; nhiệm vụ, quyền hạn, trách nhiệm của cơ quan, tổ chức, cá nhân có liên quan trong thi hành án dân sự.'] },
+      { n:'2', title:'Bản án, quyết định được thi hành', body:[
+        '1. Bản án, quyết định của Tòa án về dân sự, phá sản; hình phạt tiền, tịch thu tài sản, truy thu tiền, tài sản thu lợi bất chính, xử lý vật chứng, tài sản, án phí và phần dân sự trong bản án, quyết định hình sự; phần tài sản trong bản án, quyết định về vụ án hành chính, bao gồm:',
+        'a) Bản án, quyết định có hiệu lực pháp luật gồm: bản án, quyết định hoặc phần bản án, quyết định sơ thẩm không bị kháng cáo, kháng nghị theo thủ tục phúc thẩm; bản án, quyết định phúc thẩm; quyết định giám đốc thẩm, tái thẩm; quyết định của Tòa án nhân dân tối cao được thi hành theo quy định của pháp luật; bản án, quyết định dân sự của Tòa án nước ngoài, phán quyết của Trọng tài nước ngoài đã được Tòa án Việt Nam công nhận và cho thi hành tại Việt Nam; quyết định tuyên bố phá sản;',
+        'b) Bản án, quyết định được thi hành ngay mặc dù có thể bị kháng cáo, kháng nghị theo quy định của Bộ luật Tố tụng dân sự;',
+        'c) Quyết định áp dụng biện pháp khẩn cấp tạm thời.',
+        '2. Quyết định xử lý vụ việc cạnh tranh của Chủ tịch Ủy ban Cạnh tranh Quốc gia, Hội đồng xử lý vụ việc hạn chế cạnh tranh, quyết định giải quyết khiếu nại quyết định xử lý vụ việc cạnh tranh của Chủ tịch Ủy ban Cạnh tranh Quốc gia, Hội đồng giải quyết khiếu nại quyết định xử lý vụ việc cạnh tranh có liên quan đến tài sản của bên phải thi hành theo quy định của Luật Cạnh tranh.',
+        '3. Phán quyết trọng tài, quyết định áp dụng biện pháp khẩn cấp tạm thời của Hội đồng trọng tài theo quy định của Luật Trọng tài thương mại.',
+        '4. Quyết định áp dụng biện pháp xử lý chuyển hướng bồi thường thiệt hại của Cơ quan điều tra, Viện kiểm sát nhân dân, Tòa án nhân dân theo quy định của Luật Tư pháp người chưa thành niên.',
+        '5. Bản án, quyết định khác được thi hành theo quy định của pháp luật.'] }
+    ]}]
+  }
+]/*DATA_END*/;
+
+/* ===== Tiện ích ===== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nrm = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase();
+const slug = s => nrm(s).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'vb';
+let toastT;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{t.hidden=true},Math.max(1800,1200+String(msg).length*45)); }
+async function copyText(text, okMsg){
+  try{ await navigator.clipboard.writeText(text); toast(okMsg||'Đã sao chép'); }
+  catch(e){
+    try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast(okMsg||'Đã sao chép'); }
+    catch(e2){ toast('Trình duyệt không cho sao chép'); }
+  }
+}
+
+/* ===== Chuẩn hóa cho tìm kiếm =====
+   lcase: chữ thường, dạng NFC (giữ dấu). fold: bỏ dấu, GIỮ NGUYÊN độ dài chuỗi
+   để vị trí khớp trên chuỗi bỏ dấu dùng được cho chuỗi gốc khi tô vàng. */
+const FC=Object.create(null);
+function foldCh(c){
+  let r=FC[c];
+  if(r===undefined){
+    if(c==='đ'||c==='Đ') r='d';
+    else { const x=c.normalize('NFD').replace(/[\u0300-\u036f]/g,''); r=x?x[0]:' '; }
+    FC[c]=r;
+  }
+  return r;
+}
+function fold(s){ let o=''; for(let i=0;i<s.length;i++) o+=foldCh(s[i]); return o; }
+/* Hai c\u00e1ch \u0111\u1eb7t d\u1ea5u thanh \u0111\u1ec1u \u0111\u00fang: "\u1ee7y/u\u1ef7", "h\u00f2a/ho\u00e0", "th\u00fay/thu\u00fd"... Ch\u1ec9 d\u00f9ng \u0111\u1ec3 \u0111\u1ed1i chi\u1ebfu t\u00ecm ki\u1ebfm
+   (thay 2 k\u00fd t\u1ef1 b\u1eb1ng \u0111\u00fang 2 k\u00fd t\u1ef1 n\u00ean \u0111\u1ed9 d\u00e0i gi\u1eef nguy\u00ean, n\u1ed9i dung hi\u1ec3n th\u1ecb kh\u00f4ng \u0111\u1ed5i). */
+const TONE={'\u00f2a':'o\u00e0','\u00f3a':'o\u00e1','\u1ecfa':'o\u1ea3','\u00f5a':'o\u00e3','\u1ecda':'o\u1ea1','\u00f2e':'o\u00e8','\u00f3e':'o\u00e9','\u1ecfe':'o\u1ebb','\u00f5e':'o\u1ebd','\u1ecde':'o\u1eb9','\u00f9y':'u\u1ef3','\u00fay':'u\u00fd','\u1ee7y':'u\u1ef7','\u0169y':'u\u1ef9','\u1ee5y':'u\u1ef5'};
+const lcase = s => String(s==null?'':s).normalize('NFC').replace(/[\u00a0\u2000-\u200b\u202f\u3000]/g,' ').toLowerCase().replace(/[\u00f2\u00f3\u1ecf\u00f5\u1ecd][ae]|[\u00f9\u00fa\u1ee7\u0169\u1ee5]y/g,m=>TONE[m]);
+const isW = c => c!==undefined && /[\p{L}\p{N}]/u.test(c);
+/* Tìm mọi vị trí khớp theo ranh giới từ (không khớp khi nằm giữa từ khác) */
+function findAll(hay,t,open){
+  const r=[]; if(!t) return r;
+  const a=isW(t[0]), b=open?false:isW(t[t.length-1]); let p=0;
+  while((p=hay.indexOf(t,p))>-1){
+    const e=p+t.length;
+    if((!a||!isW(hay[p-1]))&&(!b||!isW(hay[e]))){ r.push(p); p=e; } else p++;
+  }
+  return r;
+}
+/* Chỉ mục tìm kiếm tính sẵn cho từng điều (không ghi vào dữ liệu lưu trong localStorage) */
+const IDX=new WeakMap();
+function idx(a){
+  let x=IDX.get(a);
+  if(!x){
+    const tl=lcase(a.title), bl=lcase((a.body||[]).join('\n'));
+    x={tl,tn:fold(tl),bl,bn:fold(bl),nn:fold(lcase(a.n))};
+    IDX.set(a,x);
+  }
+  return x;
+}
+
+/* ===== Lưu trữ cục bộ (chỉ trong trình duyệt này) ===== */
+const ORDER_KEY='thads.order.v1';
+const EMB_ORDER=/*ORDER_START*/[]/*ORDER_END*/;
+let userOrder=[]; try{ userOrder=JSON.parse(localStorage.getItem(ORDER_KEY)||'[]')||[]; if(!Array.isArray(userOrder)) userOrder=[]; }catch(e){ userOrder=[]; }
+const saveOrder=()=>{ try{ localStorage.setItem(ORDER_KEY,JSON.stringify(userOrder)); }catch(e){} pushSync(); };
+/* ===== Đồng bộ với index.html (Firebase) qua postMessage ===== */
+let syncMute=false;
+function pushSync(){
+  if(syncMute||window.parent===window) return;
+  try{ window.parent.postMessage({type:'DATA_RETURN',app:'app4',data:{'thads.docs.v1':localStorage.getItem('thads.docs.v1')||'[]','thads.order.v1':localStorage.getItem('thads.order.v1')||'[]'}},'*'); }catch(e){}
+}
+const KEY='thads.docs.v1';
+let userDocs=[];
+try{ userDocs = JSON.parse(localStorage.getItem(KEY)||'[]') || []; }catch(e){ userDocs=[]; }
+/* Bỏ các trường tính toán (key, _xxx) khi lưu/sao lưu để dữ liệu gọn */
+const REP=(k,v)=> (k==='key'||(k&&k[0]==='_')) ? undefined : v;
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(userDocs,REP)); pushSync(); return true; }catch(e){ return false; } }
+/* Bản lưu trong trình duyệt trùng hệt bản đã nhúng trong file thì bỏ đi, để file luôn là nguồn chính */
+(function(){ const n0=userDocs.length;
+  userDocs=userDocs.filter(u=>{ const b=BUILTIN.find(x=>x.id===u.id&&!x.sample); return !(b&&JSON.stringify(b,REP)===JSON.stringify(u,REP)); });
+  if(userDocs.length!==n0) persist(); })();
+
+const KIND_RANK={'Luật':0,'Nghị quyết':1,'Nghị định':2,'Quyết định':3,'Thông tư liên tịch':4,'Thông tư':5};
+let docs=[], DV=0, PEND=false; const ISS=new Map();
+function buildDocs(){
+  const uids=new Set(userDocs.map(d=>d.id)); const real = BUILTIN.filter(d=>!d.sample&&!uids.has(d.id)).concat(userDocs);
+  let list = real.length ? real : BUILTIN.filter(d=>d.sample);
+  list = list.slice().sort((a,b)=>{
+    const ra=KIND_RANK[a.kind]??9, rb=KIND_RANK[b.kind]??9; if(ra!==rb) return ra-rb;
+    const pa=(a.number||'').split('/'), pb=(b.number||'').split('/');
+    return ((+pa[1]||0)-(+pb[1]||0)) || ((+pa[0]||0)-(+pb[0]||0));
+  });
+  list.forEach(d=>{
+    const seen={};
+    d.chapters.forEach(ch=>{ (ch.articles||[]).forEach(a=>{
+      const base=String(a.n).replace(/[^A-Za-z0-9]/g,'')||'x'; seen[base]=(seen[base]||0)+1;
+      a.key = seen[base]>1 ? base+'x'+seen[base] : base;
+    }); });
+  });
+  const ord=userOrder.length?userOrder:EMB_ORDER;
+  if(ord.length){ const pos=new Map(ord.map((id,i)=>[id,i])); list=list.map((d,i)=>[d,i]).sort((a,b)=>((pos.has(a[0].id)?pos.get(a[0].id):1e6)-(pos.has(b[0].id)?pos.get(b[0].id):1e6))||(a[1]-b[1])).map(x=>x[0]); }
+  docs=list; DV++; ISS.clear();
+  PEND=(userOrder.length>0&&JSON.stringify(userOrder.filter(id=>list.some(d=>d.id===id)))!==JSON.stringify(EMB_ORDER))||userDocs.some(u=>{ const b=BUILTIN.find(x=>x.id===u.id&&!x.sample); return !b||JSON.stringify(b,REP)!==JSON.stringify(u,REP); });
+}
+
+/* ===== Trạng thái ===== */
+const PAGE=30;
+const S={doc:'all',mode:'full',q:'',act:null,chap:'all',open:new Set(),fs:1,collapsed:false,confirmDel:false,
+  res:null,ri:0,rshown:PAGE,_rk:'',sel:new Set(),shown:0,_fk:'',reorder:false};
+const FS=[15,17,19,21,23];
+const getDoc=id=>docs.find(d=>d.id===id);
+const isMulti=()=>S.doc==='all'||S.doc==='multi';
+function setSel(a){ S.sel=new Set(a); const u=Array.from(S.sel); S.doc=u.length===0?'all':u.length===1?u[0]:'multi'; }
+/* Tình trạng hiệu lực: chỉ hiển thị đúng những gì người dùng đã nhập, mặc định là "chưa xác minh" */
+const ST={con:{label:'Còn hiệu lực',cls:'ok'},mot:{label:'Hết hiệu lực một phần',cls:'warn',flag:1},het:{label:'Hết hiệu lực',cls:'bad',flag:1},chua:{label:'Chưa có hiệu lực',cls:'warn',flag:1},'':{label:'Chưa xác minh hiệu lực',cls:'unk'}};
+const stOf=d=>ST[d.status||'']||ST[''];
+const badge=d=>{ const s=stOf(d); return '<span class="badge '+s.cls+'">'+esc(s.label)+'</span>'; };
+const kcls=d=>'k-'+(d.kind==='Luật'?'luat':d.kind==='Nghị định'?'nd':/^Thông tư/.test(d.kind||'')?'tt':'ot');
+const dtag=d=>(d.chip||d.title);
+function srcHtml(s){ s=String(s||''); const m=s.match(/https?:\/\/[^\s]+/); if(!m) return esc(s); const i=s.indexOf(m[0]);
+  return esc(s.slice(0,i))+'<a href="'+esc(m[0])+'" target="_blank" rel="noopener noreferrer">'+esc(m[0])+'</a>'+esc(s.slice(i+m[0].length)); }
+function vstatHtml(d,full){ return '';
+  const rows=[['Có hiệu lực từ',d.effective],['Sửa đổi, bổ sung bởi',d.amend],['Thay thế hoặc bãi bỏ bởi',d.repl]].filter(r=>r[1]);
+  if(full){
+    const rr=rows.map(r=>'<div><b>'+r[0]+':</b> '+esc(r[1])+'</div>');
+    if(d.updated) rr.push('<div><b>Đối chiếu hiệu lực ngày:</b> '+esc(d.updated)+'</div>');
+    if(d.source) rr.push('<div><b>Nguồn:</b> '+srcHtml(d.source)+'</div>');
+    if(!d.status&&!d.sample) rr.push('<div>Chưa nhập tình trạng hiệu lực. Mở Cài đặt, chọn “Sửa thông tin” để bổ sung.</div>');
+    return '<div class="row">'+badge(d)+'</div>'+(rr.length?'<div class="vrows">'+rr.join('')+'</div>':'');
+  }
+  const bits=rows.map(r=>r[0]+' '+esc(r[1])); if(d.updated) bits.push('đối chiếu '+esc(d.updated));
+  return '<div class="vstat">'+badge(d)+bits.map(b=>'<span>'+b+'</span>').join('')+'</div>';
+}
+/* Kiểm tra cấu trúc: Điều thiếu, trùng, sai thứ tự, không nội dung, không tên; khoản nhảy số */
+function validateDoc(chs){
+  const out=[], arts=[]; chs.forEach(c=>(c.articles||[]).forEach(a=>arts.push(a)));
+  const seen=new Set(); let prev=null;
+  arts.forEach(a=>{
+    const label='Điều '+a.n, m=String(a.n).match(/^(\d+)([a-zđ]*)$/), num=m?+m[1]:NaN, suf=m?m[2]:'';
+    if(seen.has(String(a.n))) out.push(label+' bị trùng số (xuất hiện nhiều lần)'); seen.add(String(a.n));
+    if(!(a.body&&a.body.length)) out.push(label+' không có nội dung');
+    if(!String(a.title||'').trim()) out.push(label+' chưa có tên điều');
+    if(!isNaN(num)){
+      if(prev===null){ if(num!==1||suf) out.push('Điều đầu tiên là '+label+', không phải Điều 1 (có thể thiếu phần đầu)'); }
+      else if(num>prev+1) out.push('Thiếu '+(num-prev===2?'Điều '+(prev+1):'Điều '+(prev+1)+' đến Điều '+(num-1))+' (giữa Điều '+prev+' và '+label+')');
+      else if(num<prev) out.push(label+' nằm sau Điều '+prev+' (sai thứ tự)');
+      if(prev===null||num>prev) prev=num;
+    }
+    let kp=0;
+    (a.body||[]).forEach(l=>{ const k=l.match(/^(\d{1,2})\.\s/); if(k){ const n=+k[1];
+      if(n!==kp+1) out.push(label+': khoản '+n+(kp?' đứng sau khoản '+kp:' xuất hiện đầu tiên')+' (kiểm tra có thiếu khoản không)'); kp=n; } });
+  });
+  return out;
+}
+function issuesOf(d){ if(d.sample) return []; let r=ISS.get(d.id); if(!r){ r=validateDoc(d.chapters); ISS.set(d.id,r); } return r; }
+const visDocs=()=> S.doc==='all'?docs:docs.filter(d=>S.sel.has(d.id));
+const hasChap=d=>d.chapters.some(ch=>ch.title); /* có chia Chương hay không: xác định bằng dữ liệu của chính văn bản */
+function visChapters(d){
+  let out=d.chapters.map((ch,ci)=>({ch,ci}));
+  if(S.chap!=='all'){ const [id,ci]=S.chap.split('|'); out = id===d.id ? out.filter(x=>String(x.ci)===ci) : []; }
+  return out;
+}
+function flat(){ const r=[]; visDocs().forEach(d=>visChapters(d).forEach(({ch,ci})=>ch.articles.forEach(a=>r.push({d,ch,ci,a})))); return r; }
+/* Phạm vi tìm kiếm: toàn bộ các văn bản đang chọn, không phụ thuộc bộ lọc chương */
+function searchScope(){ const r=[]; visDocs().forEach(d=>d.chapters.forEach((ch,ci)=>ch.articles.forEach(a=>r.push({d,ch,ci,a})))); return r; }
+function findArt(did,k){ const d=getDoc(did); if(!d) return null; for(let ci=0;ci<d.chapters.length;ci++){ const a=d.chapters[ci].articles.find(x=>x.key===k); if(a) return {d,ch:d.chapters[ci],ci,a}; } return null; }
+function token(d,a){ return d.id+'_d'+a.key; }
+
+/* ===== Tìm kiếm =====
+   a) "điều 80", "dieu 80", "đ80", "d80" hoặc chỉ "80"/"80a": đúng Điều có số đó.
+   b) Cụm từ nguyên văn, khớp ranh giới từ. Gõ có dấu thì khớp có dấu; gõ không dấu thì khớp bỏ dấu. Hỗ trợ "..." .
+   c) Không có kết quả mới dùng dự phòng: các từ cùng xuất hiện trong một điều.
+   d) Xếp hạng: cụm trong tiêu đề, rồi số lần trong nội dung, rồi thứ tự điều. */
+function rankSort(arr){ return arr.sort((p,q)=>(q.tin-p.tin)||(q.bc-p.bc)||(p.i-q.i)).map(r=>r.x); }
+function runSearch(raw){
+  raw=raw.replace(/\s+/g,' ').trim();
+  const scope=searchScope();
+  const R={q:raw,mode:'phrase',hits:[],terms:[],fallback:false,pre:false,num:'',sub:null};
+  const nq=nrm(raw);
+  /* a) "điều 80", "d80", "80", "khoản 2 điều 80", "điều 80 khoản 2", "điểm a khoản 2 điều 80" */
+  let m=nq.match(/^(?:diem\s+([a-z])\s+)?khoan\s+(\d+)\s+(?:dieu|d)\s*(\d+[a-z]?)$/), num=null, sub=null;
+  if(m){ num=m[3]; sub={k:m[2],p:m[1]||''}; }
+  else if((m=nq.match(/^(?:dieu|d)\s*(\d+[a-z]?)\s+khoan\s+(\d+)(?:\s+diem\s+([a-z]))?$/))){ num=m[1]; sub={k:m[2],p:m[3]||''}; }
+  else if((m=nq.match(/^(?:dieu|d)\s*(\d+[a-z]?)$/))){ num=m[1]; }
+  else if((m=nq.match(/^(\d+[a-z]?)$/))){ num=m[1]; R.bare=true; }
+  if(num){
+    const hits=scope.filter(x=>idx(x.a).nn===num);
+    /* chỉ gõ số (vd "2020", "106") mà không có Điều đó thì tìm như từ khóa trong nội dung */
+    if(hits.length||!R.bare){ R.mode='num'; R.num=num; R.sub=sub; R.hits=hits; return R; }
+  }
+  const strict=raw.length>=2&&/^["“”].*["“”]$/.test(raw);
+  const ph=raw.replace(/["“”]/g,' ').replace(/\s+/g,' ').trim();
+  if(!ph) return R;
+  const p=lcase(ph), diac=fold(p)!==p;
+  const run=terms=>{ const out=[]; scope.forEach((x,i)=>{
+    const ix=idx(x.a); let all=true, allT=true, bsum=0;
+    for(const t of terms){
+      const tc=findAll(t.d?ix.tl:ix.tn,t.t,t.p).length, bc=findAll(t.d?ix.bl:ix.bn,t.t,t.p).length;
+      if(!(tc+bc)){ all=false; break; }
+      if(!tc) allT=false; bsum+=bc;
+    }
+    if(all) out.push({x,i,tin:allT?1:0,bc:bsum}); }); return out; };
+  /* b) nguyên cụm, khớp ranh giới từ */
+  let T=[{t:p,d:diac}], res=run(T); R.terms=T;
+  if(res.length){ R.hits=rankSort(res); return R; }
+  if(strict) return R;
+  /* c) nguyên cụm, từ cuối đang gõ dở (vd "kê biên tài s") */
+  T=[{t:p,d:diac,p:true}]; res=run(T);
+  if(res.length){ R.pre=true; R.terms=T; R.hits=rankSort(res); return R; }
+  const words=Array.from(new Set(p.split(' ').filter(Boolean)));
+  const mk=pre=>words.map((w,i)=>({t:w,d:fold(w)!==w,p:pre&&i===words.length-1}));
+  /* d) đủ các từ trong cùng một điều */
+  if(words.length>=2){ T=mk(false); res=run(T); if(res.length){ R.fallback=true; R.terms=T; R.hits=rankSort(res); return R; } }
+  /* e) như d) nhưng từ cuối đang gõ dở */
+  T=mk(true); res=run(T); if(res.length){ R.pre=true; R.terms=T; R.hits=rankSort(res); }
+  return R;
+}
+function selectResult(i){
+  S.ri=i; if(i>=S.rshown) S.rshown=Math.ceil((i+1)/PAGE)*PAGE;
+  const h=S.res&&S.res.hits[i];
+  if(h){ S.act={d:h.d.id,k:h.a.key}; S.open=new Set([h.d.id+'|'+h.ci]); }
+}
+/* Tính lại kết quả khi từ khóa, văn bản đang chọn hoặc dữ liệu thay đổi */
+function ensureSearch(){
+  const q=S.q.trim();
+  if(!q){
+    if(S.res){ S.res=null; S._rk=''; fixAct(); }
+    return;
+  }
+  const key=q+'|'+S.doc+'|'+Array.from(S.sel).sort().join(',')+'|'+DV;
+  if(S._rk!==key){
+    S._rk=key; S.res=runSearch(q); S.ri=0; S.rshown=PAGE;
+    if(S.res.hits.length) selectResult(0);
+  }
+}
+/* Sau khi thoát tìm kiếm: giữ nguyên điều đang xem, bảo đảm nó không bị bộ lọc chương che mất */
+function fixAct(){
+  if(!S.act) return;
+  const r=findArt(S.act.d,S.act.k);
+  if(r&&S.chap!=='all'&&S.chap!==r.d.id+'|'+r.ci) S.chap='all';
+}
+
+/* ===== Hiển thị ===== */
+const chev='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>';
+const cpIcon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+const bookIcon='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H19v-5"/></svg>';
+const searchIcon='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+
+function renderChips(){
+  const c=$('#chips'), real=docs.filter(d=>!d.sample);
+  if(S.reorder){
+    c.innerHTML='<button type="button" class="chip add done" data-rd="done">Xong sắp xếp</button>'
+     + docs.map(d=>'<span class="chip rord" draggable="true" data-rid="'+esc(d.id)+'"><button type="button" data-mv="first" data-id="'+esc(d.id)+'" title="Đưa lên đầu" aria-label="Đưa '+esc(d.chip||d.title)+' lên đầu">⇤</button><button type="button" data-mv="left" data-id="'+esc(d.id)+'" title="Sang trái" aria-label="Chuyển '+esc(d.chip||d.title)+' sang trái">◀</button><span class="lbl">'+esc(d.chip||d.title)+'</span><button type="button" data-mv="right" data-id="'+esc(d.id)+'" title="Sang phải" aria-label="Chuyển '+esc(d.chip||d.title)+' sang phải">▶</button></span>').join('');
+    return;
+  }
+  c.innerHTML = '<button type="button" class="chip" data-doc="all" aria-pressed="'+(S.doc==='all')+'">Tất cả văn bản</button>'
+   + (real.length>1?'<button type="button" class="chip add" data-rd="start" title="Đổi thứ tự các văn bản">⇅ Sắp xếp</button>':'')
+   + docs.map(d=>'<button type="button" class="chip" data-doc="'+esc(d.id)+'" aria-pressed="'+S.sel.has(d.id)+'">'+esc(d.chip||d.title)+'</button>').join('');
+}
+function moveDoc(id,how,beforeId){
+  const ids=docs.map(d=>d.id), i=ids.indexOf(id); if(i<0) return; ids.splice(i,1);
+  let j;
+  if(how==='first') j=0; else if(how==='left') j=Math.max(0,i-1); else if(how==='right') j=Math.min(ids.length,i+1);
+  else if(how==='before'){ j=ids.indexOf(beforeId); if(j<0) j=ids.length; }
+  else j=i;
+  ids.splice(j,0,id); userOrder=ids.filter(x=>{ const d=docs.find(y=>y.id===x); return d&&!d.sample; }); saveOrder();
+  buildDocs(); renderChips(); renderSettings();
+  const b=$('#chips [data-mv="'+how+'"][data-id="'+id+'"]')||$('#chips [data-mv][data-id="'+id+'"]'); if(b){ b.focus(); }
+  const r=$('#chips [data-rid="'+id+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+function setReorder(on){ S.reorder=on; renderChips(); if(on) toast('Bấm ◀ ▶ hoặc kéo thả để đổi vị trí. Bấm ⇤ để đưa lên đầu.'); else toast('Đã lưu thứ tự. Để dùng ở máy khác, tải file đã nhúng trong Cài đặt.'); }
+(function(){ const c=document.getElementById('chips'); let drag=null;
+  c.addEventListener('dragstart',e=>{ const r=e.target.closest&&e.target.closest('[data-rid]'); if(!r) return; drag=r.dataset.rid; r.classList.add('dragging'); try{ e.dataTransfer.setData('text/plain',drag); e.dataTransfer.effectAllowed='move'; }catch(x){} });
+  c.addEventListener('dragover',e=>{ if(!drag) return; const r=e.target.closest('[data-rid]'); if(!r) return; e.preventDefault(); c.querySelectorAll('.dropt').forEach(x=>x.classList.remove('dropt')); if(r.dataset.rid!==drag) r.classList.add('dropt'); });
+  c.addEventListener('drop',e=>{ if(!drag) return; e.preventDefault(); const r=e.target.closest('[data-rid]'); const id=drag; drag=null; if(r&&r.dataset.rid!==id) moveDoc(id,'before',r.dataset.rid); else renderChips(); });
+  c.addEventListener('dragend',()=>{ drag=null; c.querySelectorAll('.dragging,.dropt').forEach(x=>x.classList.remove('dragging','dropt')); });
+})();
+/* Tên văn bản viết hoa cho tiêu đề khung trái: "NGHỊ ĐỊNH SỐ 151/2026/NĐ-CP" */
+function docLabel(d){
+  if(d.kind && d.kind!=='Văn bản khác' && d.number) return (d.kind+' số '+d.number).toUpperCase();
+  return String(d.chip||d.title||'').toUpperCase();
+}
+function renderHead(){
+  document.title = 'Văn bản luật THADS';
+  let icon=bookIcon, text='Mục lục';
+  if(S.res){ icon=searchIcon; text='Kết quả tìm kiếm'; }
+  else if(!isMulti()){ const d=getDoc(S.doc); if(d&&!hasChap(d)) text=docLabel(d); }
+  $('#toch').innerHTML=icon+'<span>'+esc(text)+'</span>';
+  const d=isMulti()?null:getDoc(S.doc);
+  $('#q').placeholder = S.doc==='multi' ? 'Tra cứu trong '+S.sel.size+' văn bản đã chọn (nhập số điều hoặc từ khóa)…' : d ? 'Tra cứu trong '+(d.chip||d.title)+' (nhập số điều hoặc từ khóa)…' : 'Tra cứu trong tất cả văn bản (nhập số điều hoặc từ khóa)…';
+}
+function renderSelect(){
+  const sel=$('#chsel'); let h='<option value="all">Tất cả các chương</option>';
+  visDocs().forEach(d=>{
+    const named=d.chapters.map((ch,ci)=>({ch,ci})).filter(x=>x.ch.title);
+    if(!named.length) return;
+    const opts=named.map(({ch,ci})=>'<option value="'+esc(d.id)+'|'+ci+'">'+esc(ch.title)+'</option>').join('');
+    h += isMulti() ? '<optgroup label="'+esc(d.chip||d.title)+'">'+opts+'</optgroup>' : opts;
+  });
+  sel.innerHTML=h; sel.value=S.chap;
+  /* Ẩn ô chọn chương khi đang tìm kiếm, hoặc khi các văn bản đang xem đều không chia Chương */
+  $('.selwrap').hidden = !!S.res || !visDocs().some(hasChap);
+  if(sel.value!==S.chap){ S.chap='all'; sel.value='all'; }
+}
+function resListHtml(){
+  const R=S.res, n=R.hits.length;
+  if(!n){
+    return '<div class="empty">Không tìm thấy “'+esc(R.q)+'”'
+      +(R.mode==='num'?' (không có Điều '+esc(R.num.toUpperCase())+' trong phạm vi đang chọn)':'')
+      +'.<br>Thử bớt từ khóa hoặc kiểm tra lại chính tả.</div>';
+  }
+  const shown=Math.min(n,S.rshown); let h='';
+  if(R.fallback) h+='<div class="rnote">Không có điều chứa nguyên cụm, hiển thị các điều chứa đủ các từ</div>';
+  else if(R.pre) h+='<div class="rnote">Đang hiển thị các điều có từ bắt đầu bằng phần bạn vừa gõ</div>';
+  h+='<div class="rcount">Tìm thấy <b>'+n+'</b> điều'+(shown<n?' (đang hiển thị '+shown+')':'')+'</div>';
+  for(let i=0;i<shown;i++){
+    const {d,a}=R.hits[i];
+    h+='<button type="button" class="tart rres '+kcls(d)+'" data-act="rsel" data-i="'+i+'" aria-current="'+(i===S.ri)+'">'
+      +(isMulti()?'<span class="rtag">'+esc(dtag(d))+'</span>':'')+'Điều '+esc(a.n)+'. '+esc(a.title)+'</button>';
+  }
+  if(shown<n) h+='<button type="button" class="btn more" data-act="rmore">Xem thêm kết quả <small>(còn '+(n-shown)+')</small></button>';
+  return h;
+}
+function renderToc(){
+  const t=$('#toc');
+  if(S.res){ t.innerHTML=resListHtml(); return; }
+  const list=flat();
+  if(!list.length){ t.innerHTML='<div class="empty">Chưa có nội dung. Bấm “+ Thêm văn bản”.</div>'; return; }
+  let h='';
+  visDocs().forEach(d=>{
+    const chs=visChapters(d); if(!chs.length) return;
+    if(isMulti()) h+='<div class="tdoc '+kcls(d)+'">'+esc(d.chip||d.title)+'</div>';
+    chs.forEach(({ch,ci})=>{
+      const ck=d.id+'|'+ci;
+      const arts=ch.articles.map(a=>'<button type="button" class="tart" data-act="art" data-d="'+esc(d.id)+'" data-k="'+esc(a.key)+'" aria-current="'+(S.act&&S.act.d===d.id&&S.act.k===a.key)+'">Điều '+esc(a.n)+'. '+esc(a.title)+'</button>').join('');
+      /* Nhóm không có tên Chương (văn bản không chia Chương): liệt kê thẳng các Điều */
+      if(!ch.title){ h+='<div class="tarts">'+arts+'</div>'; return; }
+      const open=S.open.has(ck);
+      h+='<button type="button" class="tch" data-act="chap" data-ck="'+esc(ck)+'" aria-expanded="'+open+'"><span>'+esc(ch.title)+'</span>'+chev+'</button>'+(open?'<div class="tarts">'+arts+'</div>':'');
+    });
+  });
+  t.innerHTML=h;
+}
+/* Tô vàng các cụm từ khóa (terms = [{t,d}]); vị trí tính trên chuỗi chữ thường hoặc bỏ dấu cùng độ dài */
+function hl(text,terms){
+  text=String(text).normalize('NFC');
+  if(!terms||!terms.length) return esc(text);
+  const lc=lcase(text); if(lc.length!==text.length) return esc(text);
+  const nd=fold(lc), rs=[];
+  terms.forEach(({t,d,p})=>{ findAll(d?lc:nd,t,p).forEach(o=>rs.push([o,o+t.length])); });
+  if(!rs.length) return esc(text);
+  rs.sort((a,b)=>a[0]-b[0]); const m=[];
+  rs.forEach(r=>{ const l=m[m.length-1]; if(l&&r[0]<=l[1]) l[1]=Math.max(l[1],r[1]); else m.push(r.slice()); });
+  let o='',i=0; m.forEach(r=>{ o+=esc(text.slice(i,r[0]))+'<mark>'+esc(text.slice(r[0],r[1]))+'</mark>'; i=r[1]; });
+  return o+esc(text.slice(i));
+}
+function paraHtml(line,terms,hit){
+  const m=line.match(/^(\d+[.)]|[a-zđ]\))\s+(.*)$/s);
+  const isPt=/^[a-zđ]\)/.test(line);
+  const cls=((isPt?'pt':'')+(hit?' hit':'')).trim(), at=cls?' class="'+cls+'"':'';
+  if(m) return '<p'+at+'><b>'+esc(m[1])+'</b> '+hl(m[2],terms)+'</p>';
+  return '<p'+at+'>'+hl(line,terms)+'</p>';
+}
+/* Tìm đoạn [từ,đến) của khoản (và điểm) cần tra trong nội dung điều */
+function subRange(body,sub){
+  if(!sub) return null; let s=-1,e=body.length;
+  for(let i=0;i<body.length;i++){ const m=body[i].match(/^(\d+)[.)]\s/); if(m){ if(s<0){ if(m[1]===sub.k) s=i; } else { e=i; break; } } }
+  if(s<0) return null;
+  if(sub.p){ let ps=-1,pe=e;
+    for(let i=s+1;i<e;i++){ const m=body[i].match(/^([a-zđ])\)\s/); if(m){ if(ps<0){ if(nrm(m[1])===sub.p) ps=i; } else { pe=i; break; } } }
+    return ps<0?null:[ps,pe]; }
+  return [s,e];
+}
+function artHtml(d,ch,a,terms,subq){
+  const rg=subRange(a.body||[],subq); let note='';
+  if(subq&&!rg) note='<div class="rnote" style="margin:0 0 8px;font-family:var(--font-ui)">Không thấy '+(subq.p?'điểm '+esc(subq.p)+' ':'')+'khoản '+esc(subq.k)+' trong Điều '+esc(a.n)+', hiển thị cả điều.</div>';
+  return '<article class="art" id="a-'+esc(token(d,a))+'" data-d="'+esc(d.id)+'" data-k="'+esc(a.key)+'"><div class="arth"><h3>Điều '+esc(a.n)+'. '+hl(a.title,terms)+'</h3>'
+   +'<button class="cp" type="button" data-act="cpart" data-d="'+esc(d.id)+'" data-k="'+esc(a.key)+'" aria-label="Sao chép Điều '+esc(a.n)+'" title="Sao chép Điều '+esc(a.n)+'">'+cpIcon+'</button></div>'
+   +note+(a.body||[]).map((l,i)=>paraHtml(l,terms,rg&&i>=rg[0]&&i<rg[1])).join('')+'</article>';
+}
+function docHeadHtml(d){
+  const meta='';
+  let extra='';
+  if(d.sample) extra='<div class="banner">Đây là dữ liệu mẫu, chưa đối chiếu với bản chính thức, mới có Điều 1 và Điều 2 của Luật 106/2025/QH15. <button type="button" data-act="add">Thêm văn bản đầy đủ</button> để thay thế.</div>';
+  const iss=[];
+  if(iss.length) extra+='<details class="banner issues"><summary>Có '+iss.length+' cảnh báo khi kiểm tra cấu trúc văn bản</summary><div style="margin-top:6px">Có thể do nhập thiếu, hoặc do điều đã bị bãi bỏ trong bản gốc. Hãy đối chiếu bản chính thức.</div><ul>'+iss.slice(0,40).map(s=>'<li>'+esc(s)+'</li>').join('')+(iss.length>40?'<li>… và '+(iss.length-40)+' cảnh báo khác</li>':'')+'</ul></details>';
+  return '<div class="dochead"><h2>'+esc(d.title)+'</h2>'+(meta?'<p>'+esc(meta)+'</p>':'')+vstatHtml(d,true)+extra+'</div>';
+}
+/* Thanh điều hướng giữa các điều trong danh sách kết quả: "← Điều trước | Điều 78 (1 / 5) | Điều sau →" */
+function resNav(top){
+  const R=S.res, n=R.hits.length, i=S.ri, a=R.hits[i].a;
+  return '<div class="nextprev'+(top?' top':'')+'"><button class="tbtn" type="button" data-act="rnav" data-dir="-1" '+(i>0?'':'disabled')+'>← Điều trước</button>'
+    +'<span class="rpos">Điều '+esc(a.n)+' ('+(i+1)+' / '+n+')</span>'
+    +'<button class="tbtn" type="button" data-act="rnav" data-dir="1" '+(i<n-1?'':'disabled')+'>Điều sau →</button></div>';
+}
+function renderContent(){
+  const box=$('#content');
+  if(!docs.length){ box.innerHTML='<div class="empty">Chưa có văn bản.</div>'; return; }
+  if(S.res){
+    const R=S.res;
+    if(!R.hits.length){ box.innerHTML='<div class="empty">Không có nội dung để hiển thị.</div>'; return; }
+    const x=R.hits[S.ri];
+    box.innerHTML='<div class="doc">'
+      +(isMulti()?'<div class="eyebrow kcol '+kcls(x.d)+'" style="font-family:var(--font-ui);margin-bottom:6px">'+esc(dtag(x.d))+'</div>':'')+vstatHtml(x.d,false)
+      +(x.ch.title?'<h3 class="chap" style="margin-top:0">'+esc(x.ch.title)+'</h3>':'')
+      +artHtml(x.d,x.ch,x.a,R.mode==='num'?null:R.terms,R.mode==='num'?R.sub:null)+resNav(false)+'</div>';
+    box.scrollTop=0;
+    /* Điều dài: đưa vị trí khớp đầu tiên vào tầm nhìn */
+    const mk=box.querySelector(R.mode==='num'?'p.hit':'mark');
+    if(mk&&box.scrollHeight>box.clientHeight){ const off=mk.getBoundingClientRect().top-box.getBoundingClientRect().top; if(off>box.clientHeight*0.6) box.scrollTop=off-80; }
+    return;
+  }
+  const list=flat();
+  if(!list.length){ box.innerHTML='<div class="empty">Không có điều nào trong phạm vi đang chọn.</div>'; return; }
+  if(S.mode==='single'){
+    let i=list.findIndex(x=>S.act&&x.d.id===S.act.d&&x.a.key===S.act.k); if(i<0) i=0;
+    const x=list[i], pv=list[i-1], nx=list[i+1];
+    box.innerHTML='<div class="doc">'+(isMulti()?'<div class="eyebrow kcol '+kcls(x.d)+'" style="font-family:var(--font-ui);margin-bottom:6px">'+esc(dtag(x.d))+'</div>':'')+vstatHtml(x.d,false)
+      +(x.ch.title?'<h3 class="chap" style="margin-top:0">'+esc(x.ch.title)+'</h3>':'')+artHtml(x.d,x.ch,x.a)
+      +'<div class="nextprev"><button class="tbtn" type="button" data-act="art" data-d="'+esc(pv?pv.d.id:'')+'" data-k="'+esc(pv?pv.a.key:'')+'" data-go="1" '+(pv?'':'disabled')+'>← Điều trước</button>'
+      +'<button class="tbtn" type="button" data-act="art" data-d="'+esc(nx?nx.d.id:'')+'" data-k="'+esc(nx?nx.a.key:'')+'" data-go="1" '+(nx?'':'disabled')+'>Điều sau →</button></div></div>';
+    box.scrollTop=0; return;
+  }
+  const fk=S.doc+'|'+Array.from(S.sel).sort().join(',')+'|'+S.chap+'|'+DV;
+  if(S._fk!==fk){ S._fk=fk; S.shown=FIRST; }
+  S.shown=Math.min(Math.max(S.shown,FIRST),list.length);
+  box.innerHTML='<div class="doc">'+fullHtml(list,0,S.shown)+(S.shown<list.length?lmHtml(list.length-S.shown):'')+'</div>';
+  watchMore();
+}
+/* Toàn văn dựng từng đoạn (40 điều đầu, cuộn xuống thì dựng tiếp) để máy yếu và bộ nhiều văn bản vẫn mượt */
+const FIRST=40, CHUNK=60; let lmObs=null;
+function fullHtml(list,from,to){
+  let h='';
+  for(let i=from;i<to;i++){ const x=list[i], p=list[i-1];
+    if(!p||p.d!==x.d) h+=docHeadHtml(x.d);
+    if((!p||p.ch!==x.ch||p.d!==x.d)&&x.ch.title) h+='<h3 class="chap">'+esc(x.ch.title)+'</h3>';
+    if(x.a.muc) h+='<div class="muc">'+esc(x.a.muc)+'</div>';
+    h+=artHtml(x.d,x.ch,x.a); }
+  return h;
+}
+const lmHtml=n=>'<div class="loadmore" id="lm"><button type="button" class="btn" data-act="lm">Hiển thị thêm (còn '+n+' điều)</button></div>';
+function loadMore(){
+  const lm=$('#lm'); if(!lm) return; const list=flat(), to=Math.min(list.length,S.shown+CHUNK);
+  lm.insertAdjacentHTML('beforebegin',fullHtml(list,S.shown,to)); S.shown=to;
+  if(to>=list.length){ lm.remove(); if(lmObs){ lmObs.disconnect(); lmObs=null; } }
+  else { lm.querySelector('button').textContent='Hiển thị thêm (còn '+(list.length-to)+' điều)'; if(lmObs){ lmObs.unobserve(lm); lmObs.observe(lm); } }
+  queueSync();
+}
+function watchMore(){
+  if(lmObs){ lmObs.disconnect(); lmObs=null; }
+  const lm=$('#lm'); if(!lm||!('IntersectionObserver' in window)) return;
+  lmObs=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) loadMore(); },{root:isNarrow()?null:$('#content'),rootMargin:'800px 0px'});
+  lmObs.observe(lm);
+}
+function render(){
+  ensureSearch();
+  renderChips(); renderHead(); renderSelect(); renderToc(); renderContent();
+  document.documentElement.style.setProperty('--fs',FS[S.fs]+'px');
+  queueSync();
+  $('#cols').classList.toggle('collapsed',S.collapsed);
+  const shownMode=S.res?'single':S.mode;
+  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===shownMode)));
+  $('#qclr').hidden=!S.q;
+  $('#setbtn').classList.toggle('dot',PEND);
+}
+/* Cuộn phần tử vào vùng nhìn thấy trong khung cuộn gần nhất (không kéo cả trang) */
+function ensureVisible(sel){
+  const el=$(sel); if(!el) return;
+  let p=el.parentElement;
+  while(p&&p!==document.body){
+    const cs=getComputedStyle(p);
+    if(/(auto|scroll)/.test(cs.overflowY)&&p.scrollHeight>p.clientHeight){
+      const er=el.getBoundingClientRect(), pr=p.getBoundingClientRect();
+      if(er.top<pr.top) p.scrollTop-=pr.top-er.top+8; else if(er.bottom>pr.bottom) p.scrollTop+=er.bottom-pr.bottom+8;
+      return;
+    }
+    p=p.parentElement;
+  }
+}
+let tocLock=0, syncRaf=0;
+/* Đồng bộ mục lục theo điều đang hiển thị ở đầu vùng nội dung (chế độ Toàn văn) */
+function syncToc(){
+  if(S.mode!=='full'||S.res||Date.now()<tocLock) return;
+  const box=$('#content'), arts=box.querySelectorAll('article.art[data-d]'); if(!arts.length) return;
+  const line=box.getBoundingClientRect().top+24;
+  let lo=0, hi=arts.length-1;
+  while(lo<hi){ const m=(lo+hi+1)>>1; if(arts[m].getBoundingClientRect().top<=line) lo=m; else hi=m-1; }
+  let cur=arts[lo];
+  if(box.scrollHeight>box.clientHeight+4&&box.scrollTop+box.clientHeight>=box.scrollHeight-4) cur=arts[arts.length-1];
+  const d=cur.dataset.d, k=cur.dataset.k;
+  if(S.act&&S.act.d===d&&S.act.k===k) return;
+  const r=findArt(d,k); if(!r) return;
+  S.act={d:d,k:k}; S.open=new Set([d+'|'+r.ci]);
+  renderToc(); ensureVisible('#toc .tart[aria-current="true"]');
+}
+function queueSync(){ if(syncRaf) return; syncRaf=requestAnimationFrame(()=>{ syncRaf=0; syncToc(); }); }
+function scrollToAct(){
+  if(!S.act) return;
+  tocLock=Date.now()+800;
+  const id='a-'+S.act.d+'_d'+S.act.k; let el=document.getElementById(id);
+  if(!el){ const i=flat().findIndex(x=>x.d.id===S.act.d&&x.a.key===S.act.k); if(i>=0){ S.shown=Math.max(S.shown,i+20); renderContent(); el=document.getElementById(id); } }
+  if(el&&el.scrollIntoView){ el.scrollIntoView({block:'start'}); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+}
+function endSearch(){ clearTimeout(qt); S.q=''; $('#q').value=''; }
+function openArt(did,k,go){
+  S.act={d:did,k:k}; const r=findArt(did,k);
+  if(r){ S.open=new Set([did+'|'+r.ci]); }
+  tocLock=Date.now()+800;
+  if(go){ endSearch(); }
+  render();
+  if(S.mode==='full') scrollToAct();
+}
+
+/* ===== Phân tích văn bản thô thành Chương / Điều ===== */
+function parseLaw(text){
+  const lines=text.replace(/\r/g,'').split('\n').map(s=>s.replace(/\u00a0/g,' ').trim()).filter(Boolean);
+  const reCh=/^(?:CHƯƠNG|Chương)\s+([IVXLCDM]+|\d+)(?=\s|[.:\-–—]|$)\s*[.:\-–—]?\s*(.*)$/;
+  const reMuc=/^(?:MỤC|Mục)\s+(\d+|[IVXLCDM]+)(?=\s|[.:\-–—]|$)\s*[.:\-–—]?\s*(.*)$/;
+  const reDieu=/^Điều\s+(\d+[a-zđ]?)(?:\s*[.:]\s*(.*))?$/;
+  const isStruct=l=>reCh.test(l)||reMuc.test(l)||reDieu.test(l);
+  const chapters=[]; let ch=null, art=null, muc=null, skipped=0, artCount=0, ended=false;
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i]; let m;
+    /* "Nơi nhận:" là phần cuối văn bản (nơi nhận, chữ ký) — không đưa vào nội dung điều cuối */
+    if(art && /^Nơi nhận\s*:?\s*$/i.test(l)) ended=true;
+    if(ended) continue;
+    if((m=l.match(reCh))){
+      let t=m[2]; if(!t && i+1<lines.length && !isStruct(lines[i+1]) && lines[i+1].length<220) t=lines[++i];
+      ch={title:'CHƯƠNG '+m[1]+(t?': '+t.toUpperCase():''),articles:[]}; chapters.push(ch); art=null; muc=null; continue;
+    }
+    if((m=l.match(reMuc))){
+      let t=m[2]; if(!t && i+1<lines.length && !isStruct(lines[i+1]) && lines[i+1].length<220) t=lines[++i];
+      muc='MỤC '+m[1]+(t?': '+t.toUpperCase():''); continue;
+    }
+    if((m=l.match(reDieu))){
+      /* Văn bản không chia Chương (chỉ có Điều, khoản, điểm): gom vào một nhóm không tên */
+      if(!ch){ ch={title:'',articles:[]}; chapters.push(ch); }
+      let at=(m[2]||'').trim();
+      if(!at && i+1<lines.length && !isStruct(lines[i+1]) && lines[i+1].length<200 && !/^(\d+[.)]|[a-zđ]\))\s/.test(lines[i+1])) at=lines[++i];
+      art={n:m[1],title:at,body:[]}; if(muc){ art.muc=muc; muc=null; }
+      ch.articles.push(art); artCount++; continue;
+    }
+    if(art) art.body.push(l); else skipped++;
+  }
+  const head=lines.slice(0,40);
+  let kind='', number='', date='', title='';
+  for(let i=0;i<head.length;i++){
+    const k=head[i].match(/^(BỘ LUẬT|LUẬT|NGHỊ ĐỊNH|THÔNG TƯ LIÊN TỊCH|THÔNG TƯ|QUYẾT ĐỊNH|NGHỊ QUYẾT)(?=\s|$)\s*(.*)$/i);
+    if(k && !title){
+      const word=k[1].toLowerCase(); kind = word.includes('liên tịch')?'Thông tư liên tịch':word.includes('nghị định')?'Nghị định':word.includes('thông tư')?'Thông tư':word.includes('quyết định')?'Quyết định':word.includes('nghị quyết')?'Nghị quyết':'Luật';
+      let rest=k[2]; if(!rest && head[i+1] && !/^(Số|Luật số)/i.test(head[i+1])) rest=head[i+1];
+      const cap=s=>s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();
+      if(rest && kind!=='Luật') rest = rest.charAt(0).toLowerCase()+rest.slice(1);
+      title = rest ? (kind==='Luật'?'Luật ':kind+' ')+(rest===rest.toUpperCase()?rest.toLowerCase():rest) : '';
+      if(kind==='Luật' && /bộ luật/i.test(k[1])) title = 'Bộ luật '+(rest||'').toLowerCase();
+      title = title.charAt(0).toUpperCase()+title.slice(1);
+    }
+    if(!number){ const nm=head[i].match(/(\d{1,4}\/\d{4}\/[A-ZĐ0-9]+(?:-[A-ZĐ0-9]+)*)/); if(nm) number=nm[1]; }
+    if(!date){ const dm=head[i].match(/(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})/i)||head[i].match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if(dm) date=dm[1].padStart(2,'0')+'/'+dm[2].padStart(2,'0')+'/'+dm[3]; }
+  }
+  if(!kind && number){ kind = /NĐ/.test(number)?'Nghị định':/TTLT/.test(number)?'Thông tư liên tịch':/TT/.test(number)?'Thông tư':/NQ/.test(number)?'Nghị quyết':/QĐ/.test(number)?'Quyết định':/QH/.test(number)?'Luật':''; }
+  return {chapters,artCount,skipped,kind,number,date,title};
+}
+
+/* ===== Hộp thoại thêm văn bản ===== */
+const F={kind:$('#f-kind'),num:$('#f-num'),date:$('#f-date'),chip:$('#f-chip'),title:$('#f-title'),status:$('#f-status'),eff:$('#f-eff'),amend:$('#f-amend'),repl:$('#f-repl'),src:$('#f-src'),upd:$('#f-upd')};
+let touched={}, parsed=null, lastFocus=null, editId=null;
+function openModal(eid){ lastFocus=document.activeElement; touched={}; parsed=null; editId=eid||null; const ed=!!editId;
+  $('#txt').value=''; Object.values(F).forEach(e=>{ if(e.tagName!=='SELECT') e.value=''; }); F.kind.value='Luật'; F.status.value='';
+  $('#stat').textContent=''; $('#stat').className='stat'; $('#warn').hidden=true;
+  ['#drop','#txtwrap','#stat'].forEach(s=>{ $(s).hidden=ed; });
+  $('#mt').textContent=ed?'Sửa thông tin văn bản':'Thêm văn bản'; $('#save').textContent=ed?'Lưu thay đổi':'Lưu văn bản'; $('#save').disabled=!ed;
+  if(ed){ const d=getDoc(editId)||{}; F.kind.value=d.kind||'Luật'; F.num.value=d.number||''; F.date.value=d.date||''; F.chip.value=d.chip||''; F.title.value=d.title||'';
+    F.status.value=d.status||''; F.eff.value=d.effective||''; F.amend.value=d.amend||''; F.repl.value=d.repl||''; F.src.value=d.source||''; F.upd.value=d.updated||''; touched={chip:true}; }
+  $('#modal').hidden=false; (ed?F.status:$('#txt')).focus(); }
+function closeModal(){ $('#modal').hidden=true; editId=null; if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
+function chipFor(kind,num){ const p=(num||'').split('/'); return (kind||'Văn bản')+(p.length>1?' '+p[0]+'/'+p[1]:''); }
+function analyse(){ $('#warn').hidden=true;
+  const text=$('#txt').value; if(!text.trim()){ parsed=null; $('#stat').textContent=''; $('#save').disabled=true; return; }
+  const tt=text.trim();
+  if(/^[\[{]/.test(tt)){ try{ const j=JSON.parse(tt); const arr=(Array.isArray(j)?j:(j.docs||[j])).filter(d=>d&&d.chapters);
+    if(arr.length){ parsed={json:arr}; $('#stat').className='stat'; $('#stat').innerHTML='Nhận dạng dữ liệu sao lưu gồm <b>'+arr.length+' văn bản</b>.'; $('#save').disabled=false; return; } }catch(e){} }
+  parsed=parseLaw(text);
+  const set=(k,v)=>{ if(!touched[k] && v) F[k].value=v; };
+  set('kind',parsed.kind); set('num',parsed.number); set('date',parsed.date); set('title',parsed.title);
+  if(!touched.chip) F.chip.value=chipFor(F.kind.value,F.num.value);
+  const chN=parsed.chapters.filter(c=>c.title).length, st=$('#stat');
+  if(!parsed.artCount){ st.className='stat warn'; st.textContent='Chưa thấy dòng nào dạng “Điều 1. Tên điều”. Kiểm tra lại nội dung dán vào.'; $('#save').disabled=true; return; }
+  st.className='stat'; st.innerHTML=(chN?'Tìm thấy <b>'+chN+' Chương</b> và <b>'+parsed.artCount+' Điều</b>.':'Văn bản không chia Chương, tìm thấy <b>'+parsed.artCount+' Điều</b>.')+(parsed.skipped?' Bỏ qua '+parsed.skipped+' dòng trước Điều đầu tiên (phần căn cứ, quốc hiệu).':'');
+  const iss=[], wb=$('#warn');
+  if(iss.length){ wb.hidden=false; wb.innerHTML='<b>Có '+iss.length+' cảnh báo.</b> Hãy đối chiếu bản gốc trước khi lưu (có thể do nhập thiếu, hoặc điều đã bị bãi bỏ trong bản gốc):<ul>'+iss.slice(0,15).map(s=>'<li>'+esc(s)+'</li>').join('')+(iss.length>15?'<li>… và '+(iss.length-15)+' cảnh báo khác</li>':'')+'</ul>'; }
+  $('#save').disabled=false;
+}
+function metaF(){ const kind=F.kind.value, number=F.num.value.trim();
+  return {kind,number,date:F.date.value.trim(),chip:F.chip.value.trim()||chipFor(kind,number),title:F.title.value.trim()||(kind+' '+number).trim()||'Văn bản mới',
+    status:F.status.value,effective:F.eff.value.trim(),amend:F.amend.value.trim(),repl:F.repl.value.trim(),source:F.src.value.trim(),updated:F.upd.value.trim()}; }
+function saveDoc(){
+  if(editId){ const base=getDoc(editId); if(!base){ closeModal(); return; }
+    let tg=userDocs.find(d=>d.id===editId);
+    if(!tg){ tg=JSON.parse(JSON.stringify(base,REP)); userDocs.push(tg); }
+    Object.assign(tg,metaF()); const ok=persist(); buildDocs(); closeModal(); render();
+    toast(ok?'Đã cập nhật. Nhớ tải lại file đã nhúng (Cài đặt) để lưu cố định.':'Đã sửa, nhưng trình duyệt không lưu được.'); return; }
+  if(parsed&&parsed.json){ let n=0; parsed.json.forEach(d=>{ const id=d.id||slug(d.chip||d.title||'vb'); if(docs.some(x=>x.id===id&&!x.sample)) return; d.id=id; userDocs.push(d); n++; });
+    const ok=persist(); buildDocs(); setSel([]); S.chap='all'; S.act=null; closeModal(); render(); toast(n?(ok?'Đã khôi phục '+n+' văn bản':'Đã thêm, nhưng trình duyệt không lưu được'):'Các văn bản này đã có sẵn'); return; }
+  if(!parsed||!parsed.artCount) return;
+  const kind=F.kind.value, number=F.num.value.trim(), title=F.title.value.trim()||(kind+' '+number).trim()||'Văn bản mới';
+  const chip=F.chip.value.trim()||chipFor(kind,number);
+  let id=slug(chip), base=id, i=2; while(docs.some(d=>d.id===id)&&!docs.find(d=>d.id===id).sample) id=base+'-'+(i++);
+  userDocs.push(Object.assign({id},metaF(),{chapters:parsed.chapters}));
+  const ok=persist(); buildDocs(); setSel([id]); S.chap='all'; S.act=null; S.open=new Set();
+  const first=docs.find(d=>d.id===id); if(first&&first.chapters[0]) S.open.add(id+'|0');
+  const wn=0;
+  closeModal(); render(); toast(ok?'Đã lưu văn bản'+(wn?' (có '+wn+' cảnh báo, xem đầu văn bản)':'')+'. Để dùng ở máy khác: Cài đặt, Tải file ứng dụng đã nhúng.':'Đã thêm, nhưng trình duyệt không lưu được. Mở lại sẽ mất.');
+}
+/* Đọc .docx và GIỮ số tự động của Word ("Điều 1.", "1.", "a)", "I."...).
+   mammoth.extractRawText bỏ mất các số này nên Điều 1–7 trong nhiều văn bản bị mất tiêu đề. */
+async function docxToText(buf){
+  const zip=await JSZip.loadAsync(buf);
+  const rd=async p=>{ const f=zip.file(p); return f?await f.async('string'):null; };
+  const px=s=>new DOMParser().parseFromString(s,'application/xml');
+  const docXml=await rd('word/document.xml'); if(!docXml) throw new Error('no document.xml');
+  const D=px(docXml), numXml=await rd('word/numbering.xml'), styXml=await rd('word/styles.xml');
+  const val=(el,tag)=>{ const c=el&&el.getElementsByTagName(tag)[0]; return c?c.getAttribute('w:val'):null; };
+  /* định nghĩa danh sách */
+  const abs={}, nums={};
+  if(numXml){ const N=px(numXml);
+    Array.from(N.getElementsByTagName('w:abstractNum')).forEach(a=>{ const lv={};
+      Array.from(a.getElementsByTagName('w:lvl')).forEach(l=>{ lv[l.getAttribute('w:ilvl')]={fmt:val(l,'w:numFmt')||'decimal',text:val(l,'w:lvlText')||'',start:+(val(l,'w:start')||1)}; });
+      abs[a.getAttribute('w:abstractNumId')]=lv; });
+    Array.from(N.getElementsByTagName('w:num')).forEach(n=>{ const ov={}; let has=false;
+      Array.from(n.getElementsByTagName('w:lvlOverride')).forEach(o=>{ const s=val(o,'w:startOverride'); if(s!==null){ ov[o.getAttribute('w:ilvl')]=+s; has=true; } });
+      nums[n.getAttribute('w:numId')]={abs:val(n,'w:abstractNumId'),ov,has}; }); }
+  /* số gắn theo kiểu đoạn (style) */
+  const sty={};
+  if(styXml){ Array.from(px(styXml).getElementsByTagName('w:style')).forEach(s=>{ const np=s.getElementsByTagName('w:numPr')[0];
+    sty[s.getAttribute('w:styleId')]={based:val(s,'w:basedOn'),numId:np?val(np,'w:numId'):null,ilvl:np?val(np,'w:ilvl'):null}; }); }
+  const styNum=id=>{ for(let g=0;id&&sty[id]&&g<10;g++){ if(sty[id].numId!==null) return sty[id]; id=sty[id].based; } return null; };
+  const letters=(v,up)=>{ let s=''; while(v>0){ v--; s=String.fromCharCode(97+v%26)+s; v=Math.floor(v/26); } return up?s.toUpperCase():s; };
+  const roman=(v,up)=>{ const r=[[1000,'m'],[900,'cm'],[500,'d'],[400,'cd'],[100,'c'],[90,'xc'],[50,'l'],[40,'xl'],[10,'x'],[9,'ix'],[5,'v'],[4,'iv'],[1,'i']]; let s=''; r.forEach(([n,c])=>{ while(v>=n){ s+=c; v-=n; } }); return up?s.toUpperCase():s; };
+  const fmt=(v,f)=>f==='lowerLetter'?letters(v):f==='upperLetter'?letters(v,1):f==='lowerRoman'?roman(v):f==='upperRoman'?roman(v,1):f==='decimalZero'?(v<10?'0':'')+v:String(v);
+  /* lấy chữ của đoạn (bỏ phần bị xóa khi theo dõi chỉnh sửa) */
+  const txt=el=>{ let s=''; for(const c of Array.from(el.childNodes)){ if(c.nodeType!==1) continue; const t=c.nodeName;
+    if(t==='w:t') s+=c.textContent; else if(t==='w:tab'||t==='w:br') s+=' '; else if(t==='w:noBreakHyphen') s+='-'; else if(t==='w:del'||t==='w:delText'||t==='w:pPr') continue; else s+=txt(c); } return s; };
+  const counters={}, out=[];
+  Array.from(D.getElementsByTagName('w:p')).forEach(p=>{
+    let pre='', text=txt(p).replace(/\u00a0/g,' ').trim();
+    const ppr=Array.from(p.childNodes).find(c=>c.nodeName==='w:pPr'); const np=ppr&&Array.from(ppr.childNodes).find(c=>c.nodeName==='w:numPr');
+    let numId=np?val(np,'w:numId'):null, lvl=np?val(np,'w:ilvl'):null;
+    if(numId===null){ const sn=styNum(ppr?val(ppr,'w:pStyle'):null); if(sn){ numId=sn.numId; lvl=sn.ilvl; } }
+    if(numId&&numId!=='0'&&nums[numId]&&abs[nums[numId].abs]){
+      const def=abs[nums[numId].abs]; lvl=String(lvl||0); const L=def[lvl];
+      if(L){ const key=nums[numId].has?'n'+numId:'a'+nums[numId].abs; const c=counters[key]||(counters[key]={});
+        const li=+lvl, ovS=nums[numId].ov[lvl];
+        c[li]=(c[li]===undefined)?(ovS!==undefined?ovS:L.start):c[li]+1;
+        Object.keys(c).forEach(k=>{ if(+k>li) delete c[k]; });
+        if(L.fmt==='bullet') pre='- ';
+        else { pre=L.text.replace(/%(\d)/g,(m0,d)=>{ const k=+d-1, Lk=def[String(k)]; const v=c[k]!==undefined?c[k]:(Lk?Lk.start:1); return fmt(v,Lk?Lk.fmt:'decimal'); });
+          if(L.fmt==='lowerLetter') pre=pre.replace(/\.$/,')'); /* điểm a), b) */ }
+      } }
+    if(text) out.push(pre?pre+(/\s$/.test(pre)?'':' ')+text:text);
+  });
+  return out.join('\n');
+}
+/* Đọc PDF (có lớp chữ) bằng pdf.js, ghép các dòng bị ngắt thành đoạn để tách đúng Điều/khoản/điểm */
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/';
+let pdfLib=null;
+async function loadPdfJs(){
+  if(pdfLib) return pdfLib;
+  const lib=await import(PDFJS+'pdf.min.mjs');
+  try{ const r=await fetch(PDFJS+'pdf.worker.min.mjs'); const b=await r.blob();
+    lib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([b],{type:'text/javascript'})); }
+  catch(e){ lib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.mjs'; }
+  return pdfLib=lib;
+}
+async function pdfToText(buf){
+  const lib=await loadPdfJs();
+  const pdf=await lib.getDocument({data:new Uint8Array(buf)}).promise;
+  const lines=[];
+  for(let n=1;n<=pdf.numPages;n++){
+    const items=(await (await pdf.getPage(n)).getTextContent()).items.filter(i=>i.str!==undefined);
+    let cur='', y=null, endX=null;
+    const flush=()=>{ if(cur.trim()) lines.push(cur.replace(/\s+/g,' ').trim()); cur=''; };
+    items.forEach(it=>{
+      const ty=it.transform[5], tx=it.transform[4], h=Math.abs(it.transform[3])||10;
+      if(y!==null && Math.abs(ty-y)>h*0.5) flush();
+      else if(cur && endX!==null && tx-endX>h*0.15 && !/\s$/.test(cur) && !/^\s/.test(it.str)) cur+=' ';
+      cur+=it.str; y=ty; endX=tx+(it.width||0);
+      if(it.hasEOL) flush();
+    });
+    flush();
+  }
+  if(lines.join('').length<30) throw new Error('scan');
+  /* ghép dòng: chỉ bắt đầu đoạn mới khi gặp Chương/Mục/Điều, khoản "1.", điểm "a)", hoặc câu trước đã kết thúc và câu sau viết hoa */
+  const mark=/^(Chương|CHƯƠNG|Mục|MỤC)\s+[\dIVXLCDM]+\s*([.:\-–—]|$)|^Điều\s+\d+[a-zđ]?\s*([.:]|$)|^\d{1,2}[.)]\s|^[a-zđ]\)\s|^(Nơi nhận|-\s)/;
+  const out=[]; let started=false;
+  lines.forEach(l=>{
+    if(!started && /^(Chương|CHƯƠNG|Điều)\s+[\dIVXLCDM]+\s*([.:\-–—]|$)/.test(l)) started=true;
+    if(!started){ out.push(l); return; } /* phần đầu (quốc hiệu, tên văn bản, căn cứ): giữ nguyên từng dòng */
+    const prev=out[out.length-1];
+    const prevStruct=prev&&/^(Chương|CHƯƠNG|Mục|MỤC|Điều)\s+[\dIVXLCDM]+/.test(prev);
+    const upper=/^[A-ZÀ-Ỹ]/.test(l), prevEnd=prev&&/[.;:]$/.test(prev);
+    if(!prev||mark.test(l)||prevStruct&&!/^(Chương|CHƯƠNG|Mục|MỤC)\s+[\dIVXLCDM]+\s*[.:\-–—]?\s*$/.test(prev)||(prevEnd&&upper)) out.push(l);
+    else out[out.length-1]=prev+' '+l;
+  });
+  return out.join('\n');
+}
+async function readFile(f){
+  if(!f) return; const name=f.name.toLowerCase();
+  try{
+    if(name.endsWith('.docx')){
+      const buf=await f.arrayBuffer(); let done=false;
+      if(typeof JSZip!=='undefined'){ try{ $('#txt').value=await docxToText(buf); done=true; }catch(e){ console.warn('docxToText',e); } }
+      if(!done){
+        if(typeof mammoth==='undefined'){ toast('Không nạp được bộ đọc Word. Hãy dán nội dung vào ô.'); return; }
+        const r=await mammoth.extractRawText({arrayBuffer:buf}); $('#txt').value=r.value;
+        toast('Đọc ở chế độ cơ bản: số “Điều” tự động của Word có thể bị mất');
+      }
+    } else if(name.endsWith('.pdf')){
+      try{ $('#txt').value=await pdfToText(await f.arrayBuffer()); }
+      catch(e){ toast(e.message==='scan'?'PDF này là ảnh quét, không có lớp chữ nên không đọc được. Hãy dùng bản Word hoặc PDF có thể bôi đen chữ.':'Không đọc được file PDF này'); return; }
+    } else if(name.endsWith('.json')){
+      const j=JSON.parse(await f.text()); const arr=Array.isArray(j)?j:(j.docs||[j]); let n=0;
+      arr.forEach(d=>{ if(d&&d.chapters){ d.id=d.id||slug(d.chip||d.title||'vb'); userDocs.push(d); n++; } });
+      if(n){ persist(); buildDocs(); setSel([]); closeModal(); render(); toast('Đã nạp '+n+' văn bản'); } else toast('File JSON không đúng định dạng'); return;
+    } else { $('#txt').value=await f.text(); }
+    touched={}; analyse();
+  }catch(e){ toast('Không đọc được file này'); }
+}
+
+/* ===== Sự kiện ===== */
+const isNarrow=()=>!!(window.matchMedia&&window.matchMedia('(max-width:860px)').matches);
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.setwrap')) closePop();
+  /* Đổi văn bản lọc: giữ nguyên từ khóa (nếu có) và tìm lại trong văn bản vừa chọn */
+  const rdB=e.target.closest('[data-rd]'); if(rdB){ setReorder(rdB.dataset.rd==='start'); return; }
+  const mvB=e.target.closest('[data-mv]'); if(mvB){ moveDoc(mvB.dataset.id,mvB.dataset.mv); return; }
+  const chipB=e.target.closest('[data-doc]'); if(chipB){ const cid=chipB.dataset.doc; let added=null;
+    if(cid==='all') setSel([]);
+    else { const n=new Set(S.sel); if(n.has(cid)) n.delete(cid); else { n.add(cid); added=cid; } setSel(docs.filter(d=>n.has(d.id)).map(d=>d.id)); }
+    S.chap='all'; S.act=null; S.confirmDel=false;
+    docs.forEach(d=>{ if((added?d.id===added:S.sel.has(d.id)&&S.doc!=='multi')&&d.chapters[0]) S.open.add(d.id+'|0'); }); render(); $('#content').scrollTop=0; return; }
+  const m=e.target.closest('[data-mode]'); if(m){
+    const want=m.dataset.mode;
+    if(S.res){ if(want!=='full') return; endSearch(); S.mode='full'; render(); scrollToAct(); return; } /* "Toàn văn" khi đang tìm: thoát tìm kiếm, mở toàn văn tại điều đang xem */
+    S.mode=want; render(); return;
+  }
+  const f=e.target.closest('[data-fs]'); if(f){ S.fs=Math.min(FS.length-1,Math.max(0,S.fs+(+f.dataset.fs))); render(); return; }
+  const a=e.target.closest('[data-act]'); if(!a) return; const act=a.dataset.act;
+  if(act==='add'){ closePop(); openModal(); }
+  else if(act==='reorder'){ closePop(); setReorder(true); const ch=$('#chips'); if(ch&&ch.scrollIntoView) ch.scrollIntoView({block:'nearest'}); }
+  else if(act==='edit'){ closePop(); openModal(a.dataset.d); }
+  else if(act==='chap'){ const k=a.dataset.ck; S.open.has(k)?S.open.delete(k):S.open.add(k); renderToc(); }
+  else if(act==='art'){ if(!a.dataset.d) return; openArt(a.dataset.d,a.dataset.k,!!a.dataset.go); }
+  else if(act==='rsel'){ if(!S.res) return; selectResult(+a.dataset.i); render(); ensureVisible('#toc .tart[aria-current="true"]');
+    if(isNarrow()){ const c=$('#content'); if(c.scrollIntoView) c.scrollIntoView({block:'start',behavior:'smooth'}); } }
+  else if(act==='rnav'){ if(!S.res) return; const j=S.ri+(+a.dataset.dir); if(j>=0&&j<S.res.hits.length){ selectResult(j); render(); ensureVisible('#toc .tart[aria-current="true"]'); } }
+  else if(act==='lm'){ loadMore(); }
+  else if(act==='rmore'){ if(!S.res) return; S.rshown+=PAGE; renderToc(); }
+  else if(act==='cpart'){ const r=findArt(a.dataset.d,a.dataset.k); if(r) copyText('Điều '+r.a.n+'. '+r.a.title+'\n'+r.a.body.join('\n')+'\n('+r.d.chip+')','Đã sao chép Điều '+r.a.n); }
+  else if(act==='del'){ S.confirmDel=a.dataset.d; renderSettings(); }
+  else if(act==='delno'){ S.confirmDel=false; renderSettings(); }
+  else if(act==='delok'){ userDocs=userDocs.filter(d=>d.id!==a.dataset.d); persist(); buildDocs(); setSel([]); S.confirmDel=false; S.chap='all'; render(); renderSettings(); toast('Đã xóa văn bản'); }
+});
+$('#chsel').addEventListener('change',e=>{ S.chap=e.target.value; if(S.chap!=='all') S.open.add(S.chap); render(); $('#content').scrollTop=0; });
+$('#content').addEventListener('scroll',queueSync,{passive:true});
+$('#tocbtn').addEventListener('click',()=>{ S.collapsed=!S.collapsed; render(); });
+/* Ô tìm kiếm: debounce 150 ms. Bắt đầu tìm thì chuyển sang chế độ "Từng điều" và mở khung kết quả. */
+let qt;
+function applyQ(){
+  const v=$('#q').value, was=!!S.q.trim();
+  S.q=v;
+  if(!was&&v.trim()){ S.mode='single'; S.collapsed=false; }
+  render();
+}
+$('#q').addEventListener('input',e=>{ clearTimeout(qt); qt=setTimeout(applyQ,150); $('#qclr').hidden=!e.target.value; });
+$('#q').addEventListener('keydown',e=>{ if(e.key==='Enter'){ clearTimeout(qt); applyQ(); } });
+$('#qclr').addEventListener('click',()=>{ endSearch(); render(); $('#q').focus(); });
+$('#cplink').addEventListener('click',()=>{
+  const base=location.href.split('#')[0]; let tk='';
+  const cur=S.act&&findArt(S.act.d,S.act.k);
+  if(cur) tk='#'+token(cur.d,cur.a); else if(!isMulti()) tk='#'+S.doc;
+  copyText(base+tk,'Đã sao chép đường dẫn. Người nhận cần mở file ứng dụng đã nhúng văn bản thì mới thấy điều này.');
+});
+$('#cpall').addEventListener('click',()=>{
+  if((S.mode==='single'||S.res)&&S.act){ const r=findArt(S.act.d,S.act.k); if(r){ copyText('Điều '+r.a.n+'. '+r.a.title+'\n'+r.a.body.join('\n'),'Đã sao chép Điều '+r.a.n); return; } }
+  const t=flat().map(x=>'Điều '+x.a.n+'. '+x.a.title+'\n'+x.a.body.join('\n')).join('\n\n'); copyText(t,'Đã sao chép nội dung đang xem');
+});
+$('#mx').addEventListener('click',closeModal); $('#cancel').addEventListener('click',closeModal);
+$('#modal').addEventListener('mousedown',e=>{ if(e.target.id==='modal') closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#modal').hidden) closeModal(); else if(S.reorder) setReorder(false); else closePop(); } });
+$('#pick').addEventListener('click',()=>$('#file').click());
+$('#file').addEventListener('change',e=>{ readFile(e.target.files[0]); e.target.value=''; });
+const drop=$('#drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{ e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{ e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop',e=>readFile(e.dataTransfer.files[0]));
+let at; $('#txt').addEventListener('input',()=>{ clearTimeout(at); at=setTimeout(analyse,250); });
+Object.entries(F).forEach(([k,el])=>el.addEventListener('input',()=>{ touched[k]=true; if(k!=='chip'&&!touched.chip) F.chip.value=chipFor(F.kind.value,F.num.value); }));
+$('#save').addEventListener('click',saveDoc);
+
+/* ===== Menu Cài đặt ===== */
+function closePop(){ const p=$('#pop'); if(p&&!p.hidden){ p.hidden=true; $('#setbtn').setAttribute('aria-expanded','false'); } }
+function renderSettings(){
+  const box=$('#doclist');
+  box.innerHTML = docs.map(d=>{
+    const mine=userDocs.includes(d), base=BUILTIN.find(b=>b.id===d.id&&!b.sample); let right='';
+    if(!d.sample) right+='<button class="mini" type="button" data-act="edit" data-d="'+esc(d.id)+'">Sửa thông tin</button>';
+    if(mine) right+= S.confirmDel===d.id
+      ? '<button class="mini danger" type="button" data-act="delok" data-d="'+esc(d.id)+'">Xác nhận</button><button class="mini" type="button" data-act="delno">Giữ lại</button>'
+      : '<button class="mini" type="button" data-act="del" data-d="'+esc(d.id)+'" aria-label="Xóa '+esc(d.chip||d.title)+'">'+(base?'Bỏ bản sửa':'Xóa')+'</button>';
+    else right+='<span class="tag">'+(d.sample?'Dữ liệu mẫu':'Có sẵn trong file')+'</span>';
+    return '<div class="drow"><div class="dtx"><b>'+esc(d.chip||d.title)+'</b><small>'+esc(stOf(d).label)+' · '+esc(d.title)+'</small></div><div class="dact">'+right+'</div></div>';
+  }).join('') || '<div class="empty" style="padding:10px">Chưa có văn bản.</div>';
+  $('#embnote').textContent = !docs.some(d=>!d.sample) ? 'Chưa có văn bản thật để nhúng. Hãy thêm văn bản trước.'
+    : PEND ? 'Có văn bản hoặc thông tin mới chỉ lưu trong trình duyệt này. Tải file mới, dùng thay file cũ và gửi cho đồng nghiệp.'
+    : 'Mọi văn bản đã nằm trong file này. Gửi file cho đồng nghiệp để cùng dùng.';
+}
+$('#setbtn').addEventListener('click',e=>{ e.stopPropagation(); const p=$('#pop');
+  if(p.hidden){ S.confirmDel=false; renderSettings(); p.hidden=false; $('#setbtn').setAttribute('aria-expanded','true'); } else closePop(); });
+$('#exp').addEventListener('click',()=>{ if(!userDocs.length){ toast('Chưa có văn bản nào do bạn thêm'); return; } copyText(JSON.stringify(userDocs,REP),'Đã sao chép dữ liệu JSON'); });
+
+/* ===== Nhúng văn bản vào file ===== */
+function buildEmbedded(){
+  const ids=new Set(userDocs.map(d=>d.id));
+  const all=BUILTIN.filter(d=>!d.sample&&!ids.has(d.id)).concat(userDocs);
+  if(!all.length) return null;
+  const json=JSON.stringify(all,REP).replace(/</g,'\\u003c');
+  const re=/\/\*DATA_START\*\/[\s\S]*?\/\*DATA_END\*\//;
+  if(!re.test(HTML0)) return null;
+  const ro=/\/\*ORDER_START\*\/[\s\S]*?\/\*ORDER_END\*\//;
+  const ordJson=JSON.stringify(docs.filter(d=>!d.sample).map(d=>d.id));
+  let out=HTML0.replace(re,()=>'/*DATA_START*/'+json+'/*DATA_END*/');
+  if(ro.test(out)) out=out.replace(ro,()=>'/*ORDER_START*/'+ordJson+'/*ORDER_END*/');
+  return out;
+}
+function downloadEmbedded(){
+  const h=buildEmbedded(); if(!h){ toast('Chưa có văn bản thật để nhúng. Hãy thêm văn bản trước.'); return; }
+  try{
+    const u=URL.createObjectURL(new Blob([h],{type:'text/html;charset=utf-8'}));
+    const a=document.createElement('a'); a.href=u; a.download='tra-cuu-van-ban-luat-'+new Date().toISOString().slice(0,10)+'.html';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000);
+    toast('Đã tạo file. Dùng file này thay cho file cũ và gửi cho đồng nghiệp.');
+  }catch(e){ toast('Trình duyệt không cho tải file này'); }
+}
+$('#emb').addEventListener('click',downloadEmbedded);
+
+/* ===== Nhận dữ liệu từ mây (index.html gửi RESTORE_DATA) =====
+   Chỉ cập nhật khi dữ liệu khác bản đang có (tránh vòng lặp), không reload trang, không gửi ngược lại. */
+window.addEventListener('message',function(e){
+  const m=e.data; if(!m||m.type!=='RESTORE_DATA'||!m.payload) return;
+  const d=m.payload; let changed=false;
+  try{
+    const curD=localStorage.getItem(KEY)||'[]', curO=localStorage.getItem(ORDER_KEY)||'[]';
+    if(typeof d['thads.docs.v1']==='string' && d['thads.docs.v1']!==curD){ localStorage.setItem(KEY,d['thads.docs.v1']); changed=true; }
+    if(typeof d['thads.order.v1']==='string' && d['thads.order.v1']!==curO){ localStorage.setItem(ORDER_KEY,d['thads.order.v1']); changed=true; }
+  }catch(err){ return; }
+  if(!changed) return;
+  syncMute=true;
+  try{
+    try{ userDocs=JSON.parse(localStorage.getItem(KEY)||'[]')||[]; if(!Array.isArray(userDocs)) userDocs=[]; }catch(x){ userDocs=[]; }
+    try{ userOrder=JSON.parse(localStorage.getItem(ORDER_KEY)||'[]')||[]; if(!Array.isArray(userOrder)) userOrder=[]; }catch(x){ userOrder=[]; }
+    buildDocs();
+    setSel(Array.from(S.sel).filter(id=>getDoc(id)));
+    if(S.act&&!findArt(S.act.d,S.act.k)) S.act=null;
+    S.chap='all'; S._rk=''; S._fk='';
+    render(); renderSettings();
+  } finally { syncMute=false; }
+});
+
+/* ===== Khởi động ===== */
+buildDocs();
+(function init(){
+  const h=decodeURIComponent((location.hash||'').slice(1));
+  let did=null,k=null;
+  if(h){ const p=h.lastIndexOf('_d'); if(p>0){ did=h.slice(0,p); k=h.slice(p+2); } else if(getDoc(h)) did=h; }
+  if(did&&getDoc(did)){ setSel([did]); const d=getDoc(did); if(k&&findArt(did,k)){ S.act={d:did,k}; S.open.add(did+'|'+findArt(did,k).ci); S.mode='single'; } else if(d.chapters[0]) S.open.add(did+'|0'); }
+  else { const d=docs[0]; if(d&&d.chapters[0]) S.open.add(d.id+'|0'); }
+  render();
+})();
+})();
+</script>
+</body>
+</html>
