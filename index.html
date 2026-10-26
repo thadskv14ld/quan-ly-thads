@@ -24,6 +24,7 @@
             <button class="tab active" onclick="switchApp(0)">1. CHUYỂN KHOẢN</button>
             <button class="tab" onclick="switchApp(1)">2. BƯU ĐIỆN</button>
             <button class="tab" onclick="switchApp(2)">3. ĐỀ NGHỊ CHI</button>
+            <button class="tab" onclick="switchApp(3)">4. TRA CỨU LUẬT</button>
         </div>
         <div class="status">
             <span id="statusText">Sẵn sàng</span>
@@ -34,6 +35,7 @@
         <iframe id="f1" src="app1.html" class="active"></iframe>
         <iframe id="f2" src="app2.html"></iframe>
         <iframe id="f3" src="app3.html"></iframe>
+        <iframe id="f4" src="app-tra-cuu-van-ban-luat-v7.html"></iframe>
     </div>
 
     <script type="module">
@@ -53,12 +55,22 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const dbRef = ref(db, 'thads_data');
-        const frames = [document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3')];
+        const frames = [document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3'), document.getElementById('f4')];
+
+        // Lưu bản dữ liệu app4 mới nhất từ mây để gửi lại khi iframe tải xong (tránh mất tin nhắn do iframe chưa sẵn sàng)
+        let lastApp4 = null;
+        const sendApp4 = () => {
+            if (!lastApp4) return;
+            try { frames[3].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(lastApp4) }, '*'); }
+            catch(e) { console.error("Lỗi gửi dữ liệu app4:", e); }
+        };
+        frames[3].addEventListener('load', sendApp4);
 
         // 1. KẾT NỐI REAL-TIME (Live Sync): Đã bỏ onlyOnce để tự động cập nhật khi có thay đổi
         onValue(dbRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
+                if (data.app4) { lastApp4 = data.app4; sendApp4(); }
                 try {
                     if (data.app1) frames[0].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app1) }, '*');
                     if (data.app2) frames[1].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app2) }, '*');
