@@ -2,823 +2,1250 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QUẢN LÝ VĂN BẢN GỬI - THADS KV 14</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>Hệ thống Quản lý C06-THADS - V7.0 (Biểu mẫu 06/2026)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* =========================================
-           1. GIAO DIỆN HIỂN THỊ (SCREEN UI)
-           ========================================= */
-        :root {
-            --primary: #4f46e5;
-            --primary-soft: #eef2ff;
-            --blue: #2563eb;
-            --green: #059669;
-            --bg-body: #f8fafc;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --radius: 22px;
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f1f5f9; }
+        label { display: block; font-size: 0.75rem; font-weight: 700; color: #334155; margin-bottom: 2px; text-transform: uppercase; }
+        .cb-nhan-thay { width: 1.5rem; height: 1.5rem; accent-color: #2563eb; cursor: pointer; }
+        .cb-thu-phi { width: 1.2rem; height: 1.2rem; accent-color: #ea580c; cursor: pointer; }
+        .input-error { border-color: #ef4444 !important; background-color: #fef2f2 !important; }
+        .date-input-container { position: relative; display: flex; align-items: center; }
+        .date-input-container input[type="text"] { padding-right: 35px; }
+        .picker-icon { position: absolute; right: 10px; pointer-events: none; color: #64748b; }
+        .hidden-picker { position: absolute; right: 5px; width: 25px; opacity: 0; cursor: pointer; }
+        .date-group-header { background: #e2e8f0; padding: 10px 15px; font-weight: 800; color: #1e293b; border-left: 5px solid #2563eb; margin-top: 15px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+        
+        #qrModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; }
+        .qr-box { background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); max-width: 280px; width: 90%; }
+
+        /* --- GIỮ NGUYÊN CSS IN ÁN GỐC --- */
+        @media print {
+            * {
+                font-family: "Times New Roman", Times, serif !important;
+            }
+            @page { 
+                size: A4 portrait; 
+                margin: 2cm 2cm 2cm 2cm; 
+            }
+            body { background: white; margin: 0; padding: 0; color: black; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; page-break-after: always; }
+            
+            #documentRender { 
+                width: 100%; 
+                font-size: 12pt !important; 
+                line-height: 1.35; 
+            }
+            .f-12-bold-upper { font-size: 12pt; font-weight: bold; text-transform: uppercase; }
+            .f-10-italic { font-size: 10pt; font-style: italic; }
+            .bold { font-weight: bold; }
+            .italic { font-style: italic; }
+            .text-center { text-align: center; }
+            .text-justify { text-align: justify; }
+            table { border-collapse: collapse; width: 100%; border: none; }
+            td { border: none; padding: 0; vertical-align: top; }
         }
-
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-body); margin: 0; padding: 0; color: #334155; font-size: 14px; }
-
-        /* ---------- HEADER ---------- */
-        .app-header {
-            background: linear-gradient(90deg, #2563eb 0%, #4f46e5 55%, #7c3aed 100%);
-            color: white; padding: 22px 32px;
-            display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
-            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.25);
-            margin-bottom: 30px;
-        }
-        .brand { display: flex; align-items: center; gap: 18px; }
-        .brand-logo {
-            width: 56px; height: 56px; border-radius: 16px;
-            background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.25);
-            display: flex; align-items: center; justify-content: center; font-size: 26px;
-        }
-        .brand h1 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; }
-        .brand p { margin: 4px 0 0 0; font-size: 0.95rem; font-weight: 600; color: rgba(255,255,255,0.88); letter-spacing: 0.3px; }
-
-        .header-right { display: flex; align-items: center; gap: 12px; position: relative; }
-        .status-badge {
-            display: inline-flex; align-items: center; gap: 10px;
-            padding: 10px 20px; border-radius: 999px;
-            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
-            font-weight: 600; font-size: 14px;
-        }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,0.25); }
-
-        .settings-btn {
-            background: rgba(255,255,255,0.15); border-radius: 999px; padding: 10px 18px; cursor: pointer;
-            font-weight: 600; display: inline-flex; align-items: center; gap: 8px; font-size: 14px;
-            border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s; color: white;
-        }
-        .settings-btn:hover { background: rgba(255,255,255,0.3); }
-        .settings-dropdown {
-            display: none; position: absolute; right: 0; top: 52px; background: white; border-radius: 14px;
-            box-shadow: 0 15px 35px rgba(15,23,42,0.2); width: 220px; z-index: 1000; border: 1px solid var(--border); overflow: hidden; text-align: left;
-        }
-        .settings-dropdown.active { display: block; }
-        .settings-dropdown button {
-            width: 100%; text-align: left; padding: 13px 18px; background: none; border: none; font-size: 14px; color: #334155; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-weight: 500;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .settings-dropdown button:last-of-type { border-bottom: none; }
-        .settings-dropdown button:hover { background: #f8fafc; color: var(--primary); }
-
-        .container { max-width: 1250px; margin: auto; padding: 0 20px 40px 20px; }
-
-        /* ---------- CARD ---------- */
-        .card {
-            background: white; border-radius: var(--radius);
-            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.06); border: 1px solid #eef2f7;
-            overflow: hidden; margin-bottom: 26px;
-        }
-        .card-body { padding: 34px 38px; }
-
-        .section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 26px; padding-bottom: 18px; border-bottom: 1px solid #eef2f7; }
-        .section-title { font-weight: 800; color: var(--text-main); text-transform: uppercase; font-size: 16px; letter-spacing: -0.2px; }
-        .section-icon {
-            background: var(--primary-soft); color: var(--primary);
-            width: 42px; height: 42px; border-radius: 12px;
-            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px;
-            box-shadow: 0 2px 6px rgba(79,70,229,0.12);
-        }
-
-        .form-row { margin-bottom: 24px; }
-        .row-3-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
-
-        label { display: block; font-weight: 600; margin-bottom: 10px; font-size: 13px; color: #475569; text-transform: uppercase; letter-spacing: 0.6px; }
-
-        input[type="text"], input[type="number"], textarea {
-            width: 100%; padding: 14px 20px; border: 1px solid var(--border); border-radius: 18px;
-            font-size: 15px; font-weight: 500; color: #1e293b; background: #f8fafc; transition: all 0.2s;
-        }
-        input::placeholder, textarea::placeholder { color: #94a3b8; font-weight: 400; }
-        input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
-            outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-        }
-        textarea { resize: vertical; min-height: 90px; }
-
-        /* HIỆU ỨNG COPY MÀU ĐỎ */
-        .is-copy { color: #ef4444 !important; border-color: #fca5a5 !important; font-weight: 600; }
-
-        .label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-        .label-row label { margin-bottom: 0; }
-
-        .receiver-row { display: grid; grid-template-columns: 1fr 130px 44px; gap: 10px; margin-bottom: 10px; align-items: center; }
-        .btn-remove {
-            width: 40px; height: 40px; border-radius: 50%; border: none; background: transparent;
-            color: #94a3b8; cursor: pointer; font-size: 16px; transition: all 0.2s;
-        }
-        .btn-remove:hover { background: #fee2e2; color: #ef4444; }
-
-        .btn-add {
-            background: var(--primary-soft); border: 1px solid #c7d2fe; color: var(--primary);
-            padding: 10px 20px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer;
-            text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
-        }
-        .btn-add:hover { background: #e0e7ff; }
-
-        /* QUẢN LÝ NGƯỜI GỬI */
-        .sender-chevron { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: #475569; pointer-events: none; font-size: 13px; }
-        .sender-dropdown {
-            display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-radius: 16px;
-            box-shadow: 0 12px 30px rgba(15,23,42,0.12); z-index: 50; max-height: 260px; overflow-y: auto; margin-top: 8px;
-        }
-        .sender-dropdown.active { display: block; }
-        .sender-item {
-            padding: 12px 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; font-weight: 500; color: #1e293b;
-        }
-        .sender-item:hover { background: #f8fafc; color: var(--primary); }
-        .sender-actions { display: flex; gap: 5px; }
-        .sender-actions button { background: #f1f5f9; border: none; cursor: pointer; font-size: 13px; color: #64748b; border-radius: 8px; padding: 5px 9px; }
-        .sender-actions button:hover { color: white; background: var(--primary); }
-        .sender-actions button.btn-del:hover { background: #ef4444; }
-        .sender-add-btn { padding: 13px; text-align: center; color: var(--primary); font-weight: 700; cursor: pointer; background: var(--primary-soft); font-size: 13px; border-top: 1px solid var(--border); position: sticky; bottom: 0; }
-        .sender-add-btn:hover { background: #e0e7ff; }
-
-        /* ---------- NÚT HÀNH ĐỘNG ---------- */
-        .action-area { border-top: 1px solid #eef2f7; padding: 22px 38px 28px; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
-        .btn {
-            border: none; padding: 15px 28px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 14px;
-            text-transform: uppercase; display: inline-flex; align-items: center; gap: 10px; color: white;
-            transition: transform 0.15s, box-shadow 0.15s; letter-spacing: 0.3px;
-        }
-        .btn:hover { transform: translateY(-2px); }
-        .btn-post { background: #2563eb; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); }
-        .btn-direct { background: #059669; box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3); }
-        .btn-cancel { background: #64748b; box-shadow: 0 8px 20px rgba(100, 116, 139, 0.25); }
-        .btn-a4 { background: #d97706; box-shadow: 0 8px 20px rgba(217, 119, 6, 0.3); padding: 13px 26px; min-width: 190px; justify-content: center; }
-        .btn-tem { background: #047857; box-shadow: 0 8px 20px rgba(4, 120, 87, 0.3); padding: 13px 26px; min-width: 190px; justify-content: center; }
-
-        /* ---------- TÌM KIẾM ---------- */
-        .search-container {
-            display: flex; gap: 14px; align-items: center; margin-bottom: 26px; background: white;
-            padding: 20px 26px; border-radius: var(--radius); border: 1px solid #eef2f7;
-            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.06); flex-wrap: wrap;
-        }
-        .search-box { position: relative; flex: 1; min-width: 240px; max-width: 560px; }
-        .search-box i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 16px; }
-        #searchInput { padding-left: 48px; border-radius: 999px; margin: 0; }
-        .search-spacer { flex: 1; }
-        .check-pill {
-            display: inline-flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer; white-space: nowrap;
-            margin: 0; padding: 12px 20px; border: 1px solid var(--border); border-radius: 999px; background: #f8fafc;
-            font-size: 13px; color: #334155;
-        }
-        input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); cursor: pointer; }
-
-        /* ---------- BẢNG DANH SÁCH ---------- */
-        .table-card {
-            background: white; border-radius: var(--radius); border: 1px solid #eef2f7;
-            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.06); overflow-x: auto; margin-bottom: 26px;
-        }
-        table.main-list { width: 100%; border-collapse: collapse; background: white; min-width: 900px; }
-        table.main-list th { padding: 20px 18px; color: #475569; font-size: 13px; text-transform: uppercase; background: white; border-bottom: 1px solid var(--border); text-align: left; letter-spacing: 0.6px; font-weight: 700; }
-        table.main-list td { padding: 20px 18px; border-bottom: 1px solid #f1f5f9; font-size: 15px; vertical-align: top; color: #1e293b; line-height: 1.6; }
-        table.main-list tbody tr.data-row:hover { background: #fafbff; }
-
-        .date-row td { background: #f5f7ff; padding: 14px 18px !important; font-weight: 700; color: #3730a3; font-size: 15px; border-bottom: 1px solid #e0e7ff; }
-        .date-row i { margin-right: 10px; color: #4f46e5; }
-
-        .badge { display: inline-block; padding: 7px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; border: 1px solid transparent; white-space: nowrap; }
-        .badge-post { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
-        .badge-direct { background: #ecfdf5; color: #047857; border-color: #d1fae5; }
-
-        .recv-name { font-weight: 700; color: #0f172a; }
-        .recv-addr { color: #64748b; font-size: 13px; display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
-        .recv-addr i { color: #f43f5e; margin-top: 5px; }
-        .recv-phone { color: #64748b; font-size: 13px; display: flex; gap: 8px; align-items: center; margin-top: 2px; }
-        .recv-phone i { color: #059669; }
-        .barcode-text { color: #e11d48; font-family: 'Roboto', Arial, sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.8px; font-variant-numeric: tabular-nums; }
-        .btn-del-head { width: 34px; height: 34px; border: none; border-radius: 10px; background: #fff1f2; color: #e11d48; cursor: pointer; font-size: 15px; transition: all 0.15s; }
-        .btn-del-head:hover { background: #e11d48; color: white; }
-
-        /* BỐ CỤC CỘT DANH SÁCH: thu hẹp cột Hình thức / Mã vạch để mở rộng cột Người nhận & Nội dung */
-        table.main-list { table-layout: fixed; min-width: 1100px; }
-        table.main-list td { overflow-wrap: break-word; }
-        table.main-list th:nth-child(1), table.main-list td:nth-child(1) { width: 80px; padding-left: 6px; padding-right: 6px; }
-        table.main-list th:nth-child(2), table.main-list td:nth-child(2) { width: 100px; padding-left: 2px; padding-right: 2px; }
-        table.main-list th:nth-child(3), table.main-list td:nth-child(3) { width: 340px; }
-        table.main-list th:nth-child(5), table.main-list td:nth-child(5) { width: 145px; padding-left: 4px; padding-right: 4px; }
-        table.main-list th:nth-child(6), table.main-list td:nth-child(6) { width: 150px; padding-left: 4px; padding-right: 4px; }
-
-        .action-btns { display: flex; gap: 10px; justify-content: center; }
-        .btn-icon { width: 40px; height: 40px; border-radius: 12px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: transform 0.15s; }
-        .btn-icon:hover { transform: translateY(-2px); }
-        .btn-edit { background: #fffbeb; color: #d97706; box-shadow: 0 4px 10px rgba(217,119,6,0.15); }
-        .btn-copy { background: #eff6ff; color: #2563eb; box-shadow: 0 4px 10px rgba(37,99,235,0.15); }
-        .btn-delete { background: #fff1f2; color: #e11d48; box-shadow: 0 4px 10px rgba(225,29,72,0.15); }
-
-        /* ---------- FOOTER ---------- */
-        .app-footer { text-align: center; padding: 28px 0 10px; color: #64748b; font-size: 14px; border-top: 1px solid var(--border); margin-top: 40px; }
-        .app-footer p { margin: 0; }
-
-        @media (max-width: 900px) {
-            .row-3-cols { grid-template-columns: 1fr; }
-            .card-body { padding: 24px 20px; }
-            .action-area { padding: 20px; justify-content: center; }
-            .app-header { padding: 18px 20px; }
-            .brand h1 { font-size: 1.2rem; }
-        }
+        .print-only { display: none; }
 
         /* =========================================
            ĐIỀU CHỈNH HIỂN THỊ THEO KÍCH THƯỚC MÀN HÌNH
            (chỉ thêm mới - không thay đổi phần khác)
            ========================================= */
-        /* Khung nội dung co giãn theo màn hình */
-        .container { width: 100%; max-width: 1250px; }
-        @media (min-width: 1400px) { .container { max-width: 100%; padding-left: 40px; padding-right: 40px; } }
-        @media (min-width: 1700px) { html { zoom: 1.1; } }
-        @media (min-width: 2200px) { html { zoom: 1.35; } }
-
-        /* Máy nhỏ / bị scale 125-150%: bớt chật bảng */
-        @media (max-width: 1250px) {
-            table.main-list { min-width: 980px; }
-            table.main-list th:nth-child(3), table.main-list td:nth-child(3) { width: 280px; }
-            .card-body { padding: 26px 24px; }
+        /* Khung nội dung co giãn theo chiều ngang màn hình (thay cho giới hạn max-w-7xl = 1280px) */
+        @media (min-width: 1400px) {
+            body > .max-w-7xl { max-width: 100%; }
+            body[class] { padding-left: 40px; padding-right: 40px; }
+        }
+        /* Màn hình lớn: phóng nhẹ phần giao diện chính (không áp dụng cho cửa sổ QR và bản in) */
+        @media (min-width: 1700px) {
+            body > .max-w-7xl { zoom: 1.1; }
+        }
+        @media (min-width: 2200px) {
+            body > .max-w-7xl { zoom: 1.35; }
+        }
+        @media print {
+            body > .max-w-7xl { zoom: 1 !important; }
         }
 
-        /* Giữ nguyên khi in */
-        @media print { html { zoom: 1 !important; } }
-
         /* =========================================
-           2. CẤU TRÚC IN (CSS) - GIỮ NGUYÊN 100%
+           GIAO DIỆN HIỆN ĐẠI - ĐƠN GIẢN
+           (chỉ đổi kiểu dáng bằng CSS, không đổi cấu trúc / chức năng)
            ========================================= */
-        @media print {
-            * { font-family: "Times New Roman", Times, serif !important; }
-            @page { size: A4; margin: 20mm 15mm 20mm 20mm; }
-            body { background: white; padding: 0; font-size: 12pt; }
-            .no-print { display: none !important; }
-            #printA4Area { display: block !important; padding: 0; }
-            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .header-table td { vertical-align: top; text-align: center; font-size: 11pt; color: black; white-space: nowrap; }
-            .a4-title { text-align: center; font-weight: bold; font-size: 12pt; margin: 25px 0 15px 0; text-transform: uppercase; }
-            table.print-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-            table.print-table th, table.print-table td { border: 1px solid black !important; padding: 8px; font-size: 11pt; color: black; word-wrap: break-word; text-align: justify; }
-            .footer-area { margin-top: 30px; display: flex; justify-content: space-between; page-break-inside: avoid; }
-            .footer-col { width: 48%; text-align: center; }
-            .is-direct .barcode-col { display: none !important; }
-            #printSenderName { font-weight: bold; margin-top: 60px; font-size: 12pt; }
+        body[class] { background-color: #f8fafc; font-family: 'Inter', 'Segoe UI', sans-serif; color: #334155; }
+
+        /* ---------- Header: nền gradient xanh đậm + logo ---------- */
+        body > .max-w-7xl > div:first-child {
+            background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 55%, #0f172a 100%);
+            border-radius: 22px; padding: 18px 28px;
+            box-shadow: 0 10px 30px rgba(30, 58, 138, 0.25);
+        }
+        body > .max-w-7xl > div:first-child > div:first-child { gap: 18px; }
+        body > .max-w-7xl > div:first-child > div:first-child::before {
+            content: ""; flex: 0 0 auto; width: 64px; height: 64px; border-radius: 12px;
+            background: #fff url("https://raw.githubusercontent.com/thadskv14ld/logo-thads/main/LOGO%20THI%20H%C3%80NH%20%C3%81N.png") center / 86% no-repeat;
+        }
+        body > .max-w-7xl > div:first-child .text-orange-500 { display: none; }
+        body > .max-w-7xl > div:first-child h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+        body > .max-w-7xl > div:first-child h1::after {
+            content: "PHÒNG THADS KHU VỰC 14, LÂM ĐỒNG";
+            display: block; margin-top: 4px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em; color: #fcd34d;
+        }
+        body > .max-w-7xl > div:first-child > div.relative > button {
+            background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 999px; padding: 10px 18px; font-size: 13px; transition: background 0.2s;
+        }
+        body > .max-w-7xl > div:first-child > div.relative > button:hover { background: rgba(255, 255, 255, 0.3); }
+        #settingsMenu { border-radius: 14px; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.2); }
+
+        /* ---------- Thẻ (card) ---------- */
+        #mainForm, body > .max-w-7xl > div:last-child {
+            border-radius: 22px; border: 1px solid #eef2f7; box-shadow: 0 10px 40px rgba(15, 23, 42, 0.06);
+        }
+        #mainForm { padding: 32px 36px; }
+        #mainForm .border-b.pb-2 { padding-bottom: 16px; gap: 12px; border-bottom-color: #eef2f7; }
+        #mainForm h2 { font-size: 1.05rem; font-weight: 800; text-transform: uppercase; color: #0f172a; letter-spacing: 0.01em; }
+        #mainForm span.w-6.h-6.rounded-full { display: none; }
+
+        /* ---------- Nhãn ---------- */
+        #mainForm label { text-transform: none; letter-spacing: 0; }
+        #mainForm label:not([class*="text-["]):not([class*="text-xs"]):not(.m-0) { font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; }
+
+        /* ---------- Ô nhập liệu ---------- */
+        #mainForm :where(input:not([type="checkbox"]):not([type="radio"]):not([type="date"])),
+        #mainForm select, #mainForm textarea {
+            border: 1px solid #e2e8f0; border-radius: 14px; background-color: #f8fafc;
+            padding-top: 12px; padding-bottom: 12px; padding-left: 16px; padding-right: 16px;
+            transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+        }
+        #mainForm .date-input-container input[type="text"] { padding-right: 40px; }
+        #mainForm #phiHienThi { border: 0; border-radius: 0; background: transparent; padding: 0; }
+        #mainForm :where(input, select, textarea):focus {
+            outline: none; border-color: #4f46e5; background-color: #fff; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+        #mainForm .rounded { border-radius: 14px; }
+        #mainForm .rounded-lg { border-radius: 16px; }
+        #mainForm .picker-icon { right: 14px; }
+
+        /* ---------- Nút lưu ---------- */
+        #formActions { justify-content: flex-end; }
+        #btnSave {
+            background: linear-gradient(90deg, #ea580c, #d97706); border: 0; border-radius: 14px;
+            padding: 15px 36px; font-size: 14px; letter-spacing: 0.3px;
+            box-shadow: 0 8px 20px rgba(234, 88, 12, 0.3);
+        }
+        #btnSave:hover { filter: brightness(1.06); }
+        #btnCancel { border-radius: 14px; padding: 15px 28px; }
+
+        /* ---------- Danh sách ---------- */
+        body > .max-w-7xl > div:last-child > div:first-child { background: #fff; padding: 20px 26px; border-bottom: 1px solid #eef2f7; }
+        body > .max-w-7xl > div:last-child h3 { font-size: 1rem; font-weight: 800; text-transform: none; color: #0f172a; }
+        body > .max-w-7xl > div:last-child > div:first-child button {
+            border-radius: 12px; padding: 10px 18px; font-size: 13px; box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+        }
+        #searchBox { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 999px; }
+        #searchBox:focus { background-color: #fff; border-color: #4f46e5; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+
+        body > .max-w-7xl table thead { background: #f8fafc; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+        body > .max-w-7xl table thead th { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; padding: 16px 14px; }
+        body > .max-w-7xl table td:not(.date-group-header) { padding: 16px 14px; }
+        body > .max-w-7xl table tbody tr { border-color: #f1f5f9; }
+        body > .max-w-7xl .date-group-header {
+            background: #f5f7ff; color: #3730a3; border-left: 0; border-bottom: 1px solid #e0e7ff;
+            margin-top: 0; padding: 14px 18px; font-size: 0.9rem;
+        }
+        #listContainer td:last-child button { border-radius: 10px; padding: 8px; }
+
+        /* ---------- Cửa sổ QR ---------- */
+        #qrModal { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); }
+        #qrModal .qr-box { border-radius: 22px; padding: 24px; }
+
+        /* ---------- Màn hình nhỏ ---------- */
+        @media (max-width: 640px) {
+            body > .max-w-7xl > div:first-child { padding: 14px 16px; }
+            body > .max-w-7xl > div:first-child > div:first-child { gap: 12px; }
+            body > .max-w-7xl > div:first-child > div:first-child::before { width: 44px; height: 44px; }
+            body > .max-w-7xl > div:first-child h1 { font-size: 1rem; }
+            body > .max-w-7xl > div:first-child h1::after { font-size: 0.65rem; }
+            #mainForm { padding: 22px 18px; }
         }
     </style>
 </head>
-<body>
+<body class="p-4 md:p-6">
 
-<div class="app-header no-print">
-    <div class="brand">
-        <div class="brand-logo"><i class="fa-solid fa-scale-balanced"></i></div>
-        <div>
-            <h1>QUẢN LÝ VĂN BẢN GỬI</h1>
-            <p>PHÒNG THADS KV 14 - TỈNH LÂM ĐỒNG</p>
-        </div>
-    </div>
-    <div class="header-right">
-        <div class="settings-btn" onclick="toggleSettings()"><i class="fa-solid fa-gear"></i> Cài đặt</div>
-        <div id="settingsDropdown" class="settings-dropdown">
-            <button onclick="exportData()"><i class="fa-solid fa-download"></i> Xuất dữ liệu</button>
-            <button onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> Cập nhật dữ liệu</button>
-            <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(event)">
-        </div>
-    </div>
-</div>
-
-<div class="container no-print">
-    <div class="card">
-        <div class="card-body">
-            <div class="section-header">
-                <div class="section-title">Thông tin người nhận</div>
+    <div class="max-w-7xl mx-auto no-print space-y-6">
+        <div class="bg-slate-900 text-white p-4 rounded-lg flex justify-between items-center shadow-lg">
+            <div class="flex items-center gap-2">
+                <i data-lucide="clipboard-list" class="text-orange-500"></i>
+                <h1 class="text-lg font-bold tracking-tighter uppercase">QUẢN LÝ NGHIỆP VỤ C06-THADS</h1>
             </div>
-
-            <div class="form-row">
-                <div class="label-row">
-                    <label>Nơi nhận / Người nhận</label>
-                    <button type="button" class="btn-add" onclick="addNewReceiver()"><i class="fa-solid fa-plus"></i> THÊM NGƯỜI NHẬN</button>
+            
+            <!-- CẬP NHẬT: Thay thế nút Tạo hồ sơ mới bằng Menu Cài đặt -->
+            <div class="relative">
+                <button onclick="toggleSettingsMenu(event)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-bold uppercase flex items-center gap-2">
+                    ⚙️ Cài đặt
+                </button>
+                <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-xl z-[9999] border border-slate-200 overflow-hidden text-slate-800">
+                    <button onclick="exportDataApp()" class="w-full text-left px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 border-b flex items-center gap-2">
+                        📥 XUẤT DỮ LIỆU
+                    </button>
+                    <button onclick="document.getElementById('importFileInput').click()" class="w-full text-left px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2">
+                        📤 CẬP NHẬT DỮ LIỆU
+                    </button>
                 </div>
-                <div id="receiverContainer">
-                    <div class="receiver-row">
-                        <input type="text" class="in-name" placeholder="Nhập họ tên người nhận hoặc đơn vị..." oninput="this.classList.remove('is-copy')">
-                        <input type="number" class="in-year" placeholder="Năm" style="text-align: center;" oninput="this.classList.remove('is-copy')">
-                        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <!-- Input ẩn để chọn file cập nhật dữ liệu -->
+            <input type="file" id="importFileInput" class="hidden" accept=".json" onchange="importDataApp(event)">
+        </div>
+
+        <div id="mainForm" class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 border-b pb-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">A</span>
+                    <h2 class="font-bold text-slate-700 uppercase text-sm">Thông tin người thụ hưởng</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2"><label>Họ và tên / Tổ chức (*)</label><input type="text" id="hoTen" class="req w-full border-2 border-slate-100 p-2 rounded text-sm font-bold outline-none focus:border-blue-500"></div>
+                    <div><label>Năm sinh</label><input type="number" id="namSinh" class="w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
+                    <div class="md:col-span-3"><label>Địa chỉ (*)</label><input type="text" id="diaChi" class="req w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
+                </div>
+
+                <div class="flex items-center gap-3 p-3 bg-blue-50 rounded border border-blue-100">
+                    <input type="checkbox" id="coNguoiNhanThay" onchange="toggleNhanThay()" class="cb-nhan-thay">
+                    <label for="coNguoiNhanThay" class="font-bold text-blue-800 text-sm cursor-pointer m-0">☑ CÓ NGƯỜI NHẬN THAY (ỦY QUYỀN)</label>
+                </div>
+
+                <div id="formNhanThay" class="hidden p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2"><label>Họ tên người nhận thay (*)</label><input type="text" id="tenThay" class="w-full border border-slate-300 p-2 rounded text-sm font-bold"></div>
+                        <div><label>Năm sinh</label><input type="number" id="namSinhThay" class="w-full border border-slate-300 p-2 rounded text-sm"></div>
+                        <div class="md:col-span-3"><label>Địa chỉ người thay (*)</label><input type="text" id="dcThay" class="w-full border border-slate-300 p-2 rounded text-sm"></div>
+                        <div><label>Số CCCD (*)</label><input type="text" id="cccdThay" class="w-full border border-slate-300 p-2 rounded text-sm font-bold"></div>
+                        <div>
+                            <label>Ngày cấp</label>
+                            <div class="date-input-container">
+                                <input type="text" id="ngayThay" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="w-full border border-slate-300 p-2 rounded text-sm">
+                                <i data-lucide="calendar" class="w-4 h-4 picker-icon"></i>
+                                <input type="date" class="hidden-picker" onchange="syncPicker(this, 'ngayThay')">
+                            </div>
+                        </div>
+                        <div><label>Nơi cấp CCCD</label>
+                            <select id="noiThay" class="w-full border border-slate-300 p-2 rounded text-sm font-bold">
+                                <option value="Cục Cảnh sát quản lý hành chính về trật tự xã hội">Cục Cảnh sát quản lý hành chính về trật tự xã hội</option>
+                                <option value="Bộ Công an">Bộ Công an</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="formNguoiNhan" class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                    <div><label>Số CCCD người nhận chi</label><input type="text" id="cccdSo" class="w-full border-2 border-slate-100 p-2 rounded text-sm font-bold"></div>
+                    <div>
+                        <label>Ngày cấp</label>
+                        <div class="date-input-container">
+                            <input type="text" id="cccdNgay" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="w-full border-2 border-slate-100 p-2 rounded text-sm">
+                            <i data-lucide="calendar" class="w-4 h-4 picker-icon"></i>
+                            <input type="date" class="hidden-picker" onchange="syncPicker(this, 'cccdNgay')">
+                        </div>
+                    </div>
+                    <div><label>Nơi cấp CCCD</label>
+                        <select id="cccdNoi" class="w-full border-2 border-slate-100 p-2 rounded text-sm font-bold">
+                            <option value="Cục Cảnh sát quản lý hành chính về trật tự xã hội">Cục Cảnh sát quản lý hành chính về trật tự xã hội</option>
+                            <option value="Bộ Công an">Bộ Công an</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
-            <div class="form-row">
-                <label>Địa chỉ chi tiết (Nơi nhận)</label>
-                <input type="text" id="inAddr" placeholder="Số nhà, đường, thôn/xóm, xã/phường, tỉnh..." oninput="this.classList.remove('is-copy')">
+            <div class="space-y-4 mt-8 pt-6 border-t-4 border-slate-100">
+                <div class="flex items-center gap-2 border-b pb-2">
+                    <span class="bg-orange-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">B</span>
+                    <h2 class="font-bold text-slate-700 uppercase text-sm">Tài chính & Thanh toán</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label>Số tài khoản</label><input type="text" id="stk" class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
+                    <div><label>Ngân hàng & Chi nhánh</label><input type="text" id="nganHang" class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
+                    <div><label>Mã Ngân hàng</label><input type="text" id="maNH" class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
+                </div>
+
+                <div><label>Giấy uỷ quyền / Biên bản (Số - ngày - tháng - năm)</label><input type="text" id="giayUQ" placeholder="Số... ngày... tháng... năm..." class="w-full border-2 border-slate-100 p-2 rounded text-sm"></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div>
+                        <label class="text-blue-700 font-bold">Số tiền chi trả (*)</label>
+                        <input type="text" id="soTien" oninput="handleMoneyChange(this)" placeholder="0" class="req w-full border-2 border-blue-200 p-2 rounded text-lg font-bold text-blue-700 outline-none">
+                        <div class="flex items-center gap-4 bg-white p-2 mt-2 rounded border border-slate-200">
+                            <div class="flex items-center gap-2 pr-4 border-r">
+                                <input type="checkbox" id="coThuPhi" onchange="handleFeeChange()" class="cb-thu-phi">
+                                <label for="coThuPhi" class="font-bold text-orange-700 text-[10px] m-0">THU PHÍ</label>
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[9px] text-slate-400 uppercase">Phí tự động</label>
+                                <input type="text" id="phiHienThi" disabled placeholder="---" class="w-full bg-transparent border-none font-bold text-orange-600 outline-none text-sm">
+                            </div>
+                            <div id="boxTiLePhi" class="hidden flex gap-3">
+                                <label class="flex items-center gap-1 cursor-pointer text-xs font-bold"><input type="radio" name="tiLePhi" value="1" onchange="handleMoneyChange(document.getElementById('soTien'))" checked> 1%</label>
+                                <label class="flex items-center gap-1 cursor-pointer text-xs font-bold"><input type="radio" name="tiLePhi" value="3" onchange="handleMoneyChange(document.getElementById('soTien'))"> 3%</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-slate-500 font-bold">Số tiền bằng chữ (Đối chiếu)</label>
+                        <div id="txtDocTien" class="w-full h-[88px] bg-white border-2 border-slate-100 p-3 rounded text-sm italic text-slate-600 flex items-start shadow-inner">
+                            Chưa nhập số tiền...
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="section-header" style="margin-top: 40px;">
-                <div class="section-title">Chi tiết Văn bản &amp; Gửi</div>
-            </div>
-
-            <div class="form-row row-3-cols">
-                <div><label>Số điện thoại</label><input type="text" id="inPhone" placeholder="Nhập số điện thoại..." oninput="this.classList.remove('is-copy')"></div>
-                <div><label>Mã vạch bưu điện</label><input type="text" id="inBarcode" placeholder="Ví dụ: RC805189716VN" oninput="this.classList.remove('is-copy')"></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 pt-6 border-t">
+                <div><label>Số Quyết định THA (*)</label><input type="text" id="qdSo" onfocus="handleQDFocus(this)" class="req w-full border-2 border-slate-100 p-2 rounded text-sm font-bold text-blue-700 outline-none" value="/QĐ-THADS"></div>
                 <div>
-                    <label>Người gửi (Ký tên)</label>
-                    <div style="position: relative;" id="senderWrapper">
-                        <input type="text" id="inSender" placeholder="Chọn hoặc nhập tên..." style="font-weight: 600; color: #0f172a; padding-right: 46px;" onclick="toggleSenderDropdown()" oninput="filterSenderList()" autocomplete="off">
-                        <i class="fa-solid fa-chevron-down sender-chevron"></i>
-                        <div id="senderDropdown" class="sender-dropdown">
-                            <div id="senderList"></div>
-                            <div class="sender-add-btn" onclick="addSender()"><i class="fa-solid fa-plus"></i> THÊM TÊN MỚI</div>
-                        </div>
+                    <label>Ngày Quyết định (*)</label>
+                    <div class="date-input-container">
+                        <input type="text" id="qdNgay" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="req w-full border-2 border-slate-100 p-2 rounded text-sm">
+                        <i data-lucide="calendar" class="w-4 h-4 picker-icon"></i>
+                        <input type="date" class="hidden-picker" onchange="syncPicker(this, 'qdNgay')">
                     </div>
                 </div>
-            </div>
-
-            <div class="form-row" style="margin-bottom: 0;">
-                <label>Nội dung văn bản / Trích yếu</label>
-                <textarea id="inContent" rows="3" placeholder="Nhập trích yếu hoặc nội dung văn bản gửi..." oninput="this.classList.remove('is-copy')"></textarea>
-            </div>
-        </div>
-
-        <div class="action-area" id="mainActionGroup">
-            <button class="btn btn-direct" onclick="saveData('DIRECT')"><i class="fa-solid fa-handshake-angle"></i> Lưu gửi trực tiếp</button>
-            <button class="btn btn-post" onclick="saveData('POST')"><i class="fa-solid fa-truck-fast"></i> Lưu gửi bưu điện</button>
-        </div>
-        <div class="action-area" id="editActionGroup" style="display: none; background: #fffbeb;">
-            <button class="btn btn-cancel" onclick="resetForm()"><i class="fa-solid fa-xmark"></i> Hủy sửa</button>
-            <button class="btn btn-direct" onclick="saveData('DIRECT')"><i class="fa-solid fa-floppy-disk"></i> Cập nhật trực tiếp</button>
-            <button class="btn btn-post" onclick="saveData('POST')"><i class="fa-solid fa-floppy-disk"></i> Cập nhật bưu điện</button>
-        </div>
-        <div class="action-area" id="copyActionGroup" style="display: none; background: #f0fdf4;">
-            <button class="btn btn-cancel" onclick="resetForm()"><i class="fa-solid fa-xmark"></i> Hủy copy</button>
-            <button class="btn btn-direct" onclick="saveData('DIRECT')"><i class="fa-solid fa-copy"></i> Lưu copy (Trực tiếp)</button>
-            <button class="btn btn-post" onclick="saveData('POST')"><i class="fa-solid fa-copy"></i> Lưu copy (Bưu điện)</button>
-        </div>
-    </div>
-
-    <div class="search-container">
-        <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="searchInput" placeholder="Tìm kiếm tên, địa chỉ, nội dung..." oninput="renderTable()">
-        </div>
-        <div class="search-spacer"></div>
-        <label class="check-pill">
-            <input type="checkbox" id="checkShowDate"> HIỆN NGÀY
-        </label>
-        <button class="btn btn-a4" onclick="printA4()"><i class="fa-solid fa-print"></i> IN A4</button>
-        <button class="btn btn-tem" onclick="printTem()"><i class="fa-solid fa-barcode"></i> IN TEM</button>    </div>
-
-    <div class="table-card">
-        <table class="main-list">
-            <thead>
-                <tr>
-                    <th width="95" style="text-align:center;">
-                        <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
-                            <input type="checkbox" id="selectAll" onclick="toggleAll()">
-                            <button type="button" class="btn-del-head" onclick="deleteSelected()" title="Xóa các dòng đã chọn"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    </th>
-                    <th width="110" style="text-align:center;">Hình thức</th>
-                    <th>Người nhận &amp; Địa chỉ</th>
-                    <th>Nội dung / Trích yếu văn bản</th>
-                    <th width="150" style="text-align:center;">Mã vạch</th>
-                    <th width="170" style="text-align:center;">Thao tác</th>
-                </tr>
-            </thead>
-            <tbody id="dataTableBody"></tbody>
-        </table>
-    </div>
-
-    <footer class="app-footer no-print">
-        <p>© 2026 Mai Đức Lên. All rights reserved.</p>
-    </footer>
-</div>
-
-<div id="printA4Area" style="display: none;">
-    <table class="header-table">
-        <tr>
-            <td width="48%">
-                <div>THI HÀNH ÁN DÂN SỰ TỈNH LÂM ĐỒNG</div>
-                <div style="font-weight: bold;">PHÒNG THI HÀNH ÁN DÂN SỰ</div>
-                <div style="font-weight: bold; text-decoration: underline;">KHU VỰC 14</div>
-            </td>
-            <td>
-                <div style="font-weight: bold;">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div style="font-weight: bold; text-decoration: underline;">Độc lập - Tự do - Hạnh phúc</div>
-            </td>
-        </tr>
-    </table>
-    <div class="a4-title" id="a4MainTitle">DANH SÁCH GỬI CÔNG VĂN...</div>
-    <table class="print-table">
-        <thead>
-            <tr>
-                <th width="45" style="text-align: center;">TT</th>
-                <th width="220" style="text-align: center;">Nơi nhận/người nhận</th>
-                <th style="text-align: center;">Số, ngày, tháng, năm, trích yếu nội dung...</th>
-                <th width="140" class="barcode-col" style="text-align: center;">Số Mã vạch</th>
-            </tr>
-        </thead>
-        <tbody id="a4Body"></tbody>
-    </table>
-    <div class="footer-area">
-        <div class="footer-col">
-            <div style="height: 30px;"></div><div style="font-weight: bold;" id="footerConfirmLabel">XÁC NHẬN CỦA BƯU ĐIỆN</div><div style="font-style: italic;">(Ký, ghi rõ họ tên)</div>
-        </div>
-        <div class="footer-col">
-            <div id="footerDate" style="font-style: italic;"></div><div style="font-weight: bold; text-transform: uppercase;">NGƯỜI GỬI</div><div style="font-style: italic;">(Ký, ghi rõ họ tên)</div><div id="printSenderName"></div>
-        </div>
-    </div>
-</div>
-
-<script>
-    let db = JSON.parse(localStorage.getItem('thads_v13')) || [];
-    let editingId = null;
-
-    function addNewReceiver(n = '', y = '', isRed = false) {
-        const div = document.createElement('div');
-        div.className = 'receiver-row';
-        const cls = isRed ? 'is-copy' : '';
-        div.innerHTML = `<input type="text" class="in-name ${cls}" value="${n}" placeholder="Nhập họ tên người nhận hoặc đơn vị..." oninput="this.classList.remove('is-copy')">
-                         <input type="number" class="in-year ${cls}" value="${y}" style="text-align:center;" placeholder="Năm" oninput="this.classList.remove('is-copy')">
-                         <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Xóa"><i class="fa-solid fa-xmark"></i></button>`;
-        document.getElementById('receiverContainer').appendChild(div);
-    }
-
-    // ===========================================
-    // HÀM LƯU DỮ LIỆU ĐÃ SỬA LỖI ĐỒNG BỘ VÀ MERGE
-    // ===========================================
-    function saveData(type) {
-        const names = document.querySelectorAll('.in-name'), years = document.querySelectorAll('.in-year');
-        let recs = [];
-        names.forEach((n, i) => { if(n.value.trim()) recs.push({name: n.value.trim(), year: years[i].value}) });
-        if(recs.length === 0) return alert("Vui lòng nhập người nhận!");
-
-        // 1. Luôn kéo lại DB mới nhất trước khi xử lý lưu để tránh ghi đè làm mất dữ liệu của máy khác
-        let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-
-        const data = {
-            id: editingId || Date.now(), type: type, recs: recs,
-            addr: document.getElementById('inAddr').value,
-            phone: document.getElementById('inPhone').value,
-            content: document.getElementById('inContent').value,
-            barcode: document.getElementById('inBarcode').value,
-            day: editingId ? (latestDb.find(x => x.id === editingId)?.day || new Date().toLocaleDateString('vi-VN')) : new Date().toLocaleDateString('vi-VN')
-        };
-
-        // 2. Thực hiện MERGE bản ghi
-        if(editingId) {
-            let idx = latestDb.findIndex(x => x.id === editingId);
-            if (idx !== -1) {
-                latestDb[idx] = data; // Cập nhật nếu đã có
-            } else {
-                latestDb.push(data); // Thêm mới nếu bị khuyết
-            }
-        } else {
-            latestDb.push(data); // Thêm dòng mới
-        }
-
-        // 3. Cập nhật biến global và lưu
-        db = latestDb;
-        localStorage.setItem('thads_v13', JSON.stringify(db));
-        localStorage.setItem('thads_last_sender', document.getElementById('inSender').value);
-
-        // 4. Gửi tín hiệu đồng bộ lên mây
-        window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
-
-        location.reload();
-    }
-
-    // ========================================================
-    // TÍNH NĂNG XUẤT / NHẬP DỮ LIỆU & CÀI ĐẶT
-    // ========================================================
-    function toggleSettings() {
-        document.getElementById('settingsDropdown').classList.toggle('active');
-    }
-
-    function exportData() {
-        let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-        let dataStr = JSON.stringify(latestDb, null, 2);
-        let blob = new Blob([dataStr], { type: 'application/json' });
-        let url = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = 'thads_backup_' + new Date().getTime() + '.json';
-        a.click();
-    }
-
-    function importData(event) {
-        let file = event.target.files[0];
-        if(!file) return;
-        let reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                let importedData = JSON.parse(e.target.result);
-                if(!Array.isArray(importedData)) throw new Error("Format lỗi");
-
-                let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-                let dbMap = new Map();
-
-                // Lấy toàn bộ dữ liệu hiện tại
-                latestDb.forEach(item => dbMap.set(item.id, item));
-
-                // MERGE: Ghi đè nếu trùng ID, thêm vào nếu là ID mới, giữ nguyên các ID cũ
-                importedData.forEach(item => {
-                    dbMap.set(item.id, item);
-                });
-
-                latestDb = Array.from(dbMap.values());
-                db = latestDb; // Cập nhật ra toàn cục
-
-                localStorage.setItem('thads_v13', JSON.stringify(db));
-                window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
-
-                alert("Đã cập nhật (Merge) dữ liệu thành công!");
-                location.reload();
-            } catch(err) {
-                alert("File dữ liệu không hợp lệ!");
-            }
-        };
-        reader.readAsText(file);
-        event.target.value = ''; // Xóa value để có thể nạp lại file cũ nếu cần
-    }
-
-    // ========================================================
-    // TÍNH NĂNG QUẢN LÝ NGƯỜI GỬI (SENDER MANAGER)
-    // ========================================================
-    let senders = JSON.parse(localStorage.getItem('thads_senders')) || [];
-
-    function toggleSenderDropdown(forceClose = false) {
-        const dropdown = document.getElementById('senderDropdown');
-        if (forceClose) {
-            dropdown.classList.remove('active');
-        } else {
-            dropdown.classList.toggle('active');
-            renderSenderList();
-        }
-    }
-
-    function renderSenderList(filterText = '') {
-        const list = document.getElementById('senderList');
-        list.innerHTML = '';
-        const filtered = senders.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
-
-        if (filtered.length === 0) {
-            list.innerHTML = '<div style="padding:12px; color:#94a3b8; text-align:center; font-size:13px;">Không tìm thấy người gửi</div>';
-            return;
-        }
-
-        filtered.forEach(sender => {
-            const div = document.createElement('div');
-            div.className = 'sender-item';
-            div.innerHTML = `
-                <span onclick="selectSender('${sender.name}')" style="flex: 1;">${sender.name}</span>
-                <div class="sender-actions">
-                    <button type="button" onclick="editSender(${sender.id}, event)" title="Sửa tên"><i class="fa-solid fa-pen"></i></button>
-                    <button type="button" class="btn-del" onclick="deleteSender(${sender.id}, event)" title="Xóa tên"><i class="fa-solid fa-xmark"></i></button>
+                <div><label>Cơ quan ban hành (*)</label><input type="text" id="qdNoi" class="req w-full border-2 border-slate-100 p-2 rounded text-sm" value="Thi hành án dân sự tỉnh Lâm Đồng"></div>
+                
+                <div class="bg-blue-50 p-2 rounded border border-blue-100">
+                    <label class="text-blue-800">Tên Chấp hành viên</label>
+                    <div class="flex gap-1">
+                        <select id="chvSelect" class="w-full border border-blue-200 p-2 rounded text-sm font-bold text-blue-900 outline-none"></select>
+                        <button onclick="addCHVName()" class="bg-white border border-blue-200 text-blue-600 px-2 rounded hover:bg-blue-100 font-bold" title="Thêm tên mới">+</button>
+                        <button onclick="delCHVName()" class="bg-white border border-red-200 text-red-500 px-2 rounded hover:bg-red-50 font-bold" title="Xóa tên đang chọn">-</button>
+                    </div>
                 </div>
-            `;
-            list.appendChild(div);
-        });
-    }
 
-    function filterSenderList() {
-        const val = document.getElementById('inSender').value;
-        renderSenderList(val);
-        document.getElementById('senderDropdown').classList.add('active');
-    }
+                <div><label>Số Biên lai thu tiền</label><input type="text" id="blSo" class="w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
+                <div>
+                    <label>Ngày Biên lai</label>
+                    <div class="date-input-container">
+                        <input type="text" id="blNgay" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="w-full border-2 border-slate-100 p-2 rounded text-sm">
+                        <i data-lucide="calendar" class="w-4 h-4 picker-icon"></i>
+                        <input type="date" class="hidden-picker" onchange="syncPicker(this, 'blNgay')">
+                    </div>
+                </div>
+                
+                <div><label>Số tiền Biên lai</label><input type="text" id="blTien" oninput="handleMoneyInputOnly(this)" placeholder="0" class="w-full border-2 border-slate-100 p-2 rounded text-sm outline-none"></div>
 
-    function selectSender(name) {
-        document.getElementById('inSender').value = name;
-        toggleSenderDropdown(true);
-    }
+                <div class="md:col-span-2"><label>Nội dung chi (*)</label><textarea id="lyDo" class="req w-full border-2 border-slate-100 p-2 rounded text-sm h-[70px]">Chi trả tiền tạm thu theo Quyết định Thi hành án</textarea></div>
+            </div>
 
-    function addSender() {
-        const name = prompt("Nhập tên người gửi mới:");
-        if (name && name.trim() !== '') {
-            senders.push({ id: Date.now(), name: name.trim() });
-            localStorage.setItem('thads_senders', JSON.stringify(senders));
-            renderSenderList(document.getElementById('inSender').value);
+            <div id="formActions" class="mt-8 flex justify-center gap-4">
+                <button id="btnSave" onclick="saveData()" class="bg-orange-600 text-white px-16 py-4 rounded-xl font-bold hover:bg-orange-700 flex items-center gap-3 shadow-xl transition-all uppercase border-b-4 border-orange-800 active:border-b-0 active:translate-y-1">
+                    <i data-lucide="save"></i> Lưu hồ sơ
+                </button>
+                <button id="btnCancel" onclick="resetForm()" class="hidden bg-slate-200 text-slate-600 px-8 py-4 rounded-xl font-bold hover:bg-slate-300 uppercase flex items-center gap-2">
+                    <i data-lucide="x-circle"></i> Hủy bỏ
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md border border-slate-200 overflow-hidden">
+            <div class="p-4 bg-slate-100 border-b flex justify-between items-center">
+                <div class="flex gap-4 items-center flex-1">
+                    <h3 class="font-bold text-slate-700 uppercase text-xs whitespace-nowrap">Danh sách hồ sơ</h3>
+                    <div class="relative w-full max-w-md">
+                        <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                        <input type="text" id="searchBox" oninput="debounceRender()" placeholder="Tìm Tên, Số QĐ, Ngày, Tiền..." class="pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm outline-none w-full shadow-sm focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="flex gap-2 ml-4">
+                    <button onclick="printSelected()" class="bg-green-600 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-green-700 uppercase">
+                        <i data-lucide="printer" class="w-4 h-4"></i> In đã chọn (<span id="countSelected">0</span>)
+                    </button>
+                    <button onclick="exportDsChi()" class="bg-purple-600 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-purple-700 uppercase">
+                        <i data-lucide="list" class="w-4 h-4"></i> Xuất danh sách chi
+                    </button>
+                    <button onclick="exportToWord()" class="bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-blue-800 uppercase">
+                        <i data-lucide="file-text" class="w-4 h-4"></i> Xuất Word
+                    </button>
+                </div>
+            </div>
+            
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-800 text-[10px] uppercase font-black text-white border-b">
+                    <tr>
+                        <th class="p-3 w-8"><input type="checkbox" id="masterCheck" onchange="toggleMaster(this)"></th>
+                        <th class="p-3 w-1/4">Người thụ hưởng / Nội dung chi</th>
+                        <th class="p-3">Số Quyết định</th>
+                        <th class="p-3 text-right">Số tiền</th>
+                        <th class="p-3 text-center">Trạng thái</th>
+                        <th class="p-3">Ghi chú</th>
+                        <th class="p-3 text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="listContainer"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="qrModal" onclick="this.style.display='none'">
+        <div class="qr-box" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kiểm tra tài khoản</span>
+                <button onclick="document.getElementById('qrModal').style.display='none'" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <img id="qrImageDisplay" src="" class="w-full aspect-square bg-slate-50 border p-2 rounded-lg" alt="QR">
+            <div id="qrStkDisplay" class="mt-3 font-black text-blue-700 text-lg tracking-wider"></div>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+
+    <script>
+        lucide.createIcons();
+        let db = [];
+        let editId = null;
+        let isCopyMode = false;
+
+        /* --- XỬ LÝ MENU CÀI ĐẶT & XUẤT/NHẬP DỮ LIỆU --- */
+        function toggleSettingsMenu(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('settingsMenu');
+            menu.classList.toggle('hidden');
         }
-    }
 
-    function editSender(id, event) {
-        event.stopPropagation();
-        const sender = senders.find(s => s.id === id);
-        if (sender) {
-            const newName = prompt("Sửa tên người gửi:", sender.name);
-            if (newName && newName.trim() !== '') {
-                sender.name = newName.trim();
-                localStorage.setItem('thads_senders', JSON.stringify(senders));
-                renderSenderList(document.getElementById('inSender').value);
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('settingsMenu');
+            if (menu && !menu.classList.contains('hidden') && !event.target.closest('#settingsMenu')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        function exportDataApp() {
+            const dataToExport = {
+                version: "7.0",
+                exportDate: new Date().toISOString(),
+                records: db,
+                chvList: chvList
+            };
+            const dataStr = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `DuLieu_C06_THADS_${new Date().getTime()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toggleSettingsMenu();
+        }
+
+        function importDataApp(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    let importedRecords = [];
+
+                    if (Array.isArray(importedData)) {
+                        importedRecords = importedData;
+                    } else if (importedData && importedData.records) {
+                        importedRecords = importedData.records;
+                        // Phục hồi thêm danh sách CHV
+                        if (importedData.chvList && Array.isArray(importedData.chvList)) {
+                            importedData.chvList.forEach(chv => {
+                                if (!chvList.includes(chv)) {
+                                    chvList.push(chv);
+                                }
+                            });
+                            saveCHVList();
+                        }
+                    } else {
+                        alert("File dữ liệu không đúng định dạng!");
+                        return;
+                    }
+
+                    if (!Array.isArray(importedRecords)) {
+                        alert("Không tìm thấy dữ liệu hồ sơ hợp lệ trong file!");
+                        return;
+                    }
+
+                    let updateCount = 0;
+                    let addCount = 0;
+
+                    const tx = idbDb.transaction('records', 'readwrite');
+                    const store = tx.objectStore('records');
+
+                    for (const record of importedRecords) {
+                        const existingIndex = db.findIndex(x => x.id === record.id);
+                        if (existingIndex !== -1) {
+                            db[existingIndex] = record;
+                            updateCount++;
+                        } else {
+                            db.push(record);
+                            addCount++;
+                        }
+                        // put sẽ tự động cập nhật nếu trùng ID hoặc thêm mới nếu chưa có
+                        store.put(record);
+                    }
+
+                    tx.oncomplete = () => {
+                        loadData(); // Tải lại toàn bộ để sắp xếp hiển thị chuẩn
+                        alert(`Cập nhật thành công!\n- Thêm mới: ${addCount} hồ sơ\n- Cập nhật đè (trùng ID): ${updateCount} hồ sơ`);
+                        window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
+                    };
+
+                    tx.onerror = (err) => {
+                        console.error("Lỗi khi lưu vào IDB:", err);
+                        alert("Đã xảy ra lỗi khi ghi dữ liệu!");
+                    };
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Lỗi đọc file: " + error.message);
+                }
+                
+                event.target.value = ''; // Xóa input để có thể chọn lại file cũ nếu muốn
+            };
+            reader.readAsText(file);
+            toggleSettingsMenu();
+        }
+
+        /* --- LOGIC CHV --- */
+        const STORAGE_KEY_CHV = 'chv_list_store_v1';
+        let chvList = JSON.parse(localStorage.getItem(STORAGE_KEY_CHV)) || ["Nguyễn Công Cường"]; 
+
+        function saveCHVList() {
+            localStorage.setItem(STORAGE_KEY_CHV, JSON.stringify(chvList));
+            const currentVal = document.getElementById('chvSelect').value;
+            renderCHVSelect(currentVal);
+        }
+
+        function renderCHVSelect(selectedVal = null) {
+            const sel = document.getElementById('chvSelect');
+            if(!sel) return;
+            sel.innerHTML = '';
+            chvList.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.text = name;
+                sel.appendChild(opt);
+            });
+            if(selectedVal && chvList.includes(selectedVal)) {
+                sel.value = selectedVal;
+            } else if (chvList.length > 0) {
+                sel.value = chvList[0];
             }
         }
-    }
 
-    function deleteSender(id, event) {
-        event.stopPropagation();
-        if (confirm("Xóa người gửi này khỏi danh sách?")) {
-            senders = senders.filter(s => s.id !== id);
-            localStorage.setItem('thads_senders', JSON.stringify(senders));
-            renderSenderList(document.getElementById('inSender').value);
+        function addCHVName() {
+            const newName = prompt("Nhập tên Chấp hành viên mới:");
+            if(newName && newName.trim() !== "") {
+                const cleanName = newName.trim();
+                if(!chvList.includes(cleanName)) {
+                    chvList.push(cleanName);
+                    saveCHVList();
+                    document.getElementById('chvSelect').value = cleanName;
+                } else {
+                    alert("Tên này đã có trong danh sách!");
+                }
+            }
         }
-    }
 
-    // Đóng dropdown khi click ra ngoài
-    document.addEventListener('click', function(e) {
-        const senderWrapper = document.getElementById('senderWrapper');
-        if (senderWrapper && !senderWrapper.contains(e.target)) toggleSenderDropdown(true);
-
-        const settingsDropdown = document.getElementById('settingsDropdown');
-        const settingsBtn = document.querySelector('.settings-btn');
-        if (settingsDropdown && settingsBtn && !settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
-            settingsDropdown.classList.remove('active');
+        function delCHVName() {
+            const val = document.getElementById('chvSelect').value;
+            if(!val) return;
+            if(confirm(`Bạn có chắc muốn xóa tên "${val}" khỏi danh sách?`)) {
+                chvList = chvList.filter(x => x !== val);
+                if(chvList.length === 0) chvList.push("Nguyễn Công Cường"); 
+                saveCHVList();
+            }
         }
-    });
 
-    // ========================================================
-    // TÌM KIẾM, IN ẤN VÀ CHỨC NĂNG BẢNG (GIỮ NGUYÊN LOGIC)
-    // ========================================================
-    let searchTimeout = null;
-    function renderTable() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const q = document.getElementById('searchInput').value.toLowerCase();
-            const tbody = document.getElementById('dataTableBody');
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCHVSelect();
+            
+            // Handle smart date formatting on blur
+            document.addEventListener('focusout', function(e) {
+                if (e.target && e.target.tagName === 'INPUT' && e.target.hasAttribute('placeholder') && e.target.getAttribute('placeholder') === 'dd/mm/yyyy') {
+                    let val = e.target.value.trim();
+                    if (!val) return;
+                    
+                    if (/^\d{1,2}$/.test(val)) {
+                        let d = parseInt(val, 10);
+                        if (d >= 1 && d <= 31) {
+                            let now = new Date();
+                            let mm = (now.getMonth() + 1).toString().padStart(2, '0');
+                            let yyyy = now.getFullYear();
+                            let dd = d.toString().padStart(2, '0');
+                            e.target.value = `${dd}/${mm}/${yyyy}`;
+                        }
+                    } else if (val.includes('/')) {
+                        let parts = val.split('/');
+                        if (parts.length === 3) {
+                            let d = parseInt(parts[0], 10);
+                            let m = parseInt(parts[1], 10);
+                            let y = parts[2];
+                            if (!isNaN(d) && !isNaN(m) && y.length === 4) {
+                                let dd = d.toString().padStart(2, '0');
+                                let mm = m.toString().padStart(2, '0');
+                                e.target.value = `${dd}/${mm}/${y}`;
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        /* --- END LOGIC CHV --- */
+        
+        const EXTENDED_BANK_MAP = [
+            { code: "VBA", bin: "970405", keywords: ["agribank", "nong nghiep", "vba"] },
+            { code: "VCB", bin: "970436", keywords: ["vietcombank", "vcb", "ngoai thuong"] },
+            { code: "BIDV", bin: "970418", keywords: ["bidv", "dau tu va phat trien"] },
+            { code: "CTG", bin: "970415", keywords: ["vietinbank", "ctg", "cong thuong", "vietin"] },
+            { code: "TCB", bin: "970407", keywords: ["techcombank", "tcb", "ky thuong"] },
+            { code: "STB", bin: "970403", keywords: ["sacombank", "stb", "sai gon thuong tin"] },
+            { code: "VPB", bin: "970432", keywords: ["vpbank", "vpb", "thinh vuong"] },
+            { code: "ACB", bin: "970416", keywords: ["acb", "a chau"] },
+            { code: "TPB", bin: "970423", keywords: ["tpbank", "tpb", "tien phong"] },
+            { code: "VIB", bin: "970441", keywords: ["vib", "quoc te"] },
+            { code: "NAB", bin: "970428", keywords: ["nam a", "nab"] },
+            { code: "OCB", bin: "970448", keywords: ["ocb", "phuong dong"] },
+            { code: "SHB", bin: "970443", keywords: ["shb", "sai gon ha noi"] },
+            { code: "NCB", bin: "970419", keywords: ["ncb", "quoc dan"] },
+            { code: "HDB", bin: "970437", keywords: ["hdbank", "hdb", "phat trien tp"] },
+            { code: "ABB", bin: "970425", keywords: ["abbank", "abb", "an binh"] },
+            { code: "PVCB", bin: "970412", keywords: ["pvcombank", "dai chung"] },
+            { code: "BAB", bin: "970409", keywords: ["bac a", "bab"] },
+            { code: "BVB", bin: "970438", keywords: ["baoviet", "bao viet"] },
+            { code: "KLB", bin: "970452", keywords: ["kien long", "kienlong"] },
+            { code: "VBB", bin: "970433", keywords: ["vietbank", "viet nam thuong tin"] },
+            { code: "SGB", bin: "970400", keywords: ["saigonbank", "sai gon cong thuong"] },
+            { code: "EIB", bin: "970431", keywords: ["eximbank", "eib", "xuat nhap khau"] },
+            { code: "LPB", bin: "970449", keywords: ["lpbank", "lien viet", "lienviet"] },
+            { code: "SEAB", bin: "970440", keywords: ["seabank", "dong nam a"] },
+            { code: "MSB", bin: "970426", keywords: ["msb", "hang hai"] },
+            { code: "CBB", bin: "970444", keywords: ["cbbank", "xay dung"] },
+            { code: "GPB", bin: "970408", keywords: ["gpbank", "dau khi"] },
+            { code: "OCEB", bin: "970414", keywords: ["oceanbank", "dai duong"] },
+            { code: "VRB", bin: "970421", keywords: ["vrb", "viet nga"] },
+            { code: "SCB", bin: "970429", keywords: ["scb", "sai gon"] },
+            { code: "DAB", bin: "970406", keywords: ["dong a", "donga"] },
+            { code: "VAB", bin: "970427", keywords: ["viet a", "vieta"] },
+            { code: "VCCB", bin: "970454", keywords: ["ban viet", "bvbank", "banviet"] },
+            { code: "MB", bin: "970422", keywords: ["mbbank", "mb", "quan doi"] }
+        ];
 
-            const filtered = db.filter(i =>
-                i.recs.some(r => r.name.toLowerCase().includes(q)) ||
-                i.addr.toLowerCase().includes(q) ||
-                i.content.toLowerCase().includes(q) ||
-                (i.barcode && i.barcode.toLowerCase().includes(q))
-            );
+        let searchTimeout;
+        function debounceRender() { clearTimeout(searchTimeout); searchTimeout = setTimeout(renderTable, 500); }
 
-            const groups = filtered.reduce((acc, i) => { acc[i.day] = acc[i.day] || []; acc[i.day].push(i); return acc; }, {});
+        function handleQDFocus(el) { if (el.value === "/QĐ-THADS") el.setSelectionRange(0, 0); }
 
-            let htmlContent = '';
+        function handleMoneyInputOnly(e) {
+            let val = e.value.replace(/\D/g, "");
+            e.value = val ? new Intl.NumberFormat('vi-VN').format(val) : "";
+        }
 
-            Object.keys(groups).reverse().forEach(day => {
-                htmlContent += `<tr class="date-row"><td colspan="6"><i class="fa-solid fa-calendar-days"></i>Ngày ${day}</td></tr>`;
+        function showQR(id) {
+            const r = db.find(x => x.id === id);
+            if (!r.stk || (!r.nganHang && !r.maNH)) { alert("Thiếu STK hoặc Ngân hàng!"); return; }
+            
+            let bankCode = "";
+            const removeAccents = (str) => { 
+                return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase() : ""; 
+            };
+            
+            const inputBank = removeAccents(r.nganHang);
+            const inputMaNH = removeAccents(r.maNH);
 
-                groups[day].reverse().forEach(item => {
-                    const names = item.recs.map(r => `<span class="recv-name">${r.name}${r.year ? ', sinh năm ' + r.year : ''}</span>`).join(' và ');
-                    const badge = item.type === 'POST' ? '<span class="badge badge-post">Bưu điện</span>' : '<span class="badge badge-direct">Trực tiếp</span>';
+            for (let bank of EXTENDED_BANK_MAP) { 
+                const matchName = bank.keywords.some(kw => new RegExp("\\b" + kw + "\\b").test(inputBank));
+                const matchMaNH = inputMaNH && (bank.code.toLowerCase() === inputMaNH || bank.bin === inputMaNH || bank.keywords.includes(inputMaNH));
+                
+                if (matchName || matchMaNH) { 
+                    bankCode = bank.bin || bank.code; 
+                    break; 
+                } 
+            }
+            
+            if (!bankCode) {
+                bankCode = r.maNH ? r.maNH.trim() : (r.nganHang ? r.nganHang.split(' ')[0] : "");
+            }
 
-                    htmlContent += `
-                        <tr class="data-row">
-                            <td align="center"><input type="checkbox" class="row-cb" value="${item.id}"></td>
-                            <td align="center">${badge}</td>
-                            <td>
-                                ${names}
-                                ${item.addr && item.addr.trim() ? `<div class="recv-addr"><i class="fa-solid fa-location-dot"></i><span>${item.addr}</span></div>` : ''}
-                                ${item.phone ? `<div class="recv-phone"><i class="fa-solid fa-phone"></i><span>${item.phone}</span></div>` : ''}
-                            </td>
-                            <td style="white-space: pre-wrap;">${item.content}</td>
-                            <td align="center"><span class="barcode-text">${item.barcode || '-'}</span></td>
-                            <td>
-                                <div class="action-btns">
-                                    <button class="btn-icon btn-edit" title="Sửa" onclick="editItem(${item.id})"><i class="fa-solid fa-pen"></i></button>
-                                    <button class="btn-icon btn-copy" title="Copy" onclick="makeCopy(${item.id})"><i class="fa-solid fa-file-lines"></i></button>
-                                    <button class="btn-icon btn-delete" title="Xóa" onclick="deleteItem(${item.id})"><i class="fa-solid fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>`;
+            const qrUrl = `https://img.vietqr.io/image/${bankCode}-${r.stk}-compact2.jpg?label=KIEM%20TRA%20TK`;
+
+            document.getElementById('qrImageDisplay').src = qrUrl;
+            document.getElementById('qrStkDisplay').innerText = r.stk;
+            document.getElementById('qrModal').style.display = 'flex';
+        }
+
+        function renderTable() {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const container = document.getElementById('listContainer');
+            container.innerHTML = '';
+            const filtered = db.filter(r => {
+                const sTien = Number(r.soTien).toLocaleString('vi-VN');
+                return r.hoTen.toLowerCase().includes(search) || r.qdSo.toLowerCase().includes(search) || r.qdNgay.toLowerCase().includes(search) || r.lyDo.toLowerCase().includes(search) || sTien.includes(search);
+            });
+            const groups = filtered.reduce((acc, obj) => {
+                const date = obj.dateCreated;
+                acc[date] = acc[date] || [];
+                acc[date].push(obj);
+                return acc;
+            }, {});
+            const sortedDates = Object.keys(groups).sort((a, b) => {
+                const toDate = d => new Date(d.split('/').reverse().join('-'));
+                return toDate(b) - toDate(a);
+            });
+            const fragment = document.createDocumentFragment();
+            sortedDates.forEach(date => {
+                const groupTr = document.createElement('tr');
+                groupTr.innerHTML = `<td colspan="7" class="date-group-header"><i data-lucide="calendar" class="w-4 h-4"></i> NGÀY TẠO: ${date}</td>`;
+                fragment.appendChild(groupTr);
+                groups[date].forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b hover:bg-slate-50 transition-colors';
+                    const stColor = r.isPaid ? 'text-teal-500' : 'text-red-500';
+                    tr.innerHTML = `
+                        <td class="p-3"><input type="checkbox" class="row-check" value="${r.id}" onchange="updateCount()"></td>
+                        <td class="p-3"><div class="font-bold text-slate-800 text-xs">${r.hoTen}</div><div class="text-[11px] text-slate-500 mt-1 leading-tight">${r.lyDo}</div></td>
+                        <td class="p-3"><div class="font-bold text-blue-700 text-xs">${r.qdSo}</div><div class="text-[10px] text-slate-400">(${r.qdNgay || '...'})</div></td>
+                        <td class="p-3 text-right font-bold text-slate-800 text-xs">${Number(r.soTien).toLocaleString('vi-VN')}</td>
+                        <td class="p-3 text-center" id="cell-status-${r.id}"><div class="font-black text-[11px] cursor-pointer ${stColor}" onclick="handleStatusToggle(${r.id})">${r.isPaid ? 'ĐÃ CHI' : 'CHƯA CHI'}</div><div class="text-[10px] font-bold text-teal-800">${r.paidDate || ''}</div></td>
+                        <td class="p-3"><input type="text" value="${r.ghiChu || ''}" onblur="updateGhiChu(${r.id}, this.value)" placeholder="..." class="bg-transparent border-b border-dashed border-slate-200 w-full text-[11px] outline-none"></td>
+                        <td class="p-3 text-center"><div class="flex gap-1 justify-center">
+                            <button onclick="editRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-blue-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                            <button onclick="copyRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-amber-600"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                            <button onclick="delRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-300 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            <button onclick="showQR(${r.id})" class="p-1.5 bg-slate-100 rounded text-purple-600 hover:bg-purple-600 hover:text-white"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
+                            <button onclick="exportSingleWord(${r.id})" title="Tải file Word" class="p-1.5 bg-slate-100 rounded text-blue-700 hover:bg-blue-700 hover:text-white"><i data-lucide="download" class="w-4 h-4"></i></button>
+                        </div></td>`;
+                    fragment.appendChild(tr);
                 });
             });
-
-            tbody.innerHTML = htmlContent;
-        }, 100);
-    }
-
-    function printA4() {
-        const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
-        if(ids.length === 0) return alert("Chọn dòng cần in!");
-        const selected = db.filter(i => ids.includes(i.id));
-        const isDirect = selected.every(i => i.type === 'DIRECT');
-        document.getElementById('a4MainTitle').innerText = isDirect ? "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO..." : "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO... QUA BƯU ĐIỆN";
-        document.getElementById('footerConfirmLabel').innerText = isDirect ? "XÁC NHẬN CỦA BÊN NHẬN" : "XÁC NHẬN CỦA BƯU ĐIỆN";
-        if(isDirect) document.body.classList.add('is-direct'); else document.body.classList.remove('is-direct');
-        const now = new Date(), isTick = document.getElementById('checkShowDate').checked;
-        document.getElementById('footerDate').innerText = `Liên Hương, ngày ${isTick ? now.getDate() : "…."} tháng ${now.getMonth()+1} năm ${now.getFullYear()}`;
-        document.getElementById('printSenderName').innerText = document.getElementById('inSender').value;
-        let h = ''; selected.forEach((item, i) => {
-            const n = item.recs.map(r => `${r.name}${r.year ? ', sinh năm '+r.year : ''}`).join(' và ');
-            const phoneText = item.phone ? `<br>SĐT: ${item.phone}` : '';
-            h += `<tr><td align="center">${i+1}</td><td><strong>${n}</strong><br>Địa chỉ: ${item.addr}${phoneText}</td><td style="white-space: pre-wrap;">${item.content}</td><td align="center" class="barcode-col"><strong>${item.barcode || ''}</strong></td></tr>`;
-        });
-        document.getElementById('a4Body').innerHTML = h; window.print();
-    }
-
-    function printTem() {
-        const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
-        if(ids.length === 0) return alert("Chọn dòng!");
-        const selected = db.filter(i => ids.includes(i.id));
-        let h = '';
-        selected.forEach(item => {
-            const names = item.recs.map(r => `<strong style="font-size:16px">${r.name}</strong> <span style="font-size:14px; font-weight:normal">${r.year ? '('+r.year+')' : ''}</span>`).join(', ');
-            h += `<div style="width:75mm; height:50mm; padding:4mm; box-sizing:border-box; font-family:'Times New Roman', Times, serif; line-height:1.4; overflow:hidden; page-break-inside:avoid; text-align:justify;">
-                    <div style="font-size:15px; margin-bottom:2mm;">Người nhận: ${names}</div>
-                    ${item.addr ? '<div style="font-size:15px; margin-bottom:2mm;">Đ/c: '+item.addr+'</div>' : ''}
-                    ${item.phone ? '<div style="font-size:15px;">SĐT: '+item.phone+'</div>' : ''}
-                  </div>`;
-        });
-        const w = window.open('', '_blank');
-        w.document.write(`<html><head><style>@page { size: 75mm 50mm; margin: 0; } body { margin: 0; padding: 0; }</style></head><body>${h}
-        <script>window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 500); };<\/script></body></html>`);
-        w.document.close();
-    }
-
-    function editItem(id) {
-        const item = db.find(x => x.id === id); editingId = id;
-        document.getElementById('receiverContainer').innerHTML = '';
-        item.recs.forEach(r => addNewReceiver(r.name, r.year));
-        ['inAddr', 'inPhone', 'inContent', 'inBarcode'].forEach(fid => {
-            document.getElementById(fid).value = item[fid.replace('in','').toLowerCase()] || '';
-        });
-        showActions('EDIT'); window.scrollTo(0,0);
-    }
-
-    function makeCopy(id) {
-        const item = db.find(x => x.id === id); editingId = null;
-        document.getElementById('receiverContainer').innerHTML = '';
-        item.recs.forEach(r => addNewReceiver(r.name, r.year, true));
-        ['inAddr', 'inPhone', 'inContent', 'inBarcode'].forEach(fid => {
-            const el = document.getElementById(fid);
-            el.value = item[fid.replace('in','').toLowerCase()] || '';
-            el.classList.add('is-copy');
-        });
-        showActions('COPY'); window.scrollTo(0,0);
-    }
-
-    function showActions(mode) {
-        document.getElementById('mainActionGroup').style.display = 'none';
-        document.getElementById('editActionGroup').style.display = mode === 'EDIT' ? 'flex' : 'none';
-        document.getElementById('copyActionGroup').style.display = mode === 'COPY' ? 'flex' : 'none';
-    }
-
-    function resetForm() { location.reload(); }
-
-    function deleteItem(id) {
-        if(confirm("Xóa dòng này?")) {
-            // Luôn fetch DB mới nhất trước khi xóa để đồng bộ MERGE
-            let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-            latestDb = latestDb.filter(i => i.id !== id);
-            db = latestDb; // Cập nhật ra toàn cục
-
-            localStorage.setItem('thads_v13', JSON.stringify(db));
-            window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
-
-            renderTable();
+            container.appendChild(fragment);
+            lucide.createIcons();
+            updateCount();
         }
-    }
 
-    // XÓA NHIỀU DÒNG ĐÃ CHỌN (có cảnh báo, đồng bộ như xóa từng dòng)
-    function deleteSelected() {
-        const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
-        if(ids.length === 0) return alert("Vui lòng chọn ít nhất một dòng cần xóa!");
-        if(confirm("CẢNH BÁO: Bạn sắp xóa " + ids.length + " dòng đã chọn.\nDữ liệu đã xóa không thể khôi phục. Bạn có chắc chắn muốn xóa?")) {
-            let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-            latestDb = latestDb.filter(i => !ids.includes(i.id));
-            db = latestDb;
-
-            localStorage.setItem('thads_v13', JSON.stringify(db));
-            window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
-
-            document.getElementById('selectAll').checked = false;
-            renderTable();
+        function copyRec(id) { const r = db.find(x => x.id === id); fillForm(r); editId = null; isCopyMode = true; document.getElementById('btnSave').innerHTML = `<i data-lucide="copy"></i> LƯU BẢN SAO MỚI`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
+        
+        function fillForm(r) { 
+            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'lyDo', 'tenThay', 'namSinhThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ', 'blSo', 'blNgay', 'blTien'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = r[f] || ""; }); 
+            document.getElementById('coThuPhi').checked = r.hasFee; 
+            document.getElementById('coNguoiNhanThay').checked = r.hasNT; 
+            renderCHVSelect(r.chvName); 
+            handleFeeChange(); 
+            toggleNhanThay(); 
         }
-    }
 
-    function toggleAll() { const s = document.getElementById('selectAll').checked; document.querySelectorAll('.row-cb').forEach(c => c.checked = s); }
+        function editRec(id) { const r = db.find(x => x.id === id); editId = r.id; isCopyMode = false; fillForm(r); document.getElementById('btnSave').innerHTML = `<i data-lucide="check"></i> Cập nhật hồ sơ`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
+        
+        function resetForm() { 
+            editId = null; isCopyMode = false; 
+            document.getElementById('btnSave').innerHTML = `<i data-lucide="save"></i> Lưu hồ sơ`; 
+            document.getElementById('btnCancel').classList.add('hidden'); 
+            document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error')); 
+            document.getElementById('coThuPhi').checked = false; 
+            document.getElementById('coNguoiNhanThay').checked = false; 
+            handleFeeChange(); 
+            toggleNhanThay(); 
+            ['hoTen', 'namSinh', 'diaChi', 'cccdSo', 'cccdNgay', 'cccdNoi', 'stk', 'maNH', 'nganHang', 'soTien', 'qdSo', 'qdNgay', 'qdNoi', 'tenThay', 'namSinhThay', 'dcThay', 'cccdThay', 'ngayThay', 'noiThay', 'giayUQ', 'blSo', 'blNgay', 'blTien'].forEach(f => { if(document.getElementById(f)) document.getElementById(f).value = (f === 'qdNoi' ? "Thi hành án dân sự tỉnh Lâm Đồng" : (f === 'cccdNoi' || f === 'noiThay' ? "Cục Cảnh sát quản lý hành chính về trật tự xã hội" : (f === 'qdSo' ? "/QĐ-THADS" : ""))); }); 
+            document.getElementById('lyDo').value = "Chi trả tiền tạm thu theo Quyết định Thi hành án"; 
+            document.getElementById('txtDocTien').innerText = "Chưa nhập số tiền..."; 
+            renderCHVSelect();
+            lucide.createIcons(); 
+        }
 
-    window.onload = () => {
-        renderTable();
-        document.getElementById('inSender').value = localStorage.getItem('thads_last_sender') || '';
-    };
-</script>
-<script>
-window.addEventListener('message', function(e) {
-    if (e.data.type === 'GET_DATA') {
-        const val = localStorage.getItem('thads_v13');
-        const data = val ? {'thads_v13': val} : {};
-        window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: data}, '*');
-    }
-    if (e.data.type === 'RESTORE_DATA') {
-        const d = e.data.payload;
-        if(d) {
-            Object.keys(d).forEach(k => localStorage.setItem(k, d[k]));
-            // KHÔNG reload trang: giữ nguyên nội dung người dùng đang nhập dở ở form.
-            // Chỉ cập nhật dữ liệu mới nhận về và vẽ lại bảng danh sách.
-            try { db = JSON.parse(localStorage.getItem('thads_v13')) || []; } catch(err) {}
-            if (d['thads_senders'] !== undefined) {
-                try { senders = JSON.parse(localStorage.getItem('thads_senders')) || []; } catch(err) {}
+        async function saveData() { 
+            if (!validateForm()) return; 
+            
+            const tongTien = parseInt(document.getElementById('soTien').value.replace(/\D/g,"")) || 0; 
+            const hasFee = document.getElementById('coThuPhi').checked; 
+            const tiLe = parseInt(document.querySelector('input[name="tiLePhi"]:checked').value); 
+            const phi = hasFee ? Math.round(tongTien * tiLe / 100) : 0; 
+            
+            const data = { 
+                id: (editId) ? editId : Date.now(), 
+                dateCreated: (editId) ? (db.find(x=>x.id===editId).dateCreated) : new Date().toLocaleDateString('vi-VN'), 
+                hoTen: document.getElementById('hoTen').value, 
+                namSinh: document.getElementById('namSinh').value, 
+                diaChi: document.getElementById('diaChi').value, 
+                cccdSo: document.getElementById('cccdSo').value, 
+                cccdNgay: document.getElementById('cccdNgay').value, 
+                cccdNoi: document.getElementById('cccdNoi').value, 
+                stk: document.getElementById('stk').value, 
+                nganHang: document.getElementById('nganHang').value, 
+                maNH: document.getElementById('maNH').value, 
+                lyDo: document.getElementById('lyDo').value, 
+                soTien: tongTien, hasFee, tiLePhi: tiLe, phiTien: phi, 
+                thucNhan: tongTien - phi, 
+                isPaid: (editId) ? (db.find(x=>x.id===editId).isPaid) : false, 
+                paidDate: (editId) ? (db.find(x=>x.id===editId).paidDate) : '', 
+                ghiChu: (editId) ? (db.find(x=>x.id===editId).ghiChu || "") : "", 
+                hasNT: document.getElementById('coNguoiNhanThay').checked, 
+                tenThay: document.getElementById('tenThay').value, 
+                namSinhThay: document.getElementById('namSinhThay').value,
+                dcThay: document.getElementById('dcThay').value, 
+                cccdThay: document.getElementById('cccdThay').value, 
+                ngayThay: document.getElementById('ngayThay').value, 
+                noiThay: document.getElementById('noiThay').value, 
+                giayUQ: document.getElementById('giayUQ').value, 
+                qdSo: document.getElementById('qdSo').value, 
+                qdNgay: document.getElementById('qdNgay').value, 
+                qdNoi: document.getElementById('qdNoi').value,
+                chvName: document.getElementById('chvSelect').value,
+                blSo: document.getElementById('blSo').value,
+                blNgay: document.getElementById('blNgay').value,
+                blTien: document.getElementById('blTien').value
+            }; 
+
+            if (editId) {
+                db = db.map(x => x.id === editId ? data : x); 
+            } else {
+                db.unshift(data); 
             }
-            const checked = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => c.value);
+
+            await saveToIDB(data);
+            window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
+            resetForm();
             renderTable();
-            setTimeout(() => {
-                document.querySelectorAll('.row-cb').forEach(c => { if (checked.includes(c.value)) c.checked = true; });
-            }, 250);
         }
-    }
-});
-</script>
+
+        function formatDateInput(el) { 
+            let current = el.value.replace(/[^\d/]/g, "");
+            if (current !== el.value) el.value = current;
+            let val = el.value.replace(/\D/g, ""); 
+            if (val.length === 8 && !el.value.includes('/')) {
+                el.value = val.slice(0, 2) + "/" + val.slice(2, 4) + "/" + val.slice(4, 8); 
+            }
+        }
+        function syncPicker(picker, textId) { if (!picker.value) return; const [y, m, d] = picker.value.split('-'); document.getElementById(textId).value = `${d}/${m}/${y}`; }
+        function isValidDate(dateStr) { return /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/.test(dateStr); }
+        function validateForm() { let isValid = true; document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error')); document.querySelectorAll('.req').forEach(el => { if (!el.value.trim() || el.value === "/QĐ-THADS") { el.classList.add('input-error'); isValid = false; } }); ['qdNgay', 'cccdNgay', 'ngayThay', 'blNgay'].forEach(id => { const el = document.getElementById(id); if (el && el.value.trim() && !isValidDate(el.value)) { el.classList.add('input-error'); isValid = false; } }); return isValid; }
+        function toggleNhanThay() { const checked = document.getElementById('coNguoiNhanThay').checked; document.getElementById('formNhanThay').style.display = checked ? 'block' : 'none'; document.getElementById('formNguoiNhan').style.display = checked ? 'none' : 'grid'; }
+        function handleFeeChange() { document.getElementById('boxTiLePhi').style.display = document.getElementById('coThuPhi').checked ? 'flex' : 'none'; handleMoneyChange(document.getElementById('soTien')); }
+        function handleMoneyChange(e) { let val = e.value.replace(/\D/g, ""); e.value = val ? new Intl.NumberFormat('vi-VN').format(val) : ""; const hasFee = document.getElementById('coThuPhi').checked, tiLe = document.querySelector('input[name="tiLePhi"]:checked').value; const tongTien = parseInt(val) || 0, phi = hasFee ? Math.round(tongTien * tiLe / 100) : 0, thucNhan = tongTien - phi; document.getElementById('phiHienThi').value = hasFee ? new Intl.NumberFormat('vi-VN').format(phi) : "---"; document.getElementById('txtDocTien').innerText = val ? docSo(thucNhan) : "Chưa nhập số tiền..."; }
+        
+        function handleStatusToggle(id) { const r = db.find(x => x.id === id); if (r.isPaid) { if(confirm("Chuyển về trạng thái CHƯA CHI?")) updateStatus(id, false, ""); } else { document.getElementById(`cell-status-${id}`).innerHTML = `<div class="flex flex-col items-center gap-1"><div class="date-input-container"><input type="text" id="tempDate-${id}" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="text-[10px] border p-1 rounded w-24"><input type="date" class="hidden-picker" style="width:20px" onchange="syncPicker(this, 'tempDate-${id}')"></div><div class="flex gap-1"><button onclick="confirmPaid(${id})" class="bg-teal-600 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Lưu</button><button onclick="renderTable()" class="bg-slate-400 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Hủy</button></div></div>`; } }
+        function confirmPaid(id) { const d = document.getElementById(`tempDate-${id}`).value; if(!isValidDate(d)) return alert("Vui lòng nhập đúng định dạng dd/mm/yyyy!"); updateStatus(id, true, d); }
+        async function updateStatus(id, isPaid, date) { 
+            db = db.map(x => x.id === id ? {...x, isPaid, paidDate: date} : x); 
+            const updated = db.find(x => x.id === id); 
+            await saveToIDB(updated);
+            window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*'); 
+            renderTable(); 
+        }
+
+        async function updateGhiChu(id, val) { 
+            db = db.map(x => x.id === id ? {...x, ghiChu: val} : x); 
+            const updated = db.find(x => x.id === id); 
+            await saveToIDB(updated);
+            window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
+        }
+
+        async function delRec(id) { 
+            if(confirm("Xóa hồ sơ?")) { 
+                db = db.filter(x => x.id !== id); 
+                await deleteFromIDB(id); 
+                window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
+                renderTable(); 
+            } 
+        }
+
+        function updateCount() { const count = document.querySelectorAll('.row-check:checked').length; document.getElementById('countSelected').innerText = count; document.getElementById('masterCheck').checked = (count > 0 && count === document.querySelectorAll('.row-check').length); }
+        function toggleMaster(m) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = m.checked); updateCount(); }
+        function printSelected() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Chọn hồ sơ!"); document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); window.print(); }
+        
+        function exportSingleWord(id) {
+            const checkboxes = document.querySelectorAll('.row-check');
+            const originalStates = [];
+            checkboxes.forEach(cb => {
+                originalStates.push({ el: cb, checked: cb.checked });
+                cb.checked = (cb.value == id);
+            });
+            exportToWord();
+            originalStates.forEach(state => {
+                state.el.checked = state.checked;
+            });
+            updateCount();
+        }
+
+        function exportDsChi() {
+            const checked = document.querySelectorAll('.row-check:checked');
+            if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất danh sách chi!");
+
+            let totalTien = 0;
+            let rowsHtml = '';
+            
+            Array.from(checked).forEach((cb, index) => {
+                const r = db.find(x => x.id == cb.value);
+                totalTien += Number(r.soTien) || 0;
+                
+                const ngay = r.qdNgay ? ` ngày ${r.qdNgay}` : "";
+                const soQd = r.qdSo ? r.qdSo : "";
+                const lyDoFormated = (r.lyDo || '').replace(/\n/g, '<br>');
+                
+                rowsHtml += `
+                    <tr>
+                        <td style="border: 1px solid black; padding: 5px; text-align: center;">${index + 1}</td>
+                        <td style="border: 1px solid black; padding: 5px;">${soQd}${ngay}</td>
+                        <td style="border: 1px solid black; padding: 5px; text-align: center;">1</td>
+                        <td style="border: 1px solid black; padding: 5px;">${lyDoFormated}</td>
+                        <td style="border: 1px solid black; padding: 5px;">${r.hoTen || ''}${r.diaChi ? '<br>Địa chỉ: ' + r.diaChi : ''}</td>
+                        <td style="border: 1px solid black; padding: 5px; text-align: right;">${Number(r.soTien).toLocaleString('vi-VN')}</td>
+                    </tr>
+                `;
+            });
+
+            rowsHtml += `
+                <tr>
+                    <td style="border: 1px solid black; padding: 5px; font-weight: bold; text-align: center;">Tổng cộng: ${checked.length} hồ sơ</td>
+                    <td style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: bold;">${checked.length}</td>
+                    <td style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: right; font-weight: bold;">${totalTien.toLocaleString('vi-VN')}</td>
+                </tr>
+            `;
+
+            const htmlContent = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>Danh sách hồ sơ chi</title>
+                    <style>
+                        @page {
+                            size: 29.7cm 21cm;
+                            mso-page-orientation: landscape;
+                            margin: 2cm 2cm 2cm 2cm;
+                        }
+                        body { font-family: 'Times New Roman', serif; font-size: 13pt; }
+                        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+                        th, td { border: 1px solid black; padding: 8px; vertical-align: top; }
+                        th { font-weight: bold; text-align: center; }
+                    </style>
+                </head>
+                <body>
+                    <div style="width: 100%; font-weight: bold; font-size: 13pt; text-align: left;">
+                        <div style="display: inline-block; text-align: center;">
+                            THI HÀNH ÁN DÂN SỰ TỈNH LÂM ĐỒNG<br>
+                            PHÒNG THADS KHU VỰC 14
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-weight: bold; font-size: 16pt; margin-top: 30px; margin-bottom: 20px;">
+                        DANH SÁCH HỒ SƠ CHI
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Số QĐ THA/Ngày tháng năm QĐ</th>
+                                <th>Số lượng</th>
+                                <th>Nội dung chi</th>
+                                <th>Đương sự/ Người được chi</th>
+                                <th>Số tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Danh_sach_chi.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+        function exportToWord() {
+            const checked = document.querySelectorAll('.row-check:checked');
+            if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất Word!");
+
+            const escapeXml = (unsafe) => (unsafe || "").toString().replace(/[<>&'"]/g, c => {
+                switch (c) {
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '&': return '&amp;';
+                    case '\'': return '&apos;';
+                    case '"': return '&quot;';
+                }
+            });
+
+            let xmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\n<w:body>\n`;
+
+            const addRawXml = (xmlStr) => { xmlContent += xmlStr; };
+
+            const addPara = (runs, pageBreak = false, alignCenter = false, noIndent = false) => {
+                let align = alignCenter ? 'center' : 'both';
+                let indent = alignCenter || noIndent ? '' : '<w:ind w:firstLine="720"/>';
+                let p = `<w:p><w:pPr><w:jc w:val="${align}"/><w:spacing w:line="264" w:lineRule="auto" w:after="0"/>${indent}${pageBreak ? '<w:pageBreakBefore/>' : ''}</w:pPr>`;
+                runs.forEach(run => {
+                    p += `<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="28"/><w:szCs w:val="28"/>`;
+                    if (run.b) p += `<w:b/>`;
+                    if (run.i) p += `<w:i/>`;
+                    p += `</w:rPr><w:t xml:space="preserve">${escapeXml(run.t)}</w:t></w:r>`;
+                });
+                p += `</w:p>\n`;
+                xmlContent += p;
+            };
+
+            Array.from(checked).forEach((cb, index) => {
+                const r = db.find(x => x.id == cb.value);
+                const nS = r.namSinh ? `, sinh năm ${r.namSinh}` : "";
+                const c_S = r.hasNT ? r.cccdThay : (r.cccdSo || "....................");
+                const c_Noi = r.hasNT ? r.noiThay : (r.cccdNoi || "........................................");
+                const c_Ng = r.hasNT ? (r.ngayThay || '..........') : (r.cccdNgay || '..........');
+                const uq = r.hasNT ? (escapeXml(r.giayUQ) || "........................................") : "Giấy uỷ quyền (nếu là nhận thay) số:........... ngày ..... tháng ...... năm ....................";
+                const nsThay = r.namSinhThay ? `, sinh năm ${r.namSinhThay}` : "";
+                const isFirst = index === 0;
+
+                if (!isFirst) {
+                    addRawXml(`<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>`);
+                }
+
+                addPara([{t: "Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng", b: true}], false, true);
+                addPara([{t: ""}]);
+                
+                addPara([{t: "Đề nghị chi cho: "}, {t: r.hoTen, b: true}, {t: nS}]);
+                addPara([{t: `Địa chỉ: ${r.diaChi}.`}]);
+                
+                if (r.hasNT) {
+                    addPara([{t: `Người nhận thay: ${r.tenThay || '....................'}${nsThay}`}]);
+                    addPara([{t: `Địa chỉ: ${r.dcThay || '....................'}.`}]);
+                }
+                
+                addPara([{t: `CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}`}]);
+                addPara([{t: `Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}`}]);
+                addPara([{t: `Hình thức thanh toán: Chuyển khoản`}]);
+                addPara([{t: `Nội dung chi: ${r.lyDo}, gồm các khoản sau:`}]);
+
+                if (r.hasFee) {
+                    addPara([{t: `+ Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng`}]);
+                    addPara([{t: `+ Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng`}]);
+                    addPara([{t: `Tổng cộng thực nhận: ${Number(r.thucNhan).toLocaleString('vi-VN')} đồng`}]);
+                } else {
+                    addPara([{t: `+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng`}]);
+                    addPara([{t: `Tổng cộng: ${Number(r.soTien).toLocaleString('vi-VN')} đồng`}]);
+                }
+
+                addPara([{t: `Viết bằng chữ: `}, {t: docSo(r.thucNhan), i: true}]);
+                addPara([{t: `Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}`}]);
+                
+                if (r.blSo || r.blNgay || (r.blTien && r.blTien != 0)) {
+                    let tienStr = r.blTien ? `${r.blTien} đồng` : "";
+                    let parts = [];
+                    if(r.blSo) parts.push(`số ${r.blSo}`);
+                    if(r.blNgay) parts.push(`ngày ${r.blNgay}`);
+                    if(r.blTien && r.blTien != 0) parts.push(`số tiền ${tienStr}`);
+                    addPara([{t: `(Biên lai thu tiền: ${parts.join(', ')})`}]);
+                } else {
+                    addPara([{t: `(Biên lai thu tiền: số, ngày, tháng, năm, số tiền .........................)`}]);
+                }
+            });
+
+            xmlContent += `<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>\n</w:body>\n</w:document>`;
+
+            const files = {
+                "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/></Types>`,
+                "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+                "word/_rels/document.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/></Relationships>`,
+                "word/document.xml": xmlContent,
+                "word/styles.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:eastAsia="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="28"/><w:szCs w:val="28"/><w:lang w:val="vi-VN"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:line="264" w:lineRule="auto" w:after="0"/><w:ind w:firstLine="720"/><w:jc w:val="both"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style></w:styles>`,
+                "word/settings.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:zoom w:percent="100"/><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/></w:settings>`,
+                "word/fontTable.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:font w:name="Times New Roman"><w:panose1 w:val="02020603050405020304"/><w:charset w:val="00"/><w:family w:val="roman"/><w:pitch w:val="variable"/></w:font></w:fonts>`
+            };
+
+            const createZip = (filesObj) => {
+                let zipData = [], centralDir = [], offset = 0;
+                const encoder = new TextEncoder();
+                const write32 = (v) => [v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff];
+                const write16 = (v) => [v & 0xff, (v >> 8) & 0xff];
+                
+                const crcTable = new Uint32Array(256);
+                for(let i=0; i<256; i++) {
+                    let c = i;
+                    for(let j=0; j<8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                    crcTable[i] = c;
+                }
+                const crc32 = (data) => {
+                    let crc = 0xFFFFFFFF;
+                    for(let i=0; i<data.length; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ data[i]) & 0xFF];
+                    return (crc ^ 0xFFFFFFFF) >>> 0;
+                };
+
+                for (const [name, content] of Object.entries(filesObj)) {
+                    const nameBytes = encoder.encode(name);
+                    const dataBytes = encoder.encode(content);
+                    const crc = crc32(dataBytes);
+                    const size = dataBytes.length;
+
+                    const header = [
+                        0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                        0x00, 0x00, 0x00, 0x00, ...write32(crc), ...write32(size), ...write32(size),
+                        ...write16(nameBytes.length), 0x00, 0x00
+                    ];
+                    zipData.push(new Uint8Array(header), nameBytes, dataBytes);
+
+                    const cdir = [
+                        0x50, 0x4b, 0x01, 0x02, 0x14, 0x00, 0x14, 0x00, 0x00, 0x00, 
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...write32(crc), ...write32(size), ...write32(size),
+                        ...write16(nameBytes.length), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ...write32(offset)
+                    ];
+                    centralDir.push(new Uint8Array(cdir), nameBytes);
+                    offset += header.length + nameBytes.length + dataBytes.length;
+                }
+
+                let cdSize = 0; centralDir.forEach(b => cdSize += b.length);
+                const numFiles = Object.keys(filesObj).length;
+                const eocd = [
+                    0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00,
+                    ...write16(numFiles), ...write16(numFiles), ...write32(cdSize), ...write32(offset), 0x00, 0x00
+                ];
+
+                const result = new Uint8Array(offset + cdSize + eocd.length);
+                let pos = 0;
+                const append = (arr) => { result.set(arr, pos); pos += arr.length; };
+                zipData.forEach(append);
+                centralDir.forEach(append);
+                append(new Uint8Array(eocd));
+                
+                return result;
+            };
+
+            try {
+                const zipBuffer = createZip(files);
+                const zipBlob = new Blob([zipBuffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+                const fileName = checked.length === 1 ? `C06_${db.find(x => x.id == checked[0].value).hoTen}_${(db.find(x => x.id == checked[0].value).qdSo || "").split('/')[0]}.docx` : `Danh_sach_chi_C06.docx`;
+                
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(zipBlob);
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            } catch (error) {
+                console.error(error);
+                alert("Lỗi tạo file Word: " + error.message);
+            }
+        }
+
+        function getPrintTemplate(r) {
+            const nS = r.namSinh ? `, sinh năm ${r.namSinh}` : "", c_S = r.hasNT ? r.cccdThay : (r.cccdSo || "...................."), c_Noi = r.hasNT ? r.noiThay : (r.cccdNoi || "........................................"), c_Ng = r.hasNT ? (r.ngayThay || '..........') : (r.cccdNgay || '..........'), uq = r.hasNT ? (r.giayUQ || "........................................") : "Giấy uỷ quyền (nếu là nhận thay) số:........... ngày ..... tháng ...... năm ....................";
+            const nsThay = r.namSinhThay ? `, sinh năm ${r.namSinhThay}` : "";
+            
+            let rowNT = r.hasNT ? `Người nhận thay: ${r.tenThay || '....................'}${nsThay}<br>Địa chỉ: ${r.dcThay || '....................'}<br>` : "", mH = r.hasFee ? `&nbsp;&nbsp;&nbsp;&nbsp;+ Tổng tiền được nhận: ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;+ Trừ phí thi hành án (${r.tiLePhi}%): ${Number(r.phiTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng thực nhận: <span class="bold">${Number(r.thucNhan).toLocaleString('vi-VN')}</span> đồng` : `&nbsp;&nbsp;&nbsp;&nbsp;+ ${Number(r.soTien).toLocaleString('vi-VN')} đồng<br>&nbsp;&nbsp;&nbsp;&nbsp;Tổng cộng: <span class="bold">${Number(r.soTien).toLocaleString('vi-VN')}</span> đồng`;
+            const tenCHV = r.chvName || "Nguyễn Công Cường";
+
+            let blStr = "";
+            if (r.blSo || r.blNgay || (r.blTien && r.blTien != 0)) {
+                let tienStr = r.blTien ? `${r.blTien} đồng` : "";
+                let parts = [];
+                if(r.blSo) parts.push(`số ${r.blSo}`);
+                if(r.blNgay) parts.push(`ngày ${r.blNgay}`);
+                if(r.blTien && r.blTien != 0) parts.push(`số tiền ${tienStr}`);
+                
+                blStr = `(Biên lai thu tiền: ${parts.join(', ')})`;
+            } else {
+                blStr = `(Biên lai thu tiền: số, ngày, tháng, năm, số tiền .........................)`;
+            }
+
+            return `<div id="documentRender" class="print-only">
+                <table><tr><td style="width: 55%; font-weight: bold;">Đơn vị: Thi hành án dân sự tỉnh Lâm Đồng</td><td style="width: 45%; font-weight: bold; text-align: center;">Mẫu số: C06-THADS</td></tr><tr><td></td><td class="f-10-italic text-center">(Ban hành kèm theo Thông tư số 06/2026/TT-BTP<br>ngày 16/5/2026 của Bộ trưởng Bộ Tư pháp)</td></tr></table>
+                <div class="text-center" style="margin-top: 35px; position: relative; margin-bottom: 25px;"><span class="f-12-bold-upper" style="font-size: 14pt;">GIẤY ĐỀ NGHỊ CHI</span><span style="position: absolute; right: 0; font-size: 12pt;">Số:...................</span><div class="italic" style="margin-top: 2px;">Ngày .........tháng....... năm 20...</div></div>
+                <div class="text-center bold">Kính gửi: Trưởng Thi hành án dân sự tỉnh Lâm Đồng</div><br>
+                <div class="text-justify">Đề nghị chi cho: <span class="bold">${r.hoTen}</span>${nS}.<br>Địa chỉ: ${r.diaChi}<br>${rowNT}CCCD số ${c_S} do ${c_Noi} cấp ngày ${c_Ng}, kèm ${uq}<br>Tài khoản số: ${r.stk || '....................'}, Tại Ngân hàng/KBNN: ${r.nganHang || '....................'}, Mã Ngân hàng: ${r.maNH || '....................'}<br>Hình thức thanh toán: Chuyển khoản<br>Nội dung chi: ${r.lyDo}, gồm các khoản sau:<br>${mH}<br>Viết bằng chữ: <span class="italic">${docSo(r.thucNhan)}</span><br>Theo Quyết định Thi hành án số ${r.qdSo} ngày ${r.qdNgay || '..........'} của ${r.qdNoi || '..........'}<br>${blStr}</div>
+                <table style="margin-top: 30px;">
+                    <tr class="text-center">
+                        <td style="width: 55%;">
+                            <div class="bold" style="margin: 0; padding: 0; line-height: 1.2;">TL. TRƯỞNG THI HÀNH ÁN DÂN SỰ</div>
+                            <div class="bold" style="margin: 0; padding: 0; line-height: 1.2;">TRƯỞNG PHÒNG</div>
+                            <div class="bold" style="margin: 0; padding: 0; line-height: 1.2;">PHÒNG THI HÀNH ÁN DÂN SỰ KHU VỰC 14 - LÂM ĐỒNG</div>
+                            <div class="italic" style="font-weight: normal; margin-top: 4px;">(Ký, họ tên)</div>
+                        </td>
+                        <td style="width: 45%;">
+                            <div class="bold" style="margin: 0; padding: 0; line-height: 1.2;">CHẤP HÀNH VIÊN</div>
+                            <div class="italic" style="font-weight: normal; margin-top: 4px;">(Ký, họ tên)</div>
+                        </td>
+                    </tr>
+                    <tr class="text-center bold">
+                        <td style="padding-top: 75px;">Qua Đình Thiện</td>
+                        <td style="padding-top: 75px;">${tenCHV}</td>
+                    </tr>
+                </table></div>`;
+        }
+
+        function docSo(n){
+            if(!n || n==0) return ""; const ChuSo=["không","một","hai","ba","bốn","năm","sáu","bảy","tám","chín"];
+            function doc3(n){ let t=Math.floor(n/100), c=Math.floor((n%100)/10), d=n%10, res=""; if(t>0) res+=ChuSo[t]+" trăm "; if(c==0 && d>0) res+=(t>0?"lẻ ":"")+ChuSo[d]; if(c==1) res+="mười "+(d==5?"lăm":(d==0?"":ChuSo[d])); if(c>1) res+=ChuSo[c]+" mươi "+(d==1?"mốt":(d==5?"lăm":(d==0?"":ChuSo[d]))); return res; }
+            let res="", dv=[""," nghìn"," triệu"," tỷ"], i=0, temp=n; do { let m=temp%1000; if(m>0) res=doc3(m)+dv[i]+" "+res; temp=Math.floor(temp/1000); i++; } while(temp>0);
+            let s = res.trim(); return s.charAt(0).toUpperCase() + s.slice(1) + " đồng";
+        }
+
+        let idbDb, idbRequest = indexedDB.open('c09_thads_v6', 1);
+        idbRequest.onupgradeneeded = e => e.target.result.createObjectStore('records', { keyPath: 'id' });
+        idbRequest.onsuccess = e => { idbDb = e.target.result; loadData(); };
+
+        async function loadData() {
+            const tx = idbDb.transaction('records', 'readonly');
+            const store = tx.objectStore('records');
+            const req = store.getAll();
+            req.onsuccess = () => { 
+                db = (req.result || []).reverse(); 
+                renderTable(); 
+            };
+        }
+
+        async function saveToIDB(record) {
+            const tx = idbDb.transaction('records', 'readwrite');
+            const store = tx.objectStore('records');
+            await store.put(record);
+        }
+
+        async function deleteFromIDB(id) {
+            const tx = idbDb.transaction('records', 'readwrite');
+            const store = tx.objectStore('records');
+            await store.delete(id);
+        }
+
+        window.addEventListener('message', function(e) {
+            if (e.data.type === 'GET_DATA_IDB') {
+                const req = indexedDB.open('c09_thads_v6');
+                req.onsuccess = function(ev) {
+                    const db = ev.target.result;
+                    if(!db.objectStoreNames.contains('records')) return;
+                    const tx = db.transaction('records', 'readonly');
+                    const store = tx.objectStore('records');
+                    const getAll = store.getAll();
+                    getAll.onsuccess = () => { window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: getAll.result}, '*'); };
+                };
+            }
+            if (e.data.type === 'RESTORE_DATA_IDB') {
+                const items = e.data.payload;
+                if(!items || !Array.isArray(items)) return;
+                const req = indexedDB.open('c09_thads_v6');
+                req.onsuccess = function(ev) {
+                    const db = ev.target.result;
+                    const tx = db.transaction('records', 'readwrite');
+                    const store = tx.objectStore('records');
+                    store.clear().onsuccess = () => {
+                        items.forEach(item => store.put(item));
+                        setTimeout(()=> location.reload(), 100);
+                    }
+                };
+            }
+        });
+    </script>
 </body>
 </html>
