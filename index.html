@@ -3,154 +3,422 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HỆ THỐNG THADS - CHẾ ĐỘ THỦ CÔNG</title>
+    <title>HỆ THỐNG THADS</title>
     <style>
-        body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; overflow: hidden; background: #0f172a; }
-        .header { height: 45px; background: #0f172a; display: flex; align-items: center; padding: 0 10px; border-bottom: 4px solid #334155; }
-        .tabs { display: flex; gap: 4px; height: 100%; align-items: flex-end; flex: 1; }
-        .tab { background: #1e293b; color: #94a3b8; border: none; padding: 8px 20px; cursor: pointer; font-weight: bold; font-size: 12px; border-radius: 8px 8px 0 0; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #0f172a; }
+        .header { min-height: 45px; background: #0f172a; display: flex; align-items: center; padding: 0 10px; border-bottom: 4px solid #334155; gap: 10px; }
+        .tabs { display: flex; gap: 4px; height: 45px; align-items: flex-end; flex: 1; overflow-x: auto; }
+        .tab { background: #1e293b; color: #94a3b8; border: none; padding: 8px 20px; cursor: pointer; font-weight: bold; font-size: 12px; border-radius: 8px 8px 0 0; white-space: nowrap; }
         .tab.active { background: #f1f5f9; color: #0f172a; height: 38px; }
-        .status { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12px; color: white; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; }
+        .tab.admin { color: #fbbf24; }
+        .userbox { display: flex; align-items: center; gap: 8px; font-size: 12px; color: white; }
+        .userbox .who { background: rgba(255,255,255,0.1); padding: 5px 14px; border-radius: 20px; white-space: nowrap; }
+        .userbox button { background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        .userbox button:hover { background: rgba(255,255,255,0.25); }
+        .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: white; background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; white-space: nowrap; }
         .led { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; }
         .led.syncing { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
         #container { flex: 1; position: relative; background: #f1f5f9; }
         iframe { width: 100%; height: 100%; border: none; position: absolute; visibility: hidden; }
         iframe.active { visibility: visible; z-index: 10; }
+        #adminPanel { position: absolute; inset: 0; overflow: auto; padding: 24px; display: none; z-index: 10; background: #f1f5f9; color: #1e293b; }
+        #adminPanel.active { display: block; }
+
+        /* LOGIN */
+        #loginScreen { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #0f172a 100%); display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .login-card { background: #fff; width: 100%; max-width: 400px; border-radius: 22px; padding: 34px 32px; box-shadow: 0 25px 60px rgba(0,0,0,0.4); }
+        .login-card img { display: block; width: 84px; height: 84px; object-fit: contain; margin: 0 auto 10px; }
+        .login-card h1 { margin: 0; text-align: center; font-size: 19px; color: #0f172a; text-transform: uppercase; }
+        .login-card p.sub { margin: 4px 0 24px; text-align: center; font-size: 13px; font-weight: 600; color: #d97706; }
+        .login-card label { display: block; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px; }
+        .login-card input { width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; font-size: 15px; margin-bottom: 16px; }
+        .login-card input:focus { outline: none; border-color: #4f46e5; background: #fff; box-shadow: 0 0 0 4px rgba(79,70,229,0.12); }
+        .login-card .btn-login { width: 100%; padding: 13px; border: 0; border-radius: 12px; background: linear-gradient(90deg, #ea580c, #d97706); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; text-transform: uppercase; }
+        .login-card .btn-login:disabled { opacity: .6; cursor: wait; }
+        .login-err { min-height: 20px; margin-bottom: 10px; color: #dc2626; font-size: 13px; font-weight: 600; text-align: center; }
+        .login-link { display: block; margin-top: 14px; text-align: center; font-size: 13px; color: #4f46e5; cursor: pointer; background: none; border: 0; width: 100%; }
+        .login-foot { margin-top: 18px; text-align: center; font-size: 11.5px; color: #94a3b8; }
+
+        /* ADMIN */
+        .adm h2 { margin: 0 0 4px; font-size: 20px; }
+        .adm .hint { color: #64748b; font-size: 13px; margin-bottom: 18px; }
+        .adm .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(15,23,42,0.05); }
+        .adm .card h3 { margin: 0 0 14px; font-size: 15px; text-transform: uppercase; }
+        .adm .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+        .adm label.l { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase; }
+        .adm input[type=text], .adm input[type=password], .adm select { width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: #f8fafc; }
+        .adm .checks { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0; }
+        .adm .checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+        .adm button.primary { background: #2563eb; color: #fff; border: 0; border-radius: 10px; padding: 10px 20px; font-weight: 700; cursor: pointer; }
+        .adm button.small { border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .adm button.small.save { background: #059669; color: #fff; border-color: #059669; }
+        .adm table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .adm th { text-align: left; background: #f1f5f9; padding: 10px; font-size: 11px; text-transform: uppercase; color: #475569; }
+        .adm td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .adm .msg { margin-top: 10px; font-size: 13px; font-weight: 600; }
+        .adm .msg.ok { color: #059669; } .adm .msg.err { color: #dc2626; }
+        .tbl-wrap { overflow-x: auto; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="tabs">
-            <button class="tab active" onclick="switchApp(0)">1. CHUYỂN KHOẢN</button>
-            <button class="tab" onclick="switchApp(1)">2. BƯU ĐIỆN</button>
-            <button class="tab" onclick="switchApp(2)">3. ĐỀ NGHỊ CHI</button>
-            <button class="tab" onclick="switchApp(3)">4. TRA CỨU LUẬT</button>
-        </div>
-        <div class="status">
-            <span id="statusText">Sẵn sàng</span>
-            <div id="led" class="led"></div>
-        </div>
+
+<!-- MÀN HÌNH ĐĂNG NHẬP -->
+<div id="loginScreen">
+    <form class="login-card" id="loginForm" autocomplete="on">
+        <img src="https://raw.githubusercontent.com/thadskv14ld/logo-thads/main/LOGO%20THI%20H%C3%80NH%20%C3%81N.png" alt="Logo THADS">
+        <h1>Hệ thống THADS</h1>
+        <p class="sub">PHÒNG THADS KHU VỰC 14, LÂM ĐỒNG</p>
+        <label for="lgUser">Tài khoản</label>
+        <input id="lgUser" type="text" autocomplete="username" placeholder="Tên đăng nhập hoặc email" required>
+        <label for="lgPass">Mật khẩu</label>
+        <input id="lgPass" type="password" autocomplete="current-password" placeholder="Mật khẩu" required>
+        <div class="login-err" id="lgErr"></div>
+        <button class="btn-login" id="lgBtn" type="submit">Đăng nhập</button>
+        <button class="login-link" type="button" id="lgForgot">Quên mật khẩu? (chỉ áp dụng với tài khoản dùng email thật)</button>
+        <div class="login-foot">© Mai Đức Lên – Người viết phần mềm</div>
+    </form>
+</div>
+
+<div class="header" id="header" style="display:none">
+    <div class="tabs" id="tabs"></div>
+    <div class="userbox">
+        <span class="who" id="whoLabel"></span>
+        <button type="button" id="btnChangePw">Đổi mật khẩu</button>
+        <button type="button" id="btnLogout">Đăng xuất</button>
     </div>
-    <div id="container">
-        <iframe id="f1" src="app1.html" class="active"></iframe>
-        <iframe id="f2" src="app2.html"></iframe>
-        <iframe id="f3" src="app3.html"></iframe>
-        <iframe id="f4" src="app-tra-cuu-van-ban-luat-v7.html"></iframe>
+    <div class="status">
+        <span id="statusText">Sẵn sàng</span>
+        <div id="led" class="led"></div>
     </div>
+</div>
+<div id="container" style="display:none"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, child, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, child, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAbdpohDAhs010Sqah31Wp6vynmVSwrRsY",
-            authDomain: "hethongthads.firebaseapp.com",
-            databaseURL: "https://hethongthads-default-rtdb.firebaseio.com",
-            projectId: "hethongthads",
-            storageBucket: "hethongthads.firebasestorage.app",
-            messagingSenderId: "63279666579",
-            appId: "1:63279666579:web:3670e6bf283357c79d8466"
-        };
+const firebaseConfig = {
+    apiKey: "AIzaSyAbdpohDAhs010Sqah31Wp6vynmVSwrRsY",
+    authDomain: "hethongthads.firebaseapp.com",
+    databaseURL: "https://hethongthads-default-rtdb.firebaseio.com",
+    projectId: "hethongthads",
+    storageBucket: "hethongthads.firebasestorage.app",
+    messagingSenderId: "63279666579",
+    appId: "1:63279666579:web:3670e6bf283357c79d8466"
+};
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const dbRef = ref(db, 'thads_data');
-        const frames = [document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3'), document.getElementById('f4')];
+const APPS = [
+    { key: 'app1', name: '1. CHUYỂN KHOẢN', src: 'app1.html' },
+    { key: 'app2', name: '2. BƯU ĐIỆN',     src: 'app2.html' },
+    { key: 'app3', name: '3. ĐỀ NGHỊ CHI',  src: 'app3.html' },
+    { key: 'app4', name: '4. TRA CỨU LUẬT', src: 'app-tra-cuu-van-ban-luat-v7.html' }
+];
+const FAKE_DOMAIN = '@thads.local'; // gõ "nguyenvana" sẽ thành nguyenvana@thads.local
 
-        // Lưu bản dữ liệu app4 mới nhất từ mây để gửi lại khi iframe tải xong (tránh mất tin nhắn do iframe chưa sẵn sàng)
-        let lastApp4 = null;
-        const sendApp4 = () => {
-            if (!lastApp4) return;
-            try { frames[3].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(lastApp4) }, '*'); }
-            catch(e) { console.error("Lỗi gửi dữ liệu app4:", e); }
-        };
-        frames[3].addEventListener('load', sendApp4);
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+const auth = getAuth(fbApp);
+const dbRef = ref(db, 'thads_data');
 
-        // 1. KẾT NỐI REAL-TIME (Live Sync): Đã bỏ onlyOnce để tự động cập nhật khi có thay đổi
-        onValue(dbRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                if (data.app4) { lastApp4 = data.app4; sendApp4(); }
-                try {
-                    if (data.app1) frames[0].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app1) }, '*');
-                    if (data.app2) frames[1].contentWindow.postMessage({ type: 'RESTORE_DATA', payload: JSON.parse(data.app2) }, '*');
-                    if (data.app3) frames[2].contentWindow.postMessage({ type: 'RESTORE_DATA_IDB', payload: JSON.parse(data.app3) }, '*');
-                } catch(e) { console.error("Lỗi parse dữ liệu từ Firebase:", e); }
-            }
-        });
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toEmail = u => { u = u.trim(); return u.includes('@') ? u : u.toLowerCase() + FAKE_DOMAIN; };
 
-        // 2. NHẬN LỆNH LƯU
-        window.addEventListener('message', async (e) => {
-            if (e.data.type === 'DATA_RETURN' || e.data.type === 'DATA_RETURN_IDB') {
-                const appName = e.data.app;
-                const led = document.getElementById('led');
-                const statusText = document.getElementById('statusText');
-                led.className = 'led syncing';
-                statusText.innerText = 'Đang đồng bộ...';
+let me = null;            // { uid, name, role, apps }
+let allowed = [];         // danh sách app được phép
+let frames = {};          // key -> iframe
+let unsubs = [];
+let lastData = {};        // key -> dữ liệu mây mới nhất
+let secondary = null;     // app phụ để admin tạo tài khoản mà không bị đăng xuất
 
-                try {
-                    if (appName === 'app1') {
-                        // TRANSACTION - Đảm bảo an toàn tuyệt đối cho APP 1
-                        await runTransaction(child(dbRef, appName), (currentData) => {
-                            let localData = [];
-                            try { localData = JSON.parse(e.data.data['thads_v5']); } catch(err) { return; }
-                            
-                            let cloudData = [];
-                            if (currentData) {
-                                try {
-                                    const parsed = JSON.parse(currentData);
-                                    cloudData = parsed['thads_v5'] ? JSON.parse(parsed['thads_v5']) : [];
-                                } catch(err) { cloudData = []; }
-                            }
+/* ===================== ĐĂNG NHẬP ===================== */
+const errMap = {
+    'auth/invalid-credential': 'Sai tài khoản hoặc mật khẩu.',
+    'auth/wrong-password': 'Sai tài khoản hoặc mật khẩu.',
+    'auth/user-not-found': 'Sai tài khoản hoặc mật khẩu.',
+    'auth/invalid-email': 'Tài khoản không hợp lệ.',
+    'auth/too-many-requests': 'Đăng nhập sai quá nhiều lần, vui lòng thử lại sau ít phút.',
+    'auth/network-request-failed': 'Mất kết nối mạng.',
+    'auth/email-already-in-use': 'Tên đăng nhập này đã tồn tại.',
+    'auth/weak-password': 'Mật khẩu quá yếu (tối thiểu 6 ký tự).'
+};
+const errText = e => errMap[e && e.code] || ('Lỗi: ' + ((e && e.message) || e));
 
-                            // Merge logic: Map ID
-                            let mergedMap = new Map();
-                            cloudData.forEach(item => mergedMap.set(String(item.id), item));
+$('loginForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    $('lgErr').textContent = '';
+    $('lgBtn').disabled = true;
+    try {
+        await signInWithEmailAndPassword(auth, toEmail($('lgUser').value), $('lgPass').value);
+    } catch (e) {
+        $('lgErr').textContent = errText(e);
+        $('lgBtn').disabled = false;
+    }
+});
+$('lgForgot').addEventListener('click', async () => {
+    const u = $('lgUser').value.trim();
+    if (!u.includes('@')) { $('lgErr').textContent = 'Nhập email thật vào ô Tài khoản. Nếu dùng tên đăng nhập, hãy nhờ quản trị viên đặt lại mật khẩu.'; return; }
+    try { await sendPasswordResetEmail(auth, u); $('lgErr').style.color = '#059669'; $('lgErr').textContent = 'Đã gửi email đặt lại mật khẩu.'; }
+    catch (e) { $('lgErr').style.color = '#dc2626'; $('lgErr').textContent = errText(e); }
+});
 
-                            localData.forEach(localItem => {
-                                let id = String(localItem.id);
-                                if (mergedMap.has(id)) {
-                                    let cloudItem = mergedMap.get(id);
-                                    // Merge theo từng trường: Lấy local nhưng giữ lại giá trị nếu local bị trống/undefined
-                                    let mergedItem = { ...cloudItem, ...localItem };
-                                    Object.keys(cloudItem).forEach(key => {
-                                        if ((localItem[key] === undefined || localItem[key] === "") && cloudItem[key]) {
-                                            mergedItem[key] = cloudItem[key];
-                                        }
-                                    });
-                                    mergedMap.set(id, mergedItem);
-                                } else {
-                                    mergedMap.set(id, localItem);
-                                }
-                            });
-
-                            // Sort an toàn
-                            let mergedArray = Array.from(mergedMap.values()).sort((a, b) => {
-                                let valA = a.id, valB = b.id;
-                                if (!isNaN(valA) && !isNaN(valB)) return Number(valB) - Number(valA);
-                                return String(valB).localeCompare(String(valA));
-                            });
-
-                            return JSON.stringify({ 'thads_v5': JSON.stringify(mergedArray) });
-                        });
-                    } else {
-                        // GIỮ NGUYÊN SET() CHO APP 2 & 3
-                        await set(child(dbRef, appName), JSON.stringify(e.data.data));
-                    }
-                    led.className = 'led';
-                    statusText.innerText = 'Sẵn sàng';
-                } catch (error) {
-                    console.error("Lỗi đồng bộ:", error);
-                    led.className = 'led';
-                    statusText.innerText = 'Lỗi!';
-                }
-            }
-        });
-
-        window.switchApp = function(index) {
-            document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
-            frames.forEach((f, i) => f.classList.toggle('active', i === index));
+onAuthStateChanged(auth, async user => {
+    if (!user) { showLogin(); return; }
+    try {
+        const snap = await get(ref(db, 'users/' + user.uid));
+        const p = snap.val();
+        if (!p || p.active !== true) {
+            await signOut(auth);
+            $('lgErr').style.color = '#dc2626';
+            $('lgErr').textContent = 'Tài khoản chưa được cấp quyền hoặc đã bị khóa. Liên hệ quản trị viên.';
+            return;
         }
-    </script>
+        me = { uid: user.uid, name: p.name || user.email, role: p.role || 'user', apps: p.apps || {} };
+        startSession();
+    } catch (e) {
+        await signOut(auth);
+        $('lgErr').textContent = 'Không đọc được thông tin tài khoản: ' + errText(e);
+    }
+});
+
+function showLogin() {
+    $('loginScreen').style.display = 'flex';
+    $('header').style.display = 'none';
+    $('container').style.display = 'none';
+    $('lgBtn').disabled = false;
+    $('lgPass').value = '';
+}
+
+/* ===================== PHIÊN LÀM VIỆC ===================== */
+function startSession() {
+    const isAdmin = me.role === 'admin';
+    allowed = APPS.filter(a => isAdmin || me.apps[a.key] === true);
+
+    $('loginScreen').style.display = 'none';
+    $('header').style.display = 'flex';
+    $('container').style.display = 'block';
+    $('whoLabel').textContent = me.name + (isAdmin ? ' (Quản trị)' : '');
+    $('lgErr').textContent = ''; $('lgErr').style.color = '#dc2626';
+
+    const tabs = $('tabs'), cont = $('container');
+    tabs.innerHTML = ''; cont.innerHTML = ''; frames = {};
+
+    allowed.forEach(a => {
+        const b = document.createElement('button');
+        b.className = 'tab'; b.dataset.key = a.key; b.textContent = a.name;
+        b.onclick = () => switchApp(a.key);
+        tabs.appendChild(b);
+        const f = document.createElement('iframe');
+        f.id = 'f_' + a.key; f.src = a.src;
+        // app1, app2, app4 nhận lại dữ liệu mây khi iframe tải xong (app3 tự reload khi nhận dữ liệu nên không gửi lại)
+        if (a.key !== 'app3') f.addEventListener('load', () => sendToApp(a.key));
+        cont.appendChild(f);
+        frames[a.key] = f;
+    });
+
+    if (isAdmin) {
+        const b = document.createElement('button');
+        b.className = 'tab admin'; b.dataset.key = 'admin'; b.textContent = '⚙ QUẢN TRỊ NGƯỜI DÙNG';
+        b.onclick = () => switchApp('admin');
+        tabs.appendChild(b);
+        const p = document.createElement('div');
+        p.id = 'adminPanel'; cont.appendChild(p);
+    }
+
+    if (!allowed.length && !isAdmin) {
+        cont.innerHTML = '<div style="padding:40px;text-align:center;color:#475569;font-size:16px">Tài khoản của bạn chưa được cấp quyền dùng app nào.<br>Vui lòng liên hệ quản trị viên.</div>';
+    }
+
+    // Lắng nghe riêng từng app được phép (không nghe cả thads_data vì sẽ bị từ chối quyền đọc)
+    unsubs.forEach(u => u()); unsubs = []; lastData = {};
+    allowed.forEach(a => {
+        const un = onValue(child(dbRef, a.key), snap => {
+            const v = snap.val();
+            if (v) { lastData[a.key] = v; sendToApp(a.key); }
+        }, err => console.error('Không đọc được ' + a.key, err));
+        unsubs.push(un);
+    });
+
+    const first = allowed[0] ? allowed[0].key : (isAdmin ? 'admin' : null);
+    if (first) switchApp(first);
+}
+
+function sendToApp(key) {
+    const raw = lastData[key], f = frames[key];
+    if (!raw || !f || !f.contentWindow) return;
+    try {
+        const payload = JSON.parse(raw);
+        f.contentWindow.postMessage({ type: key === 'app3' ? 'RESTORE_DATA_IDB' : 'RESTORE_DATA', payload }, '*');
+    } catch (e) { console.error('Lỗi gửi dữ liệu ' + key, e); }
+}
+
+window.switchApp = function (key) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.key === key));
+    Object.keys(frames).forEach(k => frames[k].classList.toggle('active', k === key));
+    const ap = $('adminPanel');
+    if (ap) { ap.classList.toggle('active', key === 'admin'); if (key === 'admin') renderAdmin(); }
+};
+
+/* ===================== NHẬN LỆNH LƯU TỪ CÁC APP ===================== */
+window.addEventListener('message', async e => {
+    if (!e.data || (e.data.type !== 'DATA_RETURN' && e.data.type !== 'DATA_RETURN_IDB')) return;
+    const appName = e.data.app;
+    if (!me || !allowed.some(a => a.key === appName)) return; // chặn app không có quyền
+    const led = $('led'), st = $('statusText');
+    led.className = 'led syncing'; st.innerText = 'Đang đồng bộ...';
+    try {
+        if (appName === 'app1') {
+            await runTransaction(child(dbRef, appName), currentData => {
+                let localData = [];
+                try { localData = JSON.parse(e.data.data['thads_v5']); } catch (err) { return; }
+                let cloudData = [];
+                if (currentData) {
+                    try { const parsed = JSON.parse(currentData); cloudData = parsed['thads_v5'] ? JSON.parse(parsed['thads_v5']) : []; }
+                    catch (err) { cloudData = []; }
+                }
+                const mergedMap = new Map();
+                cloudData.forEach(item => mergedMap.set(String(item.id), item));
+                localData.forEach(localItem => {
+                    const id = String(localItem.id);
+                    if (mergedMap.has(id)) {
+                        const cloudItem = mergedMap.get(id);
+                        const mergedItem = { ...cloudItem, ...localItem };
+                        Object.keys(cloudItem).forEach(key => {
+                            if ((localItem[key] === undefined || localItem[key] === "") && cloudItem[key]) mergedItem[key] = cloudItem[key];
+                        });
+                        mergedMap.set(id, mergedItem);
+                    } else mergedMap.set(id, localItem);
+                });
+                const mergedArray = Array.from(mergedMap.values()).sort((a, b) => {
+                    const A = a.id, B = b.id;
+                    if (!isNaN(A) && !isNaN(B)) return Number(B) - Number(A);
+                    return String(B).localeCompare(String(A));
+                });
+                return JSON.stringify({ 'thads_v5': JSON.stringify(mergedArray) });
+            });
+        } else {
+            await set(child(dbRef, appName), JSON.stringify(e.data.data));
+        }
+        led.className = 'led'; st.innerText = 'Sẵn sàng';
+    } catch (error) {
+        console.error('Lỗi đồng bộ:', error);
+        led.className = 'led'; st.innerText = 'Lỗi! (có thể không đủ quyền)';
+    }
+});
+
+/* ===================== ĐĂNG XUẤT / ĐỔI MẬT KHẨU ===================== */
+$('btnLogout').addEventListener('click', async () => {
+    if (!confirm('Đăng xuất? Dữ liệu đã đồng bộ lên mây sẽ không bị mất.')) return;
+    unsubs.forEach(u => u()); unsubs = [];
+    $('container').innerHTML = ''; // gỡ các app để giải phóng IndexedDB
+    try { await signOut(auth); } catch (e) {}
+    // Xóa dữ liệu lưu trong trình duyệt để người dùng khác dùng chung máy không thấy
+    try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
+    const done = () => location.reload();
+    try {
+        const r = indexedDB.deleteDatabase('c09_thads_v6');
+        r.onsuccess = r.onerror = r.onblocked = done;
+        setTimeout(done, 1200);
+    } catch (e) { done(); }
+});
+
+$('btnChangePw').addEventListener('click', async () => {
+    const oldPw = prompt('Nhập mật khẩu hiện tại:'); if (!oldPw) return;
+    const newPw = prompt('Nhập mật khẩu mới (tối thiểu 6 ký tự):'); if (!newPw) return;
+    try {
+        const u = auth.currentUser;
+        await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, oldPw));
+        await updatePassword(u, newPw);
+        alert('Đã đổi mật khẩu.');
+    } catch (e) { alert(errText(e)); }
+});
+
+/* ===================== QUẢN TRỊ NGƯỜI DÙNG ===================== */
+async function renderAdmin() {
+    const p = $('adminPanel');
+    p.innerHTML = '<div class="adm"><h2>Quản trị người dùng</h2><div class="hint">Đang tải…</div></div>';
+    let users = {};
+    try { users = (await get(ref(db, 'users'))).val() || {}; }
+    catch (e) { p.innerHTML = '<div class="adm"><div class="msg err">Không đọc được danh sách: ' + esc(errText(e)) + '</div></div>'; return; }
+
+    const appChecks = (prefix, sel) => APPS.map(a =>
+        `<label><input type="checkbox" data-app="${a.key}" ${sel && sel[a.key] ? 'checked' : ''}> ${esc(a.name)}</label>`).join('');
+
+    const rows = Object.entries(users).map(([uid, u]) => {
+        const self = uid === me.uid;
+        return `<tr data-uid="${esc(uid)}">
+            <td><b>${esc(u.name || '')}</b><div style="color:#64748b;font-size:12px">${esc((u.email || '').replace(FAKE_DOMAIN, ''))}</div></td>
+            <td><select data-f="role" ${self ? 'disabled' : ''}><option value="user" ${u.role !== 'admin' ? 'selected' : ''}>Người dùng</option><option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Quản trị</option></select></td>
+            <td>${APPS.map(a => `<label style="display:inline-flex;gap:4px;margin-right:10px;white-space:nowrap"><input type="checkbox" data-app="${a.key}" ${u.role === 'admin' || (u.apps && u.apps[a.key]) ? 'checked' : ''} ${u.role === 'admin' ? 'disabled' : ''}> ${a.key.replace('app', 'App ')}</label>`).join('')}</td>
+            <td><label style="display:inline-flex;gap:4px"><input type="checkbox" data-f="active" ${u.active ? 'checked' : ''} ${self ? 'disabled' : ''}> Hoạt động</label></td>
+            <td><button class="small save" data-save="${esc(uid)}">Lưu</button></td>
+        </tr>`;
+    }).join('');
+
+    p.innerHTML = `<div class="adm">
+        <h2>Quản trị người dùng</h2>
+        <div class="hint">Tạo tài khoản và chọn app mà từng người được dùng. Quản trị viên luôn dùng được tất cả app.</div>
+        <div class="card">
+            <h3>Thêm tài khoản mới</h3>
+            <div class="grid">
+                <div><label class="l">Họ tên</label><input type="text" id="nuName" placeholder="Nguyễn Văn A"></div>
+                <div><label class="l">Tên đăng nhập hoặc email</label><input type="text" id="nuUser" placeholder="nguyenvana"></div>
+                <div><label class="l">Mật khẩu (≥ 6 ký tự)</label><input type="password" id="nuPass"></div>
+                <div><label class="l">Vai trò</label><select id="nuRole"><option value="user">Người dùng</option><option value="admin">Quản trị</option></select></div>
+            </div>
+            <div class="checks" id="nuApps">${appChecks('nu', {})}</div>
+            <button class="primary" id="nuBtn">Tạo tài khoản</button>
+            <div class="msg" id="nuMsg"></div>
+        </div>
+        <div class="card">
+            <h3>Danh sách tài khoản (${Object.keys(users).length})</h3>
+            <div class="tbl-wrap"><table><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Được dùng</th><th>Trạng thái</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5">Chưa có tài khoản.</td></tr>'}</tbody></table></div>
+            <div class="msg" id="listMsg"></div>
+        </div>
+    </div>`;
+
+    $('nuBtn').onclick = createUser;
+    p.querySelectorAll('select[data-f="role"]').forEach(s => s.onchange = () => {
+        const tr = s.closest('tr'), isA = s.value === 'admin';
+        tr.querySelectorAll('input[data-app]').forEach(c => { c.disabled = isA; if (isA) c.checked = true; });
+    });
+    p.querySelectorAll('[data-save]').forEach(b => b.onclick = () => saveUser(b.dataset.save, b.closest('tr')));
+}
+
+async function createUser() {
+    const msg = $('nuMsg'); msg.className = 'msg';
+    const name = $('nuName').value.trim(), user = $('nuUser').value.trim(), pass = $('nuPass').value, role = $('nuRole').value;
+    if (!name || !user || pass.length < 6) { msg.classList.add('err'); msg.textContent = 'Nhập đủ họ tên, tên đăng nhập và mật khẩu (≥ 6 ký tự).'; return; }
+    const apps = {};
+    $('nuApps').querySelectorAll('input[data-app]').forEach(c => { apps[c.dataset.app] = c.checked; });
+    const email = toEmail(user);
+    $('nuBtn').disabled = true;
+    try {
+        if (!secondary) secondary = initializeApp(firebaseConfig, 'secondary');
+        const sAuth = getAuth(secondary);
+        const cred = await createUserWithEmailAndPassword(sAuth, email, pass);
+        await signOut(sAuth);
+        await set(ref(db, 'users/' + cred.user.uid), { name, email, role, active: true, apps });
+        msg.classList.add('ok'); msg.textContent = 'Đã tạo tài khoản ' + user + '.';
+        renderAdmin();
+    } catch (e) { msg.classList.add('err'); msg.textContent = errText(e); }
+    $('nuBtn') && ($('nuBtn').disabled = false);
+}
+
+async function saveUser(uid, tr) {
+    const msg = $('listMsg'); msg.className = 'msg';
+    try {
+        const cur = (await get(ref(db, 'users/' + uid))).val() || {};
+        const role = tr.querySelector('[data-f="role"]').value;
+        const active = tr.querySelector('[data-f="active"]').checked;
+        const apps = {};
+        tr.querySelectorAll('input[data-app]').forEach(c => { apps[c.dataset.app] = role === 'admin' ? true : c.checked; });
+        await set(ref(db, 'users/' + uid), { ...cur, role, active, apps });
+        msg.classList.add('ok'); msg.textContent = 'Đã lưu. Quyền có hiệu lực từ lần đăng nhập tiếp theo của người đó.';
+    } catch (e) { msg.classList.add('err'); msg.textContent = errText(e); }
+}
+</script>
 </body>
 </html>
