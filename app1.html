@@ -84,6 +84,26 @@
             .qr-note { margin-top: 10mm; font-size: 15px; padding: 10px 16px; }
             .no-print { display: none !important; }
         }
+
+        /* =========================================
+           ĐIỀU CHỈNH HIỂN THỊ THEO KÍCH THƯỚC MÀN HÌNH
+           (chỉ thêm mới - không thay đổi phần khác)
+           ========================================= */
+        /* Khung nội dung co giãn theo chiều ngang màn hình (thay cho giới hạn max-w-7xl = 1280px) */
+        @media (min-width: 1400px) {
+            body .max-w-7xl { max-width: 100%; }
+            body > main.max-w-7xl, body > header .max-w-7xl, body > footer .max-w-7xl { padding-left: 40px; padding-right: 40px; }
+        }
+        /* Màn hình lớn: phóng nhẹ phần giao diện chính (không áp dụng cho cửa sổ QR và bản in) */
+        @media (min-width: 1700px) {
+            body > header, body > main, body > footer { zoom: 1.1; }
+        }
+        @media (min-width: 2200px) {
+            body > header, body > main, body > footer { zoom: 1.35; }
+        }
+        @media print {
+            body > header, body > main, body > footer { zoom: 1 !important; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col justify-between">
