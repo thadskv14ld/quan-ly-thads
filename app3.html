@@ -160,6 +160,17 @@
         #listContainer td:last-child button { border-radius: 10px; padding: 8px; }
 
         /* ---------- Cửa sổ QR ---------- */
+
+        /* ---------- Lưu theo tháng + phân trang ---------- */
+        .period-select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; font-size: 13px; font-weight: 700; color: #334155; cursor: pointer; min-width: 120px; }
+        .a3-banner { display: none; padding: 12px 20px; background: #fffbeb; border-bottom: 1px solid #fde68a; color: #92400e; font-weight: 700; font-size: 14px; }
+        .a3-banner.error { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+        .pg-btn { min-width: 38px; padding: 7px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #334155; font-size: 13px; font-weight: 800; cursor: pointer; }
+        .pg-btn:hover:not([disabled]) { background: #eef2ff; border-color: #c7d2fe; }
+        .pg-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .pg-btn[disabled] { opacity: .4; cursor: default; }
+        .pg-gap { padding: 0 4px; color: #94a3b8; }
+        @media print { .a3-banner, #pager { display: none !important; } }
         #qrModal { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); }
         #qrModal .qr-box { border-radius: 22px; padding: 24px; }
 
@@ -188,12 +199,18 @@
                 <button onclick="toggleSettingsMenu(event)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-bold uppercase flex items-center gap-2">
                     ⚙️ Cài đặt
                 </button>
-                <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-md shadow-xl z-[9999] border border-slate-200 overflow-hidden text-slate-800">
+                <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-md shadow-xl z-[9999] border border-slate-200 overflow-hidden text-slate-800">
                     <button onclick="exportDataApp()" class="w-full text-left px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 border-b flex items-center gap-2">
-                        📥 XUẤT DỮ LIỆU
+                        📥 XUẤT DỮ LIỆU (kỳ đang xem)
+                    </button>
+                    <button onclick="exportAllApp()" class="w-full text-left px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 border-b flex items-center gap-2">
+                        🗄️ XUẤT TOÀN BỘ DỮ LIỆU
                     </button>
                     <button onclick="document.getElementById('importFileInput').click()" class="w-full text-left px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2">
-                        📤 CẬP NHẬT DỮ LIỆU
+                        📤 CẬP NHẬT DỮ LIỆU (từ file)
+                    </button>
+                    <button id="btnLegacy" onclick="importLegacyLocal()" style="display:none" class="w-full text-left px-4 py-3 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 border-t items-center gap-2">
+                        🕘 Nhập dữ liệu cũ trên máy này (<span id="legacyCount">0</span> hồ sơ)
                     </button>
                 </div>
             </div>
@@ -348,15 +365,18 @@
         </div>
 
         <div class="bg-white rounded-lg shadow-md border border-slate-200 overflow-hidden">
-            <div class="p-4 bg-slate-100 border-b flex justify-between items-center">
-                <div class="flex gap-4 items-center flex-1">
+            <div id="a3Banner" class="a3-banner"></div>
+            <div id="listTop"></div>
+            <div class="p-4 bg-slate-100 border-b flex flex-wrap gap-3 justify-between items-center">
+                <div class="flex flex-wrap gap-3 items-center flex-1">
                     <h3 class="font-bold text-slate-700 uppercase text-xs whitespace-nowrap">Danh sách hồ sơ</h3>
-                    <div class="relative w-full max-w-md">
+                    <select id="selYear" class="period-select" onchange="onPeriodChange()" title="Chọn năm"></select>
+                    <div class="relative w-full max-w-md" style="min-width:200px">
                         <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
-                        <input type="text" id="searchBox" oninput="debounceRender()" placeholder="Tìm Tên, Số QĐ, Ngày, Tiền..." class="pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm outline-none w-full shadow-sm focus:border-blue-500">
+                        <input type="text" id="searchBox" oninput="debounceRender()" placeholder="Tìm Tên, Số QĐ, Ngày, Tiền... (tìm trong năm đang chọn)" class="pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm outline-none w-full shadow-sm focus:border-blue-500">
                     </div>
                 </div>
-                <div class="flex gap-2 ml-4">
+                <div class="flex flex-wrap gap-2">
                     <button onclick="printSelected()" class="bg-green-600 text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2 hover:bg-green-700 uppercase">
                         <i data-lucide="printer" class="w-4 h-4"></i> In đã chọn (<span id="countSelected">0</span>)
                     </button>
@@ -383,6 +403,16 @@
                 </thead>
                 <tbody id="listContainer"></tbody>
             </table>
+            <div id="pager" class="hidden p-4 border-t bg-slate-50 text-sm text-slate-600 font-bold">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <span id="pagerInfo"></span>
+                    <div id="pagerBtns" class="flex flex-wrap items-center gap-1"></div>
+                    <span class="flex gap-2">
+                        <button type="button" id="btnSelAll" onclick="selectAllFiltered()" class="px-3 py-2 rounded-md bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300"></button>
+                        <button type="button" onclick="clearSel()" class="px-3 py-2 rounded-md bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300">Bỏ chọn</button>
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -402,8 +432,177 @@
     <script>
         lucide.createIcons();
         let db = [];
-        let editId = null;
-        let isCopyMode = false;
+const PAGE = 100;       // số hồ sơ mỗi trang
+let page = 1;           // trang đang xem
+let editId = null;
+let isCopyMode = false;
+
+/* ======= DỮ LIỆU LƯU THEO THÁNG (nhận/gửi qua trang cha) ======= */
+const _now = new Date();
+const ALLYEARS = -1;
+let period = { year: _now.getFullYear(), month: 'all' };   // year: số năm, 0 = không rõ ngày, -1 = tất cả các năm
+let monthsData = {}, monthIndex = {}, watching = new Set(), indexReady = false;
+let viewList = [];
+const selectedIds = new Set();
+const pending = {};
+let reqSeq = 0;
+let renderTimer = null;
+const received = new Set();
+const pad2 = n => String(n).padStart(2, '0');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $id = id => document.getElementById(id);
+function toParent(msg) { try { window.parent.postMessage(msg, '*'); } catch (e) {} }
+function monthKey(r) {
+    const m = String((r && r.dateCreated) || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return m[3] + '-' + pad2(m[2]);
+    const d = new Date(Number(r && r.id));
+    if (!isNaN(d.getTime())) return d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+    return '0000-00';
+}
+function dateNum(s) { const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? (+m[3]) * 10000 + (+m[2]) * 100 + (+m[1]) : 0; }
+function displaySort(arr) {
+    return arr.slice().sort((a, b) => (dateNum(b.dateCreated) - dateNum(a.dateCreated)) || (Number(b.id) - Number(a.id)));
+}
+function showNotice(msg, level) {
+    const b = $id('a3Banner');
+    if (!msg) { b.style.display = 'none'; b.textContent = ''; return; }
+    b.textContent = msg;
+    b.className = 'a3-banner' + (level === 'error' ? ' error' : '');
+    b.style.display = 'block';
+}
+function downloadJson(data, name) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/* --- Gửi thao tác lên máy chủ (qua trang cha) --- */
+function sendOps(ops, done) {
+    const reqId = ++reqSeq;
+    pending[reqId] = (ok, err) => {
+        if (!ok) {
+            alert('Không lưu được lên máy chủ: ' + (err || 'lỗi không rõ') + '\nDữ liệu hiển thị có thể CHƯA được lưu. Vui lòng kiểm tra mạng và thử lại.');
+            toParent({ type: 'APP3_REFRESH', months: Array.from(new Set(ops.map(o => o.month))) });
+        }
+        if (done) done(ok);
+    };
+    toParent({ type: 'APP3_OPS', reqId, ops });
+}
+function applyLocal(ops) {
+    ops.forEach(o => {
+        const arr = monthsData[o.month] || (monthsData[o.month] = []);
+        const rid = String(o.op === 'delete' ? o.id : o.rec.id);
+        const i = arr.findIndex(r => String(r.id) === rid);
+        if (o.op === 'delete') { if (i > -1) arr.splice(i, 1); }
+        else if (i > -1) arr[i] = o.rec; else arr.push(o.rec);
+    });
+}
+function uploadRecords(arr, done) {
+    const ops = arr.map(r => ({ op: 'upsert', month: monthKey(r), rec: r }));
+    const chunks = [];
+    for (let i = 0; i < ops.length; i += 500) chunks.push(ops.slice(i, i + 500));
+    showNotice('Đang tải ' + arr.length + ' hồ sơ lên máy chủ, vui lòng chờ…');
+    let i = 0;
+    const next = () => {
+        if (i >= chunks.length) { showNotice(''); if (done) done(true); return; }
+        sendOps(chunks[i++], ok => { if (!ok) { showNotice(''); if (done) done(false); return; } next(); });
+    };
+    next();
+}
+
+/* --- Chọn kỳ xem (năm / tháng) --- */
+function yearsAvailable() {
+    const s = new Set([_now.getFullYear()]);
+    Object.keys(monthIndex).forEach(k => s.add(Number(k.slice(0, 4))));
+    Object.keys(monthsData).forEach(k => s.add(Number(k.slice(0, 4))));
+    return Array.from(s).filter(y => y > 0).sort((a, b) => b - a);
+}
+function yearCount(y) { let n = 0; Object.keys(monthIndex).forEach(k => { if (k.startsWith(y + '-')) n += Number(monthIndex[k]) || 0; }); return n; }
+function totalCount() { let n = 0; Object.keys(monthIndex).forEach(k => { n += Number(monthIndex[k]) || 0; }); return n; }
+function fillPeriodSelects() {
+    const ys = yearsAvailable();
+    if (monthIndex['0000-00']) ys.push(0);
+    const sy = $id('selYear');
+    sy.innerHTML = ys.map(y => '<option value="' + y + '">' + (y ? 'Năm ' + y : 'Không rõ ngày') + '</option>').join('')
+        + '<option value="' + ALLYEARS + '">Tất cả</option>';
+    if (period.year !== ALLYEARS && !ys.includes(period.year)) period.year = ys[0];
+    sy.value = String(period.year);
+    sy.title = 'Năm đang xem' + (totalCount() ? ' · tổng ' + totalCount() + ' hồ sơ' : '');
+    period.month = 'all';
+}
+function onPeriodChange() {
+    period.year = Number($id('selYear').value);
+    period.month = 'all';
+    fillPeriodSelects();
+    applyPeriod();
+}
+function searchActive() { const b = $id('searchBox'); return !!(b && b.value.trim()); }
+// Tìm kiếm chỉ quét trong năm đang chọn (chọn "Tất cả các năm" để tìm toàn bộ)
+function periodKeys(ignoreSearch) {
+    if (period.year === ALLYEARS) return Array.from(new Set([...Object.keys(monthIndex), ...Object.keys(monthsData)])).sort();
+    if (period.year === 0) return ['0000-00'];
+    const y = period.year;
+    if (period.month !== 'all') return [y + '-' + pad2(period.month)];
+    const s = new Set();
+    Object.keys(monthIndex).forEach(k => { if (k.startsWith(y + '-')) s.add(k); });
+    Object.keys(monthsData).forEach(k => { if (k.startsWith(y + '-')) s.add(k); });
+    return Array.from(s).sort();
+}
+function periodLabel() {
+    if (period.year === ALLYEARS) return 'Tất cả các năm';
+    if (period.year === 0) return 'Không rõ ngày';
+    return period.month === 'all' ? 'Cả năm ' + period.year : 'Tháng ' + period.month + '/' + period.year;
+}
+function ensureWatch() {
+    if (!indexReady) return;
+    const need = periodKeys().filter(k => !watching.has(k));
+    if (need.length) { need.forEach(k => watching.add(k)); toParent({ type: 'APP3_WATCH', months: need }); }
+}
+function applyPeriod() { page = 1; selectedIds.clear(); ensureWatch(); doRender(); }
+function rebuildDb() {
+    let recs = [];
+    periodKeys().forEach(k => { if (monthsData[k]) recs = recs.concat(monthsData[k]); });
+    db = recs;
+}
+
+/* --- Nhận tin từ trang cha --- */
+window.addEventListener('message', function (e) {
+    const d = e.data;
+    if (!d || typeof d.type !== 'string') return;
+    switch (d.type) {
+        case 'APP3_INDEX':
+            monthIndex = d.idx || {};
+            indexReady = true;
+            showNotice('');
+            fillPeriodSelects();
+            ensureWatch();
+            doRender();
+            break;
+        case 'APP3_MONTH':
+            if (!/^\d{4}-\d{2}$/.test(d.month)) break;
+            monthsData[d.month] = Array.isArray(d.data) ? d.data : [];
+            received.add(d.month);
+            scheduleRender(40);
+            break;
+        case 'APP3_ACK':
+            if (pending[d.reqId]) { const f = pending[d.reqId]; delete pending[d.reqId]; f(!!d.ok, d.error); }
+            break;
+        case 'APP3_NOTICE':
+            showNotice(d.message || '', d.level);
+            break;
+        case 'APP3_EXPORT_DATA':
+            showNotice('');
+            downloadJson({ version: '8.0', exportDate: new Date().toISOString(), records: d.records || [], chvList: chvList }, 'DuLieu_C06_THADS_TOANBO_' + Date.now() + '.json');
+            break;
+    }
+});
+window.addEventListener('load', function () {
+    toParent({ type: 'APP3_READY' });
+    setTimeout(function () { if (!indexReady) showNotice('Chưa nhận được dữ liệu từ máy chủ. Hãy mở app qua trang chính (đã đăng nhập) và kiểm tra kết nối mạng.', 'error'); }, 12000);
+    refreshLegacyBtn();
+});
 
         /* --- XỬ LÝ MENU CÀI ĐẶT & XUẤT/NHẬP DỮ LIỆU --- */
         function toggleSettingsMenu(e) {
@@ -419,99 +618,83 @@
             }
         });
 
-        function exportDataApp() {
-            const dataToExport = {
-                version: "7.0",
-                exportDate: new Date().toISOString(),
-                records: db,
-                chvList: chvList
-            };
-            const dataStr = JSON.stringify(dataToExport, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `DuLieu_C06_THADS_${new Date().getTime()}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toggleSettingsMenu();
-        }
+function exportDataApp() {
+    if (!db.length) { toggleSettingsMenu(); return alert('Kỳ đang xem chưa có hồ sơ để xuất.'); }
+    downloadJson({ version: '8.0', exportDate: new Date().toISOString(), records: db, chvList: chvList },
+        'DuLieu_C06_THADS_' + period.year + (period.month === 'all' ? '' : '-' + pad2(period.month)) + '_' + Date.now() + '.json');
+    toggleSettingsMenu();
+}
+function exportAllApp() {
+    showNotice('Đang tải toàn bộ dữ liệu để xuất, vui lòng chờ…');
+    toParent({ type: 'APP3_EXPORT_ALL' });
+    toggleSettingsMenu();
+}
 
-        function importDataApp(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    let importedRecords = [];
-
-                    if (Array.isArray(importedData)) {
-                        importedRecords = importedData;
-                    } else if (importedData && importedData.records) {
-                        importedRecords = importedData.records;
-                        // Phục hồi thêm danh sách CHV
-                        if (importedData.chvList && Array.isArray(importedData.chvList)) {
-                            importedData.chvList.forEach(chv => {
-                                if (!chvList.includes(chv)) {
-                                    chvList.push(chv);
-                                }
-                            });
-                            saveCHVList();
-                        }
-                    } else {
-                        alert("File dữ liệu không đúng định dạng!");
-                        return;
-                    }
-
-                    if (!Array.isArray(importedRecords)) {
-                        alert("Không tìm thấy dữ liệu hồ sơ hợp lệ trong file!");
-                        return;
-                    }
-
-                    let updateCount = 0;
-                    let addCount = 0;
-
-                    const tx = idbDb.transaction('records', 'readwrite');
-                    const store = tx.objectStore('records');
-
-                    for (const record of importedRecords) {
-                        const existingIndex = db.findIndex(x => x.id === record.id);
-                        if (existingIndex !== -1) {
-                            db[existingIndex] = record;
-                            updateCount++;
-                        } else {
-                            db.push(record);
-                            addCount++;
-                        }
-                        // put sẽ tự động cập nhật nếu trùng ID hoặc thêm mới nếu chưa có
-                        store.put(record);
-                    }
-
-                    tx.oncomplete = () => {
-                        loadData(); // Tải lại toàn bộ để sắp xếp hiển thị chuẩn
-                        alert(`Cập nhật thành công!\n- Thêm mới: ${addCount} hồ sơ\n- Cập nhật đè (trùng ID): ${updateCount} hồ sơ`);
-                        window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
-                    };
-
-                    tx.onerror = (err) => {
-                        console.error("Lỗi khi lưu vào IDB:", err);
-                        alert("Đã xảy ra lỗi khi ghi dữ liệu!");
-                    };
-
-                } catch (error) {
-                    console.error(error);
-                    alert("Lỗi đọc file: " + error.message);
+function importDataApp(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const imp = JSON.parse(e.target.result);
+            let recs;
+            if (Array.isArray(imp)) recs = imp;
+            else if (imp && Array.isArray(imp.records)) {
+                recs = imp.records;
+                if (Array.isArray(imp.chvList)) {
+                    imp.chvList.forEach(c => { if (!chvList.includes(c)) chvList.push(c); });
+                    saveCHVList(); renderCHVSelect();
                 }
-                
-                event.target.value = ''; // Xóa input để có thể chọn lại file cũ nếu muốn
-            };
-            reader.readAsText(file);
-            toggleSettingsMenu();
-        }
+            } else { alert('File dữ liệu không đúng định dạng!'); return; }
+            recs = recs.filter(r => r && r.id != null && r.hoTen != null);
+            if (!recs.length) { alert('Không tìm thấy hồ sơ hợp lệ trong file!'); return; }
+            if (!confirm('Gộp ' + recs.length + ' hồ sơ từ file vào hệ thống?\n(Trùng mã thì ghi đè, mã mới thì thêm vào, dữ liệu hiện có được giữ nguyên.)')) return;
+            uploadRecords(recs, ok => { if (ok) alert('Đã cập nhật (gộp) ' + recs.length + ' hồ sơ thành công!'); });
+        } catch (error) { console.error(error); alert('Lỗi đọc file: ' + error.message); }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+    toggleSettingsMenu();
+}
+
+/* --- Bản sao dữ liệu cũ còn trong trình duyệt của máy này (cách lưu trước đây) --- */
+function readLegacy(cb) {
+    let done = false; const fin = a => { if (!done) { done = true; cb(a); } };
+    try {
+        const req = indexedDB.open('c09_thads_v6');
+        req.onupgradeneeded = e => { try { e.target.transaction.abort(); } catch (x) {} };
+        req.onerror = () => fin([]);
+        req.onsuccess = e => {
+            const d = e.target.result;
+            if (!d.objectStoreNames.contains('records')) { d.close(); return fin([]); }
+            const g = d.transaction('records', 'readonly').objectStore('records').getAll();
+            g.onsuccess = () => { d.close(); fin(g.result || []); };
+            g.onerror = () => { d.close(); fin([]); };
+        };
+    } catch (x) { fin([]); }
+}
+function refreshLegacyBtn() {
+    readLegacy(arr => {
+        const n = arr.filter(r => r && r.id != null).length;
+        $id('btnLegacy').style.display = n ? 'flex' : 'none';
+        $id('legacyCount').textContent = n;
+    });
+}
+function importLegacyLocal() {
+    toggleSettingsMenu();
+    readLegacy(arr => {
+        arr = arr.filter(r => r && r.id != null && r.hoTen != null);
+        if (!arr.length) return alert('Máy này không còn dữ liệu cũ.');
+        if (!confirm('Máy này còn bản sao dữ liệu cũ (' + arr.length + ' hồ sơ).\nNhập vào hệ thống? (gộp theo mã, không làm mất dữ liệu hiện có)')) return;
+        uploadRecords(arr, ok => {
+            if (!ok) return;
+            if (confirm('Đã nhập xong. Xóa bản sao cũ trên máy này để giải phóng bộ nhớ?')) {
+                try { indexedDB.deleteDatabase('c09_thads_v6'); } catch (e) {}
+                setTimeout(refreshLegacyBtn, 500);
+            }
+        });
+    });
+}
 
         /* --- LOGIC CHV --- */
         const STORAGE_KEY_CHV = 'chv_list_store_v1';
@@ -639,7 +822,7 @@
         ];
 
         let searchTimeout;
-        function debounceRender() { clearTimeout(searchTimeout); searchTimeout = setTimeout(renderTable, 500); }
+        function debounceRender() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { page = 1; ensureWatch(); doRender(); }, 400); }
 
         function handleQDFocus(el) { if (el.value === "/QĐ-THADS") el.setSelectionRange(0, 0); }
 
@@ -681,54 +864,107 @@
             document.getElementById('qrModal').style.display = 'flex';
         }
 
-        function renderTable() {
-            const search = document.getElementById('searchBox').value.toLowerCase();
-            const container = document.getElementById('listContainer');
-            container.innerHTML = '';
-            const filtered = db.filter(r => {
-                const sTien = Number(r.soTien).toLocaleString('vi-VN');
-                return r.hoTen.toLowerCase().includes(search) || r.qdSo.toLowerCase().includes(search) || r.qdNgay.toLowerCase().includes(search) || r.lyDo.toLowerCase().includes(search) || sTien.includes(search);
-            });
-            const groups = filtered.reduce((acc, obj) => {
-                const date = obj.dateCreated;
-                acc[date] = acc[date] || [];
-                acc[date].push(obj);
-                return acc;
-            }, {});
-            const sortedDates = Object.keys(groups).sort((a, b) => {
-                const toDate = d => new Date(d.split('/').reverse().join('-'));
-                return toDate(b) - toDate(a);
-            });
-            const fragment = document.createDocumentFragment();
-            sortedDates.forEach(date => {
-                const groupTr = document.createElement('tr');
-                groupTr.innerHTML = `<td colspan="7" class="date-group-header"><i data-lucide="calendar" class="w-4 h-4"></i> NGÀY TẠO: ${date}</td>`;
-                fragment.appendChild(groupTr);
-                groups[date].forEach(r => {
-                    const tr = document.createElement('tr');
-                    tr.className = 'border-b hover:bg-slate-50 transition-colors';
-                    const stColor = r.isPaid ? 'text-teal-500' : 'text-red-500';
-                    tr.innerHTML = `
-                        <td class="p-3"><input type="checkbox" class="row-check" value="${r.id}" onchange="updateCount()"></td>
-                        <td class="p-3"><div class="font-bold text-slate-800 text-xs">${r.hoTen}</div><div class="text-[11px] text-slate-500 mt-1 leading-tight">${r.lyDo}</div></td>
-                        <td class="p-3"><div class="font-bold text-blue-700 text-xs">${r.qdSo}</div><div class="text-[10px] text-slate-400">(${r.qdNgay || '...'})</div></td>
-                        <td class="p-3 text-right font-bold text-slate-800 text-xs">${Number(r.soTien).toLocaleString('vi-VN')}</td>
-                        <td class="p-3 text-center" id="cell-status-${r.id}"><div class="font-black text-[11px] cursor-pointer ${stColor}" onclick="handleStatusToggle(${r.id})">${r.isPaid ? 'ĐÃ CHI' : 'CHƯA CHI'}</div><div class="text-[10px] font-bold text-teal-800">${r.paidDate || ''}</div></td>
-                        <td class="p-3"><input type="text" value="${r.ghiChu || ''}" onblur="updateGhiChu(${r.id}, this.value)" placeholder="..." class="bg-transparent border-b border-dashed border-slate-200 w-full text-[11px] outline-none"></td>
-                        <td class="p-3 text-center"><div class="flex gap-1 justify-center">
-                            <button onclick="editRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-blue-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                            <button onclick="copyRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-amber-600"><i data-lucide="copy" class="w-4 h-4"></i></button>
-                            <button onclick="delRec(${r.id})" class="p-1.5 bg-slate-100 rounded text-slate-300 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                            <button onclick="showQR(${r.id})" class="p-1.5 bg-slate-100 rounded text-purple-600 hover:bg-purple-600 hover:text-white"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
-                            <button onclick="exportSingleWord(${r.id})" title="Tải file Word" class="p-1.5 bg-slate-100 rounded text-blue-700 hover:bg-blue-700 hover:text-white"><i data-lucide="download" class="w-4 h-4"></i></button>
-                        </div></td>`;
-                    fragment.appendChild(tr);
-                });
-            });
-            container.appendChild(fragment);
-            lucide.createIcons();
-            updateCount();
+function scheduleRender(delay) {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(function () {
+        const a = document.activeElement;
+        // Đang gõ ghi chú / nhập ngày chi trong bảng: chờ xong rồi mới vẽ lại để không mất chữ đang gõ
+        if (a && a.closest && a.closest('#listContainer') && (a.tagName === 'INPUT')) { scheduleRender(1500); return; }
+        doRender();
+    }, delay || 0);
+}
+function renderTable() { scheduleRender(0); }
+
+function checkedItems() { return displaySort(db.filter(r => selectedIds.has(String(r.id)))).map(r => ({ value: String(r.id) })); }
+function onRowCb(c) { if (c.checked) selectedIds.add(String(c.value)); else selectedIds.delete(String(c.value)); updateCount(); }
+function selectAllFiltered() { viewList.forEach(r => selectedIds.add(String(r.id))); doRender(); }
+function clearSel() { selectedIds.clear(); doRender(); }
+function goPage(n) {
+    page = n; doRender();
+    const el = $id('listTop'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function pageNumbers(cur, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const s = new Set([1, total, cur - 1, cur, cur + 1]);
+    if (cur <= 3) { s.add(2); s.add(3); s.add(4); }
+    if (cur >= total - 2) { s.add(total - 1); s.add(total - 2); s.add(total - 3); }
+    const arr = Array.from(s).filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+    const out = [];
+    arr.forEach((n, i) => { if (i && n - arr[i - 1] > 1) out.push('…'); out.push(n); });
+    return out;
+}
+function renderPager(total, totalPages) {
+    const bar = $id('pager');
+    if (total <= PAGE) { bar.classList.add('hidden'); return; }
+    bar.classList.remove('hidden');
+    const from = (page - 1) * PAGE + 1, to = Math.min(total, page * PAGE);
+    $id('pagerInfo').textContent = 'Hồ sơ ' + from + '–' + to + ' / ' + total + ' · Trang ' + page + '/' + totalPages;
+    let h = '<button type="button" class="pg-btn" ' + (page === 1 ? 'disabled' : 'onclick="goPage(' + (page - 1) + ')"') + '>‹ Trước</button>';
+    pageNumbers(page, totalPages).forEach(n => {
+        if (n === '…') h += '<span class="pg-gap">…</span>';
+        else h += '<button type="button" class="pg-btn' + (n === page ? ' active' : '') + '" onclick="goPage(' + n + ')">' + n + '</button>';
+    });
+    h += '<button type="button" class="pg-btn" ' + (page === totalPages ? 'disabled' : 'onclick="goPage(' + (page + 1) + ')"') + '>Sau ›</button>';
+    $id('pagerBtns').innerHTML = h;
+    $id('btnSelAll').textContent = 'Chọn cả ' + total + ' hồ sơ';
+}
+
+function doRender() {
+    clearTimeout(renderTimer);
+    rebuildDb();
+    const search = $id('searchBox').value.toLowerCase().trim();
+    const container = $id('listContainer');
+    const filtered = db.filter(r => {
+        if (!search) return true;
+        const sTien = Number(r.soTien).toLocaleString('vi-VN');
+        return String(r.hoTen || '').toLowerCase().includes(search) || String(r.qdSo || '').toLowerCase().includes(search) || String(r.qdNgay || '').toLowerCase().includes(search) || String(r.lyDo || '').toLowerCase().includes(search) || String(r.dateCreated || '').includes(search) || sTien.includes(search);
+    });
+    viewList = displaySort(filtered);
+    const total = viewList.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE));
+    if (page > totalPages) page = totalPages;
+    if (page < 1) page = 1;
+    const slice = viewList.slice((page - 1) * PAGE, page * PAGE);
+
+    const fragment = document.createDocumentFragment();
+    let lastDate = null;
+    slice.forEach(r => {
+        if (r.dateCreated !== lastDate) {
+            lastDate = r.dateCreated;
+            const groupTr = document.createElement('tr');
+            groupTr.innerHTML = `<td colspan="7" class="date-group-header"><i data-lucide="calendar" class="w-4 h-4"></i> NGÀY TẠO: ${esc(lastDate)}</td>`;
+            fragment.appendChild(groupTr);
         }
+        const tr = document.createElement('tr');
+        tr.className = 'border-b hover:bg-slate-50 transition-colors';
+        const stColor = r.isPaid ? 'text-teal-500' : 'text-red-500';
+        tr.innerHTML = `
+            <td class="p-3"><input type="checkbox" class="row-check" value="${esc(r.id)}" ${selectedIds.has(String(r.id)) ? 'checked' : ''} onchange="onRowCb(this)"></td>
+            <td class="p-3"><div class="font-bold text-slate-800 text-xs">${esc(r.hoTen)}</div><div class="text-[11px] text-slate-500 mt-1 leading-tight">${esc(r.lyDo)}</div>${r.hasNT && r.tenThay ? `<div class="text-[11px] font-bold mt-1" style="color:#dc2626">Người nhận thay: ${esc(r.tenThay)}</div>` : ''}</td>
+            <td class="p-3"><div class="font-bold text-blue-700 text-xs">${esc(r.qdSo)}</div><div class="text-[10px] text-slate-400">(${esc(r.qdNgay) || '...'})</div></td>
+            <td class="p-3 text-right font-bold text-slate-800 text-xs">${Number(r.soTien).toLocaleString('vi-VN')}</td>
+            <td class="p-3 text-center" id="cell-status-${esc(r.id)}"><div class="font-black text-[11px] cursor-pointer ${stColor}" onclick="handleStatusToggle(${Number(r.id)})">${r.isPaid ? 'ĐÃ CHI' : 'CHƯA CHI'}</div><div class="text-[10px] font-bold text-teal-800">${esc(r.paidDate)}</div></td>
+            <td class="p-3"><input type="text" value="${esc(r.ghiChu)}" onblur="updateGhiChu(${Number(r.id)}, this.value)" placeholder="..." class="bg-transparent border-b border-dashed border-slate-200 w-full text-[11px] outline-none"></td>
+            <td class="p-3 text-center"><div class="flex gap-1 justify-center">
+                <button onclick="editRec(${Number(r.id)})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-blue-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="copyRec(${Number(r.id)})" class="p-1.5 bg-slate-100 rounded text-slate-600 hover:text-amber-600"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                <button onclick="delRec(${Number(r.id)})" class="p-1.5 bg-slate-100 rounded text-slate-300 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                <button onclick="showQR(${Number(r.id)})" class="p-1.5 bg-slate-100 rounded text-purple-600 hover:bg-purple-600 hover:text-white"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
+                <button onclick="exportSingleWord(${Number(r.id)})" title="Tải file Word" class="p-1.5 bg-slate-100 rounded text-blue-700 hover:bg-blue-700 hover:text-white"><i data-lucide="download" class="w-4 h-4"></i></button>
+            </div></td>`;
+        fragment.appendChild(tr);
+    });
+    container.innerHTML = '';
+    container.appendChild(fragment);
+    lucide.createIcons();
+    if (total === 0) {
+        container.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-slate-500 font-bold">' +
+            (!indexReady || (search && period.year === ALLYEARS && periodKeys().some(k => !received.has(k) && monthIndex[k])) ? 'Đang tải/tìm dữ liệu…' : (search ? 'Không có hồ sơ nào khớp từ khóa (đã tìm trong ' + periodLabel() + ').' : 'Chưa có hồ sơ nào trong kỳ này.')) + '</td></tr>';
+    }
+    renderPager(total, totalPages);
+    updateCount();
+}
 
         function copyRec(id) { const r = db.find(x => x.id === id); fillForm(r); editId = null; isCopyMode = true; document.getElementById('btnSave').innerHTML = `<i data-lucide="copy"></i> LƯU BẢN SAO MỚI`; document.getElementById('btnCancel').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); lucide.createIcons(); }
         
@@ -802,16 +1038,19 @@
                 blTien: document.getElementById('blTien').value
             }; 
 
-            if (editId) {
-                db = db.map(x => x.id === editId ? data : x); 
-            } else {
-                db.unshift(data); 
-            }
-
-            await saveToIDB(data);
-            window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
+            const month = monthKey(data);
+            const ops = [{ op: 'upsert', month, rec: data }];
+            applyLocal(ops);
+            sendOps(ops);
+            // Hồ sơ nằm ngoài kỳ đang xem thì chuyển sang kỳ chứa nó
+            if (!periodKeys(true).includes(month)) {
+                const p = month.split('-');
+                period = { year: Number(p[0]), month: 'all' };
+                fillPeriodSelects();
+                applyPeriod();
+            } else if (!editId) { page = 1; }
             resetForm();
-            renderTable();
+            doRender();
         }
 
         function formatDateInput(el) { 
@@ -831,50 +1070,56 @@
         
         function handleStatusToggle(id) { const r = db.find(x => x.id === id); if (r.isPaid) { if(confirm("Chuyển về trạng thái CHƯA CHI?")) updateStatus(id, false, ""); } else { document.getElementById(`cell-status-${id}`).innerHTML = `<div class="flex flex-col items-center gap-1"><div class="date-input-container"><input type="text" id="tempDate-${id}" oninput="formatDateInput(this)" placeholder="dd/mm/yyyy" class="text-[10px] border p-1 rounded w-24"><input type="date" class="hidden-picker" style="width:20px" onchange="syncPicker(this, 'tempDate-${id}')"></div><div class="flex gap-1"><button onclick="confirmPaid(${id})" class="bg-teal-600 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Lưu</button><button onclick="renderTable()" class="bg-slate-400 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase">Hủy</button></div></div>`; } }
         function confirmPaid(id) { const d = document.getElementById(`tempDate-${id}`).value; if(!isValidDate(d)) return alert("Vui lòng nhập đúng định dạng dd/mm/yyyy!"); updateStatus(id, true, d); }
-        async function updateStatus(id, isPaid, date) { 
-            db = db.map(x => x.id === id ? {...x, isPaid, paidDate: date} : x); 
-            const updated = db.find(x => x.id === id); 
-            await saveToIDB(updated);
-            window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*'); 
-            renderTable(); 
-        }
+async function updateStatus(id, isPaid, date) {
+    const r = db.find(x => x.id === id); if (!r) return;
+    const rec = { ...r, isPaid, paidDate: date };
+    const ops = [{ op: 'upsert', month: monthKey(rec), rec }];
+    applyLocal(ops); sendOps(ops); doRender();
+}
 
-        async function updateGhiChu(id, val) { 
-            db = db.map(x => x.id === id ? {...x, ghiChu: val} : x); 
-            const updated = db.find(x => x.id === id); 
-            await saveToIDB(updated);
-            window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
-        }
+async function updateGhiChu(id, val) {
+    const r = db.find(x => x.id === id); if (!r) return;
+    if ((r.ghiChu || '') === val) return;
+    const rec = { ...r, ghiChu: val };
+    const ops = [{ op: 'upsert', month: monthKey(rec), rec }];
+    applyLocal(ops); sendOps(ops);
+}
 
-        async function delRec(id) { 
-            if(confirm("Xóa hồ sơ?")) { 
-                db = db.filter(x => x.id !== id); 
-                await deleteFromIDB(id); 
-                window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: db}, '*');
-                renderTable(); 
-            } 
-        }
+async function delRec(id) {
+    if (!confirm("Xóa hồ sơ?")) return;
+    const r = db.find(x => x.id === id); if (!r) return;
+    const ops = [{ op: 'delete', month: monthKey(r), id: r.id }];
+    selectedIds.delete(String(id));
+    applyLocal(ops); sendOps(ops); doRender();
+}
 
-        function updateCount() { const count = document.querySelectorAll('.row-check:checked').length; document.getElementById('countSelected').innerText = count; document.getElementById('masterCheck').checked = (count > 0 && count === document.querySelectorAll('.row-check').length); }
-        function toggleMaster(m) { document.querySelectorAll('.row-check').forEach(cb => cb.checked = m.checked); updateCount(); }
-        function printSelected() { const checked = document.querySelectorAll('.row-check:checked'); if (checked.length === 0) return alert("Chọn hồ sơ!"); document.getElementById('printArea').innerHTML = Array.from(checked).map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join(''); window.print(); }
-        
-        function exportSingleWord(id) {
-            const checkboxes = document.querySelectorAll('.row-check');
-            const originalStates = [];
-            checkboxes.forEach(cb => {
-                originalStates.push({ el: cb, checked: cb.checked });
-                cb.checked = (cb.value == id);
-            });
-            exportToWord();
-            originalStates.forEach(state => {
-                state.el.checked = state.checked;
-            });
-            updateCount();
-        }
+function updateCount() {
+    const ids = new Set(db.map(r => String(r.id)));
+    let count = 0; selectedIds.forEach(i => { if (ids.has(i)) count++; });
+    $id('countSelected').innerText = count;
+    const boxes = document.querySelectorAll('.row-check');
+    $id('masterCheck').checked = boxes.length > 0 && Array.from(boxes).every(b => b.checked);
+}
+function toggleMaster(m) {
+    document.querySelectorAll('.row-check').forEach(cb => { cb.checked = m.checked; if (m.checked) selectedIds.add(String(cb.value)); else selectedIds.delete(String(cb.value)); });
+    updateCount();
+}
+function printSelected() {
+    const checked = checkedItems();
+    if (checked.length === 0) return alert("Chọn hồ sơ!");
+    $id('printArea').innerHTML = checked.map(cb => getPrintTemplate(db.find(x => x.id == cb.value))).join('');
+    window.print();
+}
+
+function exportSingleWord(id) {
+    const bak = new Set(selectedIds);
+    selectedIds.clear(); selectedIds.add(String(id));
+    try { exportToWord(); } finally { selectedIds.clear(); bak.forEach(i => selectedIds.add(i)); }
+    updateCount();
+}
 
         function exportDsChi() {
-            const checked = document.querySelectorAll('.row-check:checked');
+            const checked = checkedItems();
             if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất danh sách chi!");
 
             let totalTien = 0;
@@ -968,7 +1213,7 @@
         }
 
         function exportToWord() {
-            const checked = document.querySelectorAll('.row-check:checked');
+            const checked = checkedItems();
             if (checked.length === 0) return alert("Vui lòng chọn ít nhất một hồ sơ để xuất Word!");
 
             const escapeXml = (unsafe) => (unsafe || "").toString().replace(/[<>&'"]/g, c => {
@@ -1193,59 +1438,8 @@
             let s = res.trim(); return s.charAt(0).toUpperCase() + s.slice(1) + " đồng";
         }
 
-        let idbDb, idbRequest = indexedDB.open('c09_thads_v6', 1);
-        idbRequest.onupgradeneeded = e => e.target.result.createObjectStore('records', { keyPath: 'id' });
-        idbRequest.onsuccess = e => { idbDb = e.target.result; loadData(); };
-
-        async function loadData() {
-            const tx = idbDb.transaction('records', 'readonly');
-            const store = tx.objectStore('records');
-            const req = store.getAll();
-            req.onsuccess = () => { 
-                db = (req.result || []).reverse(); 
-                renderTable(); 
-            };
-        }
-
-        async function saveToIDB(record) {
-            const tx = idbDb.transaction('records', 'readwrite');
-            const store = tx.objectStore('records');
-            await store.put(record);
-        }
-
-        async function deleteFromIDB(id) {
-            const tx = idbDb.transaction('records', 'readwrite');
-            const store = tx.objectStore('records');
-            await store.delete(id);
-        }
-
-        window.addEventListener('message', function(e) {
-            if (e.data.type === 'GET_DATA_IDB') {
-                const req = indexedDB.open('c09_thads_v6');
-                req.onsuccess = function(ev) {
-                    const db = ev.target.result;
-                    if(!db.objectStoreNames.contains('records')) return;
-                    const tx = db.transaction('records', 'readonly');
-                    const store = tx.objectStore('records');
-                    const getAll = store.getAll();
-                    getAll.onsuccess = () => { window.parent.postMessage({type: 'DATA_RETURN_IDB', app: 'app3', data: getAll.result}, '*'); };
-                };
-            }
-            if (e.data.type === 'RESTORE_DATA_IDB') {
-                const items = e.data.payload;
-                if(!items || !Array.isArray(items)) return;
-                const req = indexedDB.open('c09_thads_v6');
-                req.onsuccess = function(ev) {
-                    const db = ev.target.result;
-                    const tx = db.transaction('records', 'readwrite');
-                    const store = tx.objectStore('records');
-                    store.clear().onsuccess = () => {
-                        items.forEach(item => store.put(item));
-                        setTimeout(()=> location.reload(), 100);
-                    }
-                };
-            }
-        });
+        fillPeriodSelects();
+        doRender();
     </script>
 </body>
 </html>

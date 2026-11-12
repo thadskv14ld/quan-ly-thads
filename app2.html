@@ -265,6 +265,25 @@
             .is-direct .barcode-col { display: none !important; }
             #printSenderName { font-weight: bold; margin-top: 60px; font-size: 12pt; }
         }
+
+        /* ===== BẢN LƯU THEO THÁNG: bổ sung ===== */
+        .period-select { padding: 12px 16px; border: 1px solid var(--border); border-radius: 999px; background: #f8fafc; font-size: 14px; font-weight: 600; color: #334155; cursor: pointer; max-width: 190px; }
+        .a2-banner { display: none; margin: 0 0 20px; padding: 14px 20px; border-radius: 16px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-weight: 600; font-size: 14px; }
+        .a2-banner.error { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+        .view-info { font-size: 13px; color: #64748b; font-weight: 700; margin: -8px 0 14px 8px; }
+        .more-bar { display: none; text-align: center; margin: -6px 0 26px; color: #64748b; font-size: 14px; font-weight: 600; }
+        .more-bar .btn-add { margin-left: 10px; }
+        .settings-dropdown { width: 300px; }
+        .period-select { padding: 11px 14px; max-width: 150px; }
+        .search-container { gap: 10px; padding: 18px 22px; }
+        .search-box { min-width: 180px; }
+        .search-container .check-pill { padding: 11px 16px; }
+        .btn-a4, .btn-tem { min-width: 0 !important; padding: 12px 20px !important; flex: none; }
+        @media (min-width: 900px) {
+            .search-container { flex-wrap: nowrap; }
+            .search-box { min-width: 120px; }
+            .search-spacer { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -280,14 +299,17 @@
     <div class="header-right">
         <div class="settings-btn" onclick="toggleSettings()"><i class="fa-solid fa-gear"></i> Cài đặt</div>
         <div id="settingsDropdown" class="settings-dropdown">
-            <button onclick="exportData()"><i class="fa-solid fa-download"></i> Xuất dữ liệu</button>
-            <button onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> Cập nhật dữ liệu</button>
+            <button onclick="exportView()"><i class="fa-solid fa-download"></i> Xuất dữ liệu (kỳ đang xem)</button>
+            <button onclick="exportAll()"><i class="fa-solid fa-database"></i> Xuất TOÀN BỘ dữ liệu</button>
+            <button onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> Cập nhật dữ liệu (từ file)</button>
+            <button id="btnLegacy" onclick="importLegacyLocal()" style="display:none"><i class="fa-solid fa-clock-rotate-left"></i> <span>Nhập dữ liệu cũ trên máy này (<b id="legacyCount">0</b> dòng)</span></button>
             <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(event)">
         </div>
     </div>
 </div>
 
 <div class="container no-print">
+    <div id="a2Banner" class="a2-banner no-print"></div>
     <div class="card">
         <div class="card-body">
             <div class="section-header">
@@ -356,9 +378,11 @@
     </div>
 
     <div class="search-container">
+        <select id="selYear" class="period-select" onchange="onPeriodChange()" title="Chọn năm"></select>
+        <select id="selMonth" class="period-select" onchange="onPeriodChange()" title="Chọn tháng"></select>
         <div class="search-box">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="searchInput" placeholder="Tìm kiếm tên, địa chỉ, nội dung..." oninput="renderTable()">
+            <input type="text" id="searchInput" placeholder="Tìm tên, địa chỉ, nội dung..." oninput="viewLimit = PAGE; renderTable()">
         </div>
         <div class="search-spacer"></div>
         <label class="check-pill">
@@ -366,6 +390,8 @@
         </label>
         <button class="btn btn-a4" onclick="printA4()"><i class="fa-solid fa-print"></i> IN A4</button>
         <button class="btn btn-tem" onclick="printTem()"><i class="fa-solid fa-barcode"></i> IN TEM</button>    </div>
+
+    <div class="view-info no-print" id="viewInfo"></div>
 
     <div class="table-card">
         <table class="main-list">
@@ -387,6 +413,8 @@
             <tbody id="dataTableBody"></tbody>
         </table>
     </div>
+
+    <div class="more-bar no-print" id="moreBar"><span id="moreInfo"></span><button type="button" class="btn-add" id="btnMore" onclick="showMore()">Xem thêm</button><button type="button" class="btn-add" id="btnSelAllFiltered" onclick="selectAllFiltered()">Chọn tất cả</button></div>
 
     <footer class="app-footer no-print">
         <p>© 2026 Mai Đức Lên. All rights reserved.</p>
@@ -430,294 +458,532 @@
 </div>
 
 <script>
-    let db = JSON.parse(localStorage.getItem('thads_v13')) || [];
-    let editingId = null;
+    // =====================================================================
+    // APP 2 - BẢN LƯU THEO THÁNG
+    // Dữ liệu được chia theo tháng ("2026-11"). Mỗi lần chỉ tải tháng/năm đang xem,
+    // chỉ hiển thị 100 dòng mỗi lượt. Việc đọc/ghi lên mây do trang cha (index.html) thực hiện.
+    // =====================================================================
+    const PAGE = 100;
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const pad2 = n => String(n).padStart(2, '0');
 
+    let monthsData = {};            // 'YYYY-MM' -> mảng bản ghi đã tải
+    let monthIndex = {};            // 'YYYY-MM' -> số bản ghi (danh mục từ máy chủ)
+    const received = new Set();     // các tháng đã nhận dữ liệu
+    const watching = new Set();     // các tháng đã yêu cầu theo dõi
+    let byId = new Map();
+    let selectedIds = new Set();
+    let editingId = null;
+    let viewLimit = PAGE;
+    let indexReady = false;
+    let lastFiltered = [];
+    const _now = new Date();
+    const ALLYEARS = -1;
+    let period = { year: _now.getFullYear(), month: 'all' };   // year: số năm, 0 = không rõ ngày, -1 = tất cả các năm; month: 1-12 hoặc 'all'
+    const pending = {};
+    let reqSeq = 0;
+    const hay = new WeakMap();
+    let renderTimer = null;
+    let senders = [];
+    try { senders = JSON.parse(localStorage.getItem('thads_senders')) || []; } catch (e) { senders = []; }
+
+    // ---------------------------------------------------------------
+    // TIỆN ÍCH
+    // ---------------------------------------------------------------
+    function monthKey(r) {
+        const m = String((r && r.day) || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m) return m[3] + '-' + pad2(m[2]);
+        const d = new Date(Number(r && r.id));
+        if (!isNaN(d.getTime())) return d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+        return '0000-00';
+    }
+    function toParent(msg) { try { window.parent.postMessage(msg, '*'); } catch (e) {} }
+    function rebuildById() {
+        byId = new Map();
+        Object.keys(monthsData).forEach(k => monthsData[k].forEach(r => byId.set(String(r.id), r)));
+    }
+    function showNotice(msg, level) {
+        const b = $('a2Banner');
+        if (!msg) { b.style.display = 'none'; b.textContent = ''; return; }
+        b.textContent = msg;
+        b.className = 'a2-banner no-print' + (level === 'error' ? ' error' : '');
+        b.style.display = 'block';
+    }
+    function downloadJson(data, name) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = name || ('thads_backup_' + Date.now() + '.json');
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    // ---------------------------------------------------------------
+    // GỬI THAO TÁC LÊN MÁY CHỦ (qua trang cha)
+    // ---------------------------------------------------------------
+    function sendOps(ops, done) {
+        const reqId = ++reqSeq;
+        pending[reqId] = (ok, err) => {
+            if (!ok) {
+                alert('Không lưu được lên máy chủ: ' + (err || 'lỗi không rõ') + '\nDữ liệu hiển thị có thể CHƯA được lưu. Vui lòng kiểm tra mạng và thử lại.');
+                const months = Array.from(new Set(ops.map(o => o.month)));
+                toParent({ type: 'APP2_REFRESH', months });
+            }
+            if (done) done(ok);
+        };
+        toParent({ type: 'APP2_OPS', reqId, ops });
+    }
+    function applyLocal(ops) {
+        ops.forEach(o => {
+            const arr = monthsData[o.month] || (monthsData[o.month] = []);
+            const i = arr.findIndex(r => String(r.id) === String(o.op === 'delete' ? o.id : o.rec.id));
+            if (o.op === 'delete') { if (i > -1) arr.splice(i, 1); }
+            else if (i > -1) arr[i] = o.rec; else arr.push(o.rec);
+        });
+        rebuildById();
+    }
+    function uploadRecords(arr, done) {
+        const ops = arr.map(r => ({ op: 'upsert', month: monthKey(r), rec: r }));
+        const chunks = [];
+        for (let i = 0; i < ops.length; i += 1000) chunks.push(ops.slice(i, i + 1000));
+        showNotice('Đang tải ' + arr.length + ' bản ghi lên máy chủ, vui lòng chờ…');
+        let i = 0;
+        const next = () => {
+            if (i >= chunks.length) { showNotice(''); if (done) done(true); return; }
+            sendOps(chunks[i++], ok => { if (!ok) { showNotice(''); if (done) done(false); return; } next(); });
+        };
+        next();
+    }
+
+    // ---------------------------------------------------------------
+    // CHỌN KỲ XEM (NĂM / THÁNG)
+    // ---------------------------------------------------------------
+    function yearsAvailable() {
+        const s = new Set([_now.getFullYear()]);
+        Object.keys(monthIndex).forEach(k => s.add(Number(k.slice(0, 4))));
+        Object.keys(monthsData).forEach(k => s.add(Number(k.slice(0, 4))));
+        return Array.from(s).filter(y => y > 0).sort((a, b) => b - a);
+    }
+    function yearCount(y) {
+        let n = 0;
+        Object.keys(monthIndex).forEach(k => { if (k.startsWith(y + '-')) n += Number(monthIndex[k]) || 0; });
+        return n;
+    }
+    function totalCount() {
+        let n = 0;
+        Object.keys(monthIndex).forEach(k => { n += Number(monthIndex[k]) || 0; });
+        return n;
+    }
+    function fillPeriodSelects() {
+        const ys = yearsAvailable();
+        if (monthIndex['0000-00']) ys.push(0);
+        const sy = $('selYear');
+        sy.innerHTML = ys.map(y => '<option value="' + y + '">' + (y ? 'Năm ' + y : 'Không rõ ngày') + '</option>').join('')
+            + '<option value="' + ALLYEARS + '">Tất cả các năm (' + totalCount() + ')</option>';
+        if (period.year !== ALLYEARS && !ys.includes(period.year)) period.year = ys[0];
+        sy.value = String(period.year);
+        const sm = $('selMonth');
+        let h = '';
+        if (period.year === ALLYEARS) {
+            h = '<option value="all">Tất cả các tháng</option>';
+            period.month = 'all';
+        } else if (period.year > 0) {
+            const yc = yearCount(period.year);
+            h += '<option value="all">Cả năm' + (yc ? ' (' + yc + ')' : '') + '</option>';
+            for (let m = 1; m <= 12; m++) {
+                const c = monthIndex[period.year + '-' + pad2(m)];
+                h += '<option value="' + m + '">Tháng ' + m + (c ? ' (' + c + ')' : '') + '</option>';
+            }
+        } else {
+            h = '<option value="all">Tất cả</option>';
+            period.month = 'all';
+        }
+        sm.innerHTML = h;
+        sm.value = String(period.month);
+        if (sm.value !== String(period.month)) { period.month = 'all'; sm.value = 'all'; }
+    }
+    function onPeriodChange() {
+        period.year = Number($('selYear').value);
+        const mv = $('selMonth').value;
+        period.month = mv === 'all' ? 'all' : Number(mv);
+        fillPeriodSelects();
+        applyPeriod();
+    }
+    function periodKeys() {
+        if (period.year === ALLYEARS) {
+            const all = new Set([...Object.keys(monthIndex), ...Object.keys(monthsData)]);
+            return Array.from(all).sort();
+        }
+        if (period.year === 0) return ['0000-00'];
+        const y = period.year;
+        if (period.month !== 'all') return [y + '-' + pad2(period.month)];
+        const s = new Set();
+        Object.keys(monthIndex).forEach(k => { if (k.startsWith(y + '-')) s.add(k); });
+        Object.keys(monthsData).forEach(k => { if (k.startsWith(y + '-')) s.add(k); });
+        return Array.from(s).sort();
+    }
+    function periodLabel() {
+        if (period.year === ALLYEARS) return 'Tất cả các năm';
+        if (period.year === 0) return 'Không rõ ngày';
+        return period.month === 'all' ? 'Cả năm ' + period.year : 'Tháng ' + period.month + '/' + period.year;
+    }
+    function ensureWatch() {
+        if (!indexReady) return;
+        const need = periodKeys().filter(k => !watching.has(k));
+        if (need.length) { need.forEach(k => watching.add(k)); toParent({ type: 'APP2_WATCH', months: need }); }
+    }
+    function applyPeriod() {
+        viewLimit = PAGE;
+        selectedIds.clear();
+        $('selectAll').checked = false;
+        ensureWatch();
+        doRender();
+    }
+    function currentRecords() {
+        let recs = [];
+        periodKeys().forEach(k => { if (monthsData[k]) recs = recs.concat(monthsData[k]); });
+        return recs;
+    }
+
+    // ---------------------------------------------------------------
+    // NHẬN TIN TỪ TRANG CHA
+    // ---------------------------------------------------------------
+    window.addEventListener('message', function (e) {
+        const d = e.data;
+        if (!d || typeof d.type !== 'string') return;
+        switch (d.type) {
+            case 'APP2_INDEX':
+                monthIndex = d.idx || {};
+                indexReady = true;
+                showNotice('');
+                fillPeriodSelects();
+                ensureWatch();
+                doRender();
+                break;
+            case 'APP2_MONTH':
+                if (!/^\d{4}-\d{2}$/.test(d.month)) break;
+                monthsData[d.month] = Array.isArray(d.data) ? d.data : [];
+                received.add(d.month);
+                rebuildById();
+                renderTable(40);
+                break;
+            case 'APP2_ACK':
+                if (pending[d.reqId]) { const f = pending[d.reqId]; delete pending[d.reqId]; f(!!d.ok, d.error); }
+                break;
+            case 'APP2_NOTICE':
+                showNotice(d.message || '', d.level);
+                break;
+            case 'APP2_EXPORT_DATA':
+                showNotice('');
+                downloadJson(d.records || [], 'thads_backup_toanbo_' + Date.now() + '.json');
+                break;
+        }
+    });
+
+    // ---------------------------------------------------------------
+    // FORM NHẬP
+    // ---------------------------------------------------------------
     function addNewReceiver(n = '', y = '', isRed = false) {
         const div = document.createElement('div');
         div.className = 'receiver-row';
         const cls = isRed ? 'is-copy' : '';
-        div.innerHTML = `<input type="text" class="in-name ${cls}" value="${n}" placeholder="Nhập họ tên người nhận hoặc đơn vị..." oninput="this.classList.remove('is-copy')">
-                         <input type="number" class="in-year ${cls}" value="${y}" style="text-align:center;" placeholder="Năm" oninput="this.classList.remove('is-copy')">
+        div.innerHTML = `<input type="text" class="in-name ${cls}" value="${esc(n)}" placeholder="Nhập họ tên người nhận hoặc đơn vị..." oninput="this.classList.remove('is-copy')">
+                         <input type="number" class="in-year ${cls}" value="${esc(y)}" style="text-align:center;" placeholder="Năm" oninput="this.classList.remove('is-copy')">
                          <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Xóa"><i class="fa-solid fa-xmark"></i></button>`;
-        document.getElementById('receiverContainer').appendChild(div);
+        $('receiverContainer').appendChild(div);
     }
 
-    // ===========================================
-    // HÀM LƯU DỮ LIỆU ĐÃ SỬA LỖI ĐỒNG BỘ VÀ MERGE
-    // ===========================================
+    function showActions(mode) {
+        $('mainActionGroup').style.display = mode === 'MAIN' ? '' : 'none';
+        $('editActionGroup').style.display = mode === 'EDIT' ? 'flex' : 'none';
+        $('copyActionGroup').style.display = mode === 'COPY' ? 'flex' : 'none';
+    }
+
+    function resetFormUI() {
+        editingId = null;
+        $('receiverContainer').innerHTML = '';
+        addNewReceiver();
+        ['inAddr', 'inPhone', 'inContent', 'inBarcode'].forEach(fid => { const el = $(fid); el.value = ''; el.classList.remove('is-copy'); });
+        showActions('MAIN');
+    }
+    function resetForm() { resetFormUI(); }
+
     function saveData(type) {
         const names = document.querySelectorAll('.in-name'), years = document.querySelectorAll('.in-year');
         let recs = [];
-        names.forEach((n, i) => { if(n.value.trim()) recs.push({name: n.value.trim(), year: years[i].value}) });
-        if(recs.length === 0) return alert("Vui lòng nhập người nhận!");
+        names.forEach((n, i) => { if (n.value.trim()) recs.push({ name: n.value.trim(), year: years[i].value }); });
+        if (recs.length === 0) return alert("Vui lòng nhập người nhận!");
 
-        // 1. Luôn kéo lại DB mới nhất trước khi xử lý lưu để tránh ghi đè làm mất dữ liệu của máy khác
-        let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-
-        const data = {
-            id: editingId || Date.now(), type: type, recs: recs,
-            addr: document.getElementById('inAddr').value,
-            phone: document.getElementById('inPhone').value,
-            content: document.getElementById('inContent').value,
-            barcode: document.getElementById('inBarcode').value,
-            day: editingId ? (latestDb.find(x => x.id === editingId)?.day || new Date().toLocaleDateString('vi-VN')) : new Date().toLocaleDateString('vi-VN')
+        const today = new Date().toLocaleDateString('vi-VN');
+        const old = editingId != null ? byId.get(String(editingId)) : null;
+        const rec = {
+            id: old ? old.id : (editingId != null ? editingId : Date.now()), type: type, recs: recs,
+            addr: $('inAddr').value,
+            phone: $('inPhone').value,
+            content: $('inContent').value,
+            barcode: $('inBarcode').value,
+            day: old ? (old.day || today) : today
         };
+        const month = monthKey(rec);
+        const ops = [{ op: 'upsert', month, rec }];
+        applyLocal(ops);
+        sendOps(ops);
+        try { localStorage.setItem('thads_last_sender', $('inSender').value); } catch (e) {}
 
-        // 2. Thực hiện MERGE bản ghi
-        if(editingId) {
-            let idx = latestDb.findIndex(x => x.id === editingId);
-            if (idx !== -1) {
-                latestDb[idx] = data; // Cập nhật nếu đã có
-            } else {
-                latestDb.push(data); // Thêm mới nếu bị khuyết
-            }
+        // Nếu bản ghi nằm ngoài kỳ đang xem thì chuyển sang kỳ chứa nó
+        if (!periodKeys().includes(month)) {
+            const p = month.split('-');
+            period = { year: Number(p[0]), month: Number(p[1]) };
+            fillPeriodSelects();
+            applyPeriod();
         } else {
-            latestDb.push(data); // Thêm dòng mới
+            doRender();
         }
-
-        // 3. Cập nhật biến global và lưu
-        db = latestDb;
-        localStorage.setItem('thads_v13', JSON.stringify(db));
-        localStorage.setItem('thads_last_sender', document.getElementById('inSender').value);
-
-        // 4. Gửi tín hiệu đồng bộ lên mây
-        window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
-
-        location.reload();
+        resetFormUI();
+        window.scrollTo(0, 0);
     }
 
-    // ========================================================
-    // TÍNH NĂNG XUẤT / NHẬP DỮ LIỆU & CÀI ĐẶT
-    // ========================================================
-    function toggleSettings() {
-        document.getElementById('settingsDropdown').classList.toggle('active');
-    }
+    // ---------------------------------------------------------------
+    // XUẤT / NHẬP DỮ LIỆU
+    // ---------------------------------------------------------------
+    function toggleSettings() { $('settingsDropdown').classList.toggle('active'); }
 
-    function exportData() {
-        let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-        let dataStr = JSON.stringify(latestDb, null, 2);
-        let blob = new Blob([dataStr], { type: 'application/json' });
-        let url = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = 'thads_backup_' + new Date().getTime() + '.json';
-        a.click();
+    function exportView() {
+        const recs = currentRecords();
+        if (!recs.length) return alert('Kỳ đang xem chưa có dữ liệu để xuất.');
+        downloadJson(recs, 'thads_backup_' + period.year + (period.month === 'all' ? '' : '-' + pad2(period.month)) + '_' + Date.now() + '.json');
+    }
+    function exportAll() {
+        showNotice('Đang tải toàn bộ dữ liệu để xuất, vui lòng chờ…');
+        toParent({ type: 'APP2_EXPORT_ALL' });
     }
 
     function importData(event) {
-        let file = event.target.files[0];
-        if(!file) return;
-        let reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                let importedData = JSON.parse(e.target.result);
-                if(!Array.isArray(importedData)) throw new Error("Format lỗi");
-
-                let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-                let dbMap = new Map();
-
-                // Lấy toàn bộ dữ liệu hiện tại
-                latestDb.forEach(item => dbMap.set(item.id, item));
-
-                // MERGE: Ghi đè nếu trùng ID, thêm vào nếu là ID mới, giữ nguyên các ID cũ
-                importedData.forEach(item => {
-                    dbMap.set(item.id, item);
-                });
-
-                latestDb = Array.from(dbMap.values());
-                db = latestDb; // Cập nhật ra toàn cục
-
-                localStorage.setItem('thads_v13', JSON.stringify(db));
-                window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
-
-                alert("Đã cập nhật (Merge) dữ liệu thành công!");
-                location.reload();
-            } catch(err) {
-                alert("File dữ liệu không hợp lệ!");
-            }
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            let arr;
+            try { arr = JSON.parse(ev.target.result); if (!Array.isArray(arr)) throw new Error('x'); }
+            catch (err) { alert("File dữ liệu không hợp lệ!"); return; }
+            arr = arr.filter(r => r && r.id != null && Array.isArray(r.recs));
+            if (!arr.length) { alert('File không có bản ghi hợp lệ.'); return; }
+            if (!confirm('Gộp ' + arr.length + ' bản ghi từ file vào hệ thống?\n(Trùng mã thì ghi đè, mã mới thì thêm vào, dữ liệu hiện có được giữ nguyên.)')) return;
+            uploadRecords(arr, ok => { if (ok) alert('Đã cập nhật (gộp) ' + arr.length + ' bản ghi thành công!'); });
         };
         reader.readAsText(file);
-        event.target.value = ''; // Xóa value để có thể nạp lại file cũ nếu cần
+        event.target.value = '';
     }
 
-    // ========================================================
-    // TÍNH NĂNG QUẢN LÝ NGƯỜI GỬI (SENDER MANAGER)
-    // ========================================================
-    let senders = JSON.parse(localStorage.getItem('thads_senders')) || [];
+    function legacyLocalList() {
+        try { const a = JSON.parse(localStorage.getItem('thads_v13') || 'null'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+    }
+    function refreshLegacyBtn() {
+        let n = 0;
+        try { n = legacyLocalList().length; } catch (e) {}
+        const b = $('btnLegacy');
+        b.style.display = n ? 'flex' : 'none';
+        $('legacyCount').textContent = n;
+    }
+    function importLegacyLocal() {
+        const arr = legacyLocalList().filter(r => r && r.id != null && Array.isArray(r.recs));
+        if (!arr.length) return alert('Máy này không còn dữ liệu cũ.');
+        if (!confirm('Máy này còn bản sao dữ liệu cũ (' + arr.length + ' dòng).\nNhập vào hệ thống? (gộp theo mã, không làm mất dữ liệu hiện có)')) return;
+        uploadRecords(arr, ok => {
+            if (!ok) return;
+            if (confirm('Đã nhập xong. Xóa bản sao cũ trên máy này để giải phóng bộ nhớ?')) {
+                try { localStorage.removeItem('thads_v13'); } catch (e) {}
+                refreshLegacyBtn();
+            }
+        });
+    }
 
+    // ---------------------------------------------------------------
+    // QUẢN LÝ NGƯỜI GỬI
+    // ---------------------------------------------------------------
     function toggleSenderDropdown(forceClose = false) {
-        const dropdown = document.getElementById('senderDropdown');
-        if (forceClose) {
-            dropdown.classList.remove('active');
-        } else {
-            dropdown.classList.toggle('active');
-            renderSenderList();
-        }
+        const dropdown = $('senderDropdown');
+        if (forceClose) { dropdown.classList.remove('active'); }
+        else { dropdown.classList.toggle('active'); renderSenderList(); }
     }
-
     function renderSenderList(filterText = '') {
-        const list = document.getElementById('senderList');
+        const list = $('senderList');
         list.innerHTML = '';
         const filtered = senders.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
-
         if (filtered.length === 0) {
             list.innerHTML = '<div style="padding:12px; color:#94a3b8; text-align:center; font-size:13px;">Không tìm thấy người gửi</div>';
             return;
         }
-
         filtered.forEach(sender => {
             const div = document.createElement('div');
             div.className = 'sender-item';
             div.innerHTML = `
-                <span onclick="selectSender('${sender.name}')" style="flex: 1;">${sender.name}</span>
+                <span data-name="${esc(sender.name)}" onclick="selectSender(this.dataset.name)" style="flex: 1;">${esc(sender.name)}</span>
                 <div class="sender-actions">
                     <button type="button" onclick="editSender(${sender.id}, event)" title="Sửa tên"><i class="fa-solid fa-pen"></i></button>
                     <button type="button" class="btn-del" onclick="deleteSender(${sender.id}, event)" title="Xóa tên"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-            `;
+                </div>`;
             list.appendChild(div);
         });
     }
-
-    function filterSenderList() {
-        const val = document.getElementById('inSender').value;
-        renderSenderList(val);
-        document.getElementById('senderDropdown').classList.add('active');
-    }
-
-    function selectSender(name) {
-        document.getElementById('inSender').value = name;
-        toggleSenderDropdown(true);
-    }
-
+    function filterSenderList() { renderSenderList($('inSender').value); $('senderDropdown').classList.add('active'); }
+    function selectSender(name) { $('inSender').value = name; toggleSenderDropdown(true); }
+    function saveSenders() { try { localStorage.setItem('thads_senders', JSON.stringify(senders)); } catch (e) {} }
     function addSender() {
         const name = prompt("Nhập tên người gửi mới:");
         if (name && name.trim() !== '') {
             senders.push({ id: Date.now(), name: name.trim() });
-            localStorage.setItem('thads_senders', JSON.stringify(senders));
-            renderSenderList(document.getElementById('inSender').value);
+            saveSenders();
+            renderSenderList($('inSender').value);
         }
     }
-
     function editSender(id, event) {
         event.stopPropagation();
         const sender = senders.find(s => s.id === id);
         if (sender) {
             const newName = prompt("Sửa tên người gửi:", sender.name);
-            if (newName && newName.trim() !== '') {
-                sender.name = newName.trim();
-                localStorage.setItem('thads_senders', JSON.stringify(senders));
-                renderSenderList(document.getElementById('inSender').value);
-            }
+            if (newName && newName.trim() !== '') { sender.name = newName.trim(); saveSenders(); renderSenderList($('inSender').value); }
         }
     }
-
     function deleteSender(id, event) {
         event.stopPropagation();
-        if (confirm("Xóa người gửi này khỏi danh sách?")) {
-            senders = senders.filter(s => s.id !== id);
-            localStorage.setItem('thads_senders', JSON.stringify(senders));
-            renderSenderList(document.getElementById('inSender').value);
-        }
+        if (confirm("Xóa người gửi này khỏi danh sách?")) { senders = senders.filter(s => s.id !== id); saveSenders(); renderSenderList($('inSender').value); }
     }
-
-    // Đóng dropdown khi click ra ngoài
-    document.addEventListener('click', function(e) {
-        const senderWrapper = document.getElementById('senderWrapper');
+    document.addEventListener('click', function (e) {
+        const senderWrapper = $('senderWrapper');
         if (senderWrapper && !senderWrapper.contains(e.target)) toggleSenderDropdown(true);
-
-        const settingsDropdown = document.getElementById('settingsDropdown');
+        const settingsDropdown = $('settingsDropdown');
         const settingsBtn = document.querySelector('.settings-btn');
-        if (settingsDropdown && settingsBtn && !settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
-            settingsDropdown.classList.remove('active');
-        }
+        if (settingsDropdown && settingsBtn && !settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) settingsDropdown.classList.remove('active');
     });
 
-    // ========================================================
-    // TÌM KIẾM, IN ẤN VÀ CHỨC NĂNG BẢNG (GIỮ NGUYÊN LOGIC)
-    // ========================================================
-    let searchTimeout = null;
-    function renderTable() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const q = document.getElementById('searchInput').value.toLowerCase();
-            const tbody = document.getElementById('dataTableBody');
-
-            const filtered = db.filter(i =>
-                i.recs.some(r => r.name.toLowerCase().includes(q)) ||
-                i.addr.toLowerCase().includes(q) ||
-                i.content.toLowerCase().includes(q) ||
-                (i.barcode && i.barcode.toLowerCase().includes(q))
-            );
-
-            const groups = filtered.reduce((acc, i) => { acc[i.day] = acc[i.day] || []; acc[i.day].push(i); return acc; }, {});
-
-            let htmlContent = '';
-
-            Object.keys(groups).reverse().forEach(day => {
-                htmlContent += `<tr class="date-row"><td colspan="6"><i class="fa-solid fa-calendar-days"></i>Ngày ${day}</td></tr>`;
-
-                groups[day].reverse().forEach(item => {
-                    const names = item.recs.map(r => `<span class="recv-name">${r.name}${r.year ? ', sinh năm ' + r.year : ''}</span>`).join(' và ');
-                    const badge = item.type === 'POST' ? '<span class="badge badge-post">Bưu điện</span>' : '<span class="badge badge-direct">Trực tiếp</span>';
-
-                    htmlContent += `
-                        <tr class="data-row">
-                            <td align="center"><input type="checkbox" class="row-cb" value="${item.id}"></td>
-                            <td align="center">${badge}</td>
-                            <td>
-                                ${names}
-                                ${item.addr && item.addr.trim() ? `<div class="recv-addr"><i class="fa-solid fa-location-dot"></i><span>${item.addr}</span></div>` : ''}
-                                ${item.phone ? `<div class="recv-phone"><i class="fa-solid fa-phone"></i><span>${item.phone}</span></div>` : ''}
-                            </td>
-                            <td style="white-space: pre-wrap;">${item.content}</td>
-                            <td align="center"><span class="barcode-text">${item.barcode || '-'}</span></td>
-                            <td>
-                                <div class="action-btns">
-                                    <button class="btn-icon btn-edit" title="Sửa" onclick="editItem(${item.id})"><i class="fa-solid fa-pen"></i></button>
-                                    <button class="btn-icon btn-copy" title="Copy" onclick="makeCopy(${item.id})"><i class="fa-solid fa-file-lines"></i></button>
-                                    <button class="btn-icon btn-delete" title="Xóa" onclick="deleteItem(${item.id})"><i class="fa-solid fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>`;
-                });
-            });
-
-            tbody.innerHTML = htmlContent;
-        }, 100);
+    // ---------------------------------------------------------------
+    // DANH SÁCH (phân trang 100 dòng)
+    // ---------------------------------------------------------------
+    function matches(r, q) {
+        let h = hay.get(r);
+        if (h === undefined) {
+            h = ((r.recs || []).map(x => x.name || '').join(' ') + '\n' + (r.addr || '') + '\n' + (r.content || '') + '\n' + (r.barcode || '') + '\n' + (r.phone || '')).toLowerCase();
+            hay.set(r, h);
+        }
+        return h.includes(q);
     }
 
-    function printA4() {
-        const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
-        if(ids.length === 0) return alert("Chọn dòng cần in!");
-        const selected = db.filter(i => ids.includes(i.id));
-        const isDirect = selected.every(i => i.type === 'DIRECT');
-        document.getElementById('a4MainTitle').innerText = isDirect ? "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO..." : "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO... QUA BƯU ĐIỆN";
-        document.getElementById('footerConfirmLabel').innerText = isDirect ? "XÁC NHẬN CỦA BÊN NHẬN" : "XÁC NHẬN CỦA BƯU ĐIỆN";
-        if(isDirect) document.body.classList.add('is-direct'); else document.body.classList.remove('is-direct');
-        const now = new Date(), isTick = document.getElementById('checkShowDate').checked;
-        document.getElementById('footerDate').innerText = `Liên Hương, ngày ${isTick ? now.getDate() : "…."} tháng ${now.getMonth()+1} năm ${now.getFullYear()}`;
-        document.getElementById('printSenderName').innerText = document.getElementById('inSender').value;
-        let h = ''; selected.forEach((item, i) => {
-            const n = item.recs.map(r => `${r.name}${r.year ? ', sinh năm '+r.year : ''}`).join(' và ');
-            const phoneText = item.phone ? `<br>SĐT: ${item.phone}` : '';
-            h += `<tr><td align="center">${i+1}</td><td><strong>${n}</strong><br>Địa chỉ: ${item.addr}${phoneText}</td><td style="white-space: pre-wrap;">${item.content}</td><td align="center" class="barcode-col"><strong>${item.barcode || ''}</strong></td></tr>`;
+    function renderTable(delay) {
+        clearTimeout(renderTimer);
+        renderTimer = setTimeout(doRender, delay === undefined ? 100 : delay);
+    }
+
+    function doRender() {
+        clearTimeout(renderTimer);
+        const q = $('searchInput').value.trim().toLowerCase();
+        const keys = periodKeys();
+        const loading = keys.filter(k => !received.has(k)).length;
+        let recs = currentRecords();
+        if (q) recs = recs.filter(r => matches(r, q));
+        recs.sort((a, b) => Number(b.id) - Number(a.id));
+        lastFiltered = recs;
+        const total = recs.length;
+        const shown = recs.slice(0, viewLimit);
+
+        let html = '', lastDay = null;
+        shown.forEach(item => {
+            const day = item.day || '';
+            if (day !== lastDay) {
+                html += `<tr class="date-row"><td colspan="6"><i class="fa-solid fa-calendar-days"></i>Ngày ${esc(day)}</td></tr>`;
+                lastDay = day;
+            }
+            const names = (item.recs || []).map(r => `<span class="recv-name">${esc(r.name)}${r.year ? ', sinh năm ' + esc(r.year) : ''}</span>`).join(' và ');
+            const badge = item.type === 'POST' ? '<span class="badge badge-post">Bưu điện</span>' : '<span class="badge badge-direct">Trực tiếp</span>';
+            const sid = esc(item.id);
+            html += `
+                <tr class="data-row">
+                    <td align="center"><input type="checkbox" class="row-cb" value="${sid}" ${selectedIds.has(String(item.id)) ? 'checked' : ''} onchange="onRowCb(this)"></td>
+                    <td align="center">${badge}</td>
+                    <td>
+                        ${names}
+                        ${item.addr && item.addr.trim() ? `<div class="recv-addr"><i class="fa-solid fa-location-dot"></i><span>${esc(item.addr)}</span></div>` : ''}
+                        ${item.phone ? `<div class="recv-phone"><i class="fa-solid fa-phone"></i><span>${esc(item.phone)}</span></div>` : ''}
+                    </td>
+                    <td style="white-space: pre-wrap;">${esc(item.content)}</td>
+                    <td align="center"><span class="barcode-text">${esc(item.barcode) || '-'}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-icon btn-edit" title="Sửa" onclick="editItem('${sid}')"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn-icon btn-copy" title="Copy" onclick="makeCopy('${sid}')"><i class="fa-solid fa-file-lines"></i></button>
+                            <button class="btn-icon btn-delete" title="Xóa" onclick="deleteItem('${sid}')"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
         });
-        document.getElementById('a4Body').innerHTML = h; window.print();
+        if (!html) {
+            html = `<tr><td colspan="6" style="text-align:center;color:#64748b;padding:40px 18px;font-weight:600;">${
+                !indexReady ? 'Đang kết nối máy chủ dữ liệu…' : (loading ? 'Đang tải dữ liệu…' : (q ? 'Không có dòng nào khớp từ khóa trong kỳ đang chọn.' : 'Kỳ này chưa có dữ liệu.'))}</td></tr>`;
+        }
+        $('dataTableBody').innerHTML = html;
+
+        let info = periodLabel() + ' · ' + total + ' dòng' + (q ? ' khớp tìm kiếm' : '');
+        if (selectedIds.size) info += ' · đã chọn ' + selectedIds.size;
+        if (loading && indexReady) info += ' · đang tải ' + loading + '/' + keys.length + ' tháng…';
+        $('viewInfo').textContent = info;
+
+        const bar = $('moreBar');
+        if (total > shown.length) {
+            bar.style.display = 'block';
+            $('moreInfo').textContent = 'Đang hiển thị ' + shown.length + ' / ' + total + ' dòng';
+            $('btnMore').textContent = 'Xem thêm ' + Math.min(PAGE, total - shown.length) + ' dòng';
+            $('btnSelAllFiltered').textContent = 'Chọn cả ' + total + ' dòng';
+        } else { bar.style.display = 'none'; }
+        const allVisibleChecked = shown.length > 0 && shown.every(r => selectedIds.has(String(r.id)));
+        $('selectAll').checked = allVisibleChecked;
+    }
+
+    function showMore() { viewLimit += PAGE; doRender(); }
+    function selectAllFiltered() { lastFiltered.forEach(r => selectedIds.add(String(r.id))); doRender(); }
+    function onRowCb(c) { if (c.checked) selectedIds.add(c.value); else selectedIds.delete(c.value); doRender(); }
+    function toggleAll() {
+        const s = $('selectAll').checked;
+        document.querySelectorAll('.row-cb').forEach(c => { if (s) selectedIds.add(c.value); else selectedIds.delete(c.value); });
+        doRender();
+    }
+    function selectedRecords() {
+        return Array.from(selectedIds).map(id => byId.get(id)).filter(Boolean).sort((a, b) => Number(a.id) - Number(b.id));
+    }
+
+    // ---------------------------------------------------------------
+    // IN ẤN
+    // ---------------------------------------------------------------
+    function printA4() {
+        const selected = selectedRecords();
+        if (selected.length === 0) return alert("Chọn dòng cần in!");
+        const isDirect = selected.every(i => i.type === 'DIRECT');
+        $('a4MainTitle').innerText = isDirect ? "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO..." : "DANH SÁCH GỬI CÔNG VĂN, QUYẾT ĐỊNH, THÔNG BÁO... QUA BƯU ĐIỆN";
+        $('footerConfirmLabel').innerText = isDirect ? "XÁC NHẬN CỦA BÊN NHẬN" : "XÁC NHẬN CỦA BƯU ĐIỆN";
+        if (isDirect) document.body.classList.add('is-direct'); else document.body.classList.remove('is-direct');
+        const now = new Date(), isTick = $('checkShowDate').checked;
+        $('footerDate').innerText = `Liên Hương, ngày ${isTick ? now.getDate() : "…."} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
+        $('printSenderName').innerText = $('inSender').value;
+        let h = '';
+        selected.forEach((item, i) => {
+            const n = (item.recs || []).map(r => `${esc(r.name)}${r.year ? ', sinh năm ' + esc(r.year) : ''}`).join(' và ');
+            const phoneText = item.phone ? `<br>SĐT: ${esc(item.phone)}` : '';
+            h += `<tr><td align="center">${i + 1}</td><td><strong>${n}</strong><br>Địa chỉ: ${esc(item.addr)}${phoneText}</td><td style="white-space: pre-wrap;">${esc(item.content)}</td><td align="center" class="barcode-col"><strong>${esc(item.barcode)}</strong></td></tr>`;
+        });
+        $('a4Body').innerHTML = h;
+        window.print();
     }
 
     function printTem() {
-        const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
-        if(ids.length === 0) return alert("Chọn dòng!");
-        const selected = db.filter(i => ids.includes(i.id));
+        const selected = selectedRecords();
+        if (selected.length === 0) return alert("Chọn dòng!");
         let h = '';
         selected.forEach(item => {
-            const names = item.recs.map(r => `<strong style="font-size:16px">${r.name}</strong> <span style="font-size:14px; font-weight:normal">${r.year ? '('+r.year+')' : ''}</span>`).join(', ');
+            const names = (item.recs || []).map(r => `<strong style="font-size:16px">${esc(r.name)}</strong> <span style="font-size:14px; font-weight:normal">${r.year ? '(' + esc(r.year) + ')' : ''}</span>`).join(', ');
             h += `<div style="width:75mm; height:50mm; padding:4mm; box-sizing:border-box; font-family:'Times New Roman', Times, serif; line-height:1.4; overflow:hidden; page-break-inside:avoid; text-align:justify;">
                     <div style="font-size:15px; margin-bottom:2mm;">Người nhận: ${names}</div>
-                    ${item.addr ? '<div style="font-size:15px; margin-bottom:2mm;">Đ/c: '+item.addr+'</div>' : ''}
-                    ${item.phone ? '<div style="font-size:15px;">SĐT: '+item.phone+'</div>' : ''}
+                    ${item.addr ? '<div style="font-size:15px; margin-bottom:2mm;">Đ/c: ' + esc(item.addr) + '</div>' : ''}
+                    ${item.phone ? '<div style="font-size:15px;">SĐT: ' + esc(item.phone) + '</div>' : ''}
                   </div>`;
         });
         const w = window.open('', '_blank');
@@ -726,99 +992,65 @@
         w.document.close();
     }
 
+    // ---------------------------------------------------------------
+    // SỬA / COPY / XÓA
+    // ---------------------------------------------------------------
+    function fillForm(item, isCopy) {
+        $('receiverContainer').innerHTML = '';
+        (item.recs || []).forEach(r => addNewReceiver(r.name, r.year, isCopy));
+        ['inAddr', 'inPhone', 'inContent', 'inBarcode'].forEach(fid => {
+            const el = $(fid);
+            el.value = item[fid.replace('in', '').toLowerCase()] || '';
+            if (isCopy) el.classList.add('is-copy'); else el.classList.remove('is-copy');
+        });
+    }
     function editItem(id) {
-        const item = db.find(x => x.id === id); editingId = id;
-        document.getElementById('receiverContainer').innerHTML = '';
-        item.recs.forEach(r => addNewReceiver(r.name, r.year));
-        ['inAddr', 'inPhone', 'inContent', 'inBarcode'].forEach(fid => {
-            document.getElementById(fid).value = item[fid.replace('in','').toLowerCase()] || '';
-        });
-        showActions('EDIT'); window.scrollTo(0,0);
+        const item = byId.get(String(id));
+        if (!item) return;
+        editingId = item.id;
+        fillForm(item, false);
+        showActions('EDIT'); window.scrollTo(0, 0);
     }
-
     function makeCopy(id) {
-        const item = db.find(x => x.id === id); editingId = null;
-        document.getElementById('receiverContainer').innerHTML = '';
-        item.recs.forEach(r => addNewReceiver(r.name, r.year, true));
-        ['inAddr', 'inPhone', 'inContent', 'inBarcode'].forEach(fid => {
-            const el = document.getElementById(fid);
-            el.value = item[fid.replace('in','').toLowerCase()] || '';
-            el.classList.add('is-copy');
-        });
-        showActions('COPY'); window.scrollTo(0,0);
+        const item = byId.get(String(id));
+        if (!item) return;
+        editingId = null;
+        fillForm(item, true);
+        showActions('COPY'); window.scrollTo(0, 0);
     }
-
-    function showActions(mode) {
-        document.getElementById('mainActionGroup').style.display = 'none';
-        document.getElementById('editActionGroup').style.display = mode === 'EDIT' ? 'flex' : 'none';
-        document.getElementById('copyActionGroup').style.display = mode === 'COPY' ? 'flex' : 'none';
-    }
-
-    function resetForm() { location.reload(); }
-
     function deleteItem(id) {
-        if(confirm("Xóa dòng này?")) {
-            // Luôn fetch DB mới nhất trước khi xóa để đồng bộ MERGE
-            let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-            latestDb = latestDb.filter(i => i.id !== id);
-            db = latestDb; // Cập nhật ra toàn cục
-
-            localStorage.setItem('thads_v13', JSON.stringify(db));
-            window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
-
-            renderTable();
+        const item = byId.get(String(id));
+        if (!item) return;
+        if (confirm("Xóa dòng này?")) {
+            const ops = [{ op: 'delete', month: monthKey(item), id: item.id }];
+            selectedIds.delete(String(id));
+            applyLocal(ops); sendOps(ops); doRender();
         }
     }
-
-    // XÓA NHIỀU DÒNG ĐÃ CHỌN (có cảnh báo, đồng bộ như xóa từng dòng)
     function deleteSelected() {
-        const ids = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => parseInt(c.value));
-        if(ids.length === 0) return alert("Vui lòng chọn ít nhất một dòng cần xóa!");
-        if(confirm("CẢNH BÁO: Bạn sắp xóa " + ids.length + " dòng đã chọn.\nDữ liệu đã xóa không thể khôi phục. Bạn có chắc chắn muốn xóa?")) {
-            let latestDb = JSON.parse(localStorage.getItem('thads_v13')) || [];
-            latestDb = latestDb.filter(i => !ids.includes(i.id));
-            db = latestDb;
-
-            localStorage.setItem('thads_v13', JSON.stringify(db));
-            window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: {'thads_v13': JSON.stringify(db)}}, '*');
-
-            document.getElementById('selectAll').checked = false;
-            renderTable();
+        const items = selectedRecords();
+        if (items.length === 0) return alert("Vui lòng chọn ít nhất một dòng cần xóa!");
+        if (confirm("CẢNH BÁO: Bạn sắp xóa " + items.length + " dòng đã chọn.\nDữ liệu đã xóa không thể khôi phục. Bạn có chắc chắn muốn xóa?")) {
+            const ops = items.map(r => ({ op: 'delete', month: monthKey(r), id: r.id }));
+            selectedIds.clear();
+            applyLocal(ops); sendOps(ops); doRender();
         }
     }
 
-    function toggleAll() { const s = document.getElementById('selectAll').checked; document.querySelectorAll('.row-cb').forEach(c => c.checked = s); }
-
+    // ---------------------------------------------------------------
+    // KHỞI ĐỘNG
+    // ---------------------------------------------------------------
     window.onload = () => {
-        renderTable();
-        document.getElementById('inSender').value = localStorage.getItem('thads_last_sender') || '';
+        try { $('inSender').value = localStorage.getItem('thads_last_sender') || ''; } catch (e) {}
+        fillPeriodSelects();
+        doRender();
+        refreshLegacyBtn();
+        toParent({ type: 'APP2_READY' });
+        setTimeout(() => {
+            if (!indexReady) showNotice('Chưa kết nối được máy chủ dữ liệu. Hãy nhấn Ctrl + F5 để tải lại. Nếu vẫn lỗi, hãy chắc chắn index.html và app2.html đều là bản mới.', 'error');
+        }, 12000);
     };
-</script>
-<script>
-window.addEventListener('message', function(e) {
-    if (e.data.type === 'GET_DATA') {
-        const val = localStorage.getItem('thads_v13');
-        const data = val ? {'thads_v13': val} : {};
-        window.parent.postMessage({type: 'DATA_RETURN', app: 'app2', data: data}, '*');
-    }
-    if (e.data.type === 'RESTORE_DATA') {
-        const d = e.data.payload;
-        if(d) {
-            Object.keys(d).forEach(k => localStorage.setItem(k, d[k]));
-            // KHÔNG reload trang: giữ nguyên nội dung người dùng đang nhập dở ở form.
-            // Chỉ cập nhật dữ liệu mới nhận về và vẽ lại bảng danh sách.
-            try { db = JSON.parse(localStorage.getItem('thads_v13')) || []; } catch(err) {}
-            if (d['thads_senders'] !== undefined) {
-                try { senders = JSON.parse(localStorage.getItem('thads_senders')) || []; } catch(err) {}
-            }
-            const checked = Array.from(document.querySelectorAll('.row-cb:checked')).map(c => c.value);
-            renderTable();
-            setTimeout(() => {
-                document.querySelectorAll('.row-cb').forEach(c => { if (checked.includes(c.value)) c.checked = true; });
-            }, 250);
-        }
-    }
-});
+
 </script>
 </body>
 </html>

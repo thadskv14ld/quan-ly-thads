@@ -16,9 +16,13 @@
         .userbox .who { background: rgba(255,255,255,0.1); padding: 5px 14px; border-radius: 20px; white-space: nowrap; }
         .userbox button { background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
         .userbox button:hover { background: rgba(255,255,255,0.25); }
+        .viewwrap { display: none; align-items: center; gap: 6px; color: #fbbf24; font-weight: 600; }
+        .viewwrap select { background: #1e293b; color: white; border: 1px solid #475569; border-radius: 8px; padding: 4px 8px; font-size: 12px; max-width: 200px; }
         .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: white; background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; white-space: nowrap; }
         .led { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; }
         .led.syncing { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+        #viewBanner { display: none; align-items: center; justify-content: center; gap: 14px; background: #f59e0b; color: #1c1917; font-size: 13px; font-weight: 700; padding: 7px 12px; }
+        #viewBanner button { border: 0; background: #1c1917; color: #fff; border-radius: 16px; padding: 4px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
         #container { flex: 1; position: relative; background: #f1f5f9; }
         iframe { width: 100%; height: 100%; border: none; position: absolute; visibility: hidden; }
         iframe.active { visibility: visible; z-index: 10; }
@@ -42,15 +46,15 @@
 
         /* ADMIN */
         .adm h2 { margin: 0 0 4px; font-size: 20px; }
-        .adm .hint { color: #64748b; font-size: 13px; margin-bottom: 18px; }
+        .adm .hint { color: #64748b; font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
         .adm .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(15,23,42,0.05); }
-        .adm .card h3 { margin: 0 0 14px; font-size: 15px; text-transform: uppercase; }
+        .adm .card h3 { margin: 0 0 10px; font-size: 15px; text-transform: uppercase; }
         .adm .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
         .adm label.l { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase; }
         .adm input[type=text], .adm input[type=password], .adm select { width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: #f8fafc; }
         .adm .checks { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0; }
         .adm .checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
-        .adm button.primary { background: #2563eb; color: #fff; border: 0; border-radius: 10px; padding: 10px 20px; font-weight: 700; cursor: pointer; }
+        .adm button.primary { background: #2563eb; color: #fff; border: 0; border-radius: 10px; padding: 10px 20px; font-weight: 700; cursor: pointer; margin-top: 12px; }
         .adm button.small { border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
         .adm button.small.save { background: #059669; color: #fff; border-color: #059669; }
         .adm table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -59,6 +63,7 @@
         .adm .msg { margin-top: 10px; font-size: 13px; font-weight: 600; }
         .adm .msg.ok { color: #059669; } .adm .msg.err { color: #dc2626; }
         .tbl-wrap { overflow-x: auto; }
+        .adm .note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #92400e; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -83,6 +88,9 @@
 <div class="header" id="header" style="display:none">
     <div class="tabs" id="tabs"></div>
     <div class="userbox">
+        <span class="viewwrap" id="viewWrap">Xem dữ liệu của:
+            <select id="viewSel"></select>
+        </span>
         <span class="who" id="whoLabel"></span>
         <button type="button" id="btnChangePw">Đổi mật khẩu</button>
         <button type="button" id="btnLogout">Đăng xuất</button>
@@ -92,11 +100,12 @@
         <div id="led" class="led"></div>
     </div>
 </div>
+<div id="viewBanner"></div>
 <div id="container" style="display:none"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, get, onValue, child, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, set, get, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -109,29 +118,39 @@ const firebaseConfig = {
     appId: "1:63279666579:web:3670e6bf283357c79d8466"
 };
 
+/* Muốn thêm app mới: thêm 1 dòng vào danh sách này */
 const APPS = [
     { key: 'app1', name: '1. CHUYỂN KHOẢN', src: 'app1.html' },
     { key: 'app2', name: '2. BƯU ĐIỆN',     src: 'app2.html' },
     { key: 'app3', name: '3. ĐỀ NGHỊ CHI',  src: 'app3.html' },
     { key: 'app4', name: '4. TRA CỨU LUẬT', src: 'app-tra-cuu-van-ban-luat-v7.html' }
 ];
-const FAKE_DOMAIN = '@thads.local'; // gõ "nguyenvana" sẽ thành nguyenvana@thads.local
+/* Các khóa dữ liệu mà mỗi app lưu trong trình duyệt (xóa khi đổi người xem / chế độ riêng) */
+const LOCAL_KEYS = {
+    app1: ['thads_v5', 'thads_v5_ts'],
+    app4: ['thads.docs.v1', 'thads.order.v1']
+};
+const FAKE_DOMAIN = '@thads.local';
 
 const fbApp = initializeApp(firebaseConfig);
 const db = getDatabase(fbApp);
 const auth = getAuth(fbApp);
-const dbRef = ref(db, 'thads_data');
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toEmail = u => { u = u.trim(); return u.includes('@') ? u : u.toLowerCase() + FAKE_DOMAIN; };
 
 let me = null;            // { uid, name, role, apps }
-let allowed = [];         // danh sách app được phép
-let frames = {};          // key -> iframe
-let unsubs = [];
-let lastData = {};        // key -> dữ liệu mây mới nhất
-let secondary = null;     // app phụ để admin tạo tài khoản mà không bị đăng xuất
+let allowed = [];         // app được phép
+let modes = {};           // { app1: 'private' | 'shared' }  (không có = shared)
+let viewUid = null;       // đang làm việc trên dữ liệu riêng của ai
+let usersCache = {};      // danh sách tài khoản (chỉ admin)
+let frames = {}, loaded = {}, sentRaw = {}, lastData = {};
+let unsubs = [], cfgUnsub = null, currentKey = null;
+let secondary = null;
+
+/* Đường dẫn dữ liệu của một app theo chế độ */
+const pathFor = key => modes[key] === 'private' ? 'thads_user/' + viewUid + '/' + key : 'thads_data/' + key;
 
 /* ===================== ĐĂNG NHẬP ===================== */
 const errMap = {
@@ -148,14 +167,10 @@ const errText = e => errMap[e && e.code] || ('Lỗi: ' + ((e && e.message) || e)
 
 $('loginForm').addEventListener('submit', async ev => {
     ev.preventDefault();
-    $('lgErr').textContent = '';
+    $('lgErr').textContent = ''; $('lgErr').style.color = '#dc2626';
     $('lgBtn').disabled = true;
-    try {
-        await signInWithEmailAndPassword(auth, toEmail($('lgUser').value), $('lgPass').value);
-    } catch (e) {
-        $('lgErr').textContent = errText(e);
-        $('lgBtn').disabled = false;
-    }
+    try { await signInWithEmailAndPassword(auth, toEmail($('lgUser').value), $('lgPass').value); }
+    catch (e) { $('lgErr').textContent = errText(e); $('lgBtn').disabled = false; }
 });
 $('lgForgot').addEventListener('click', async () => {
     const u = $('lgUser').value.trim();
@@ -167,8 +182,7 @@ $('lgForgot').addEventListener('click', async () => {
 onAuthStateChanged(auth, async user => {
     if (!user) { showLogin(); return; }
     try {
-        const snap = await get(ref(db, 'users/' + user.uid));
-        const p = snap.val();
+        const p = (await get(ref(db, 'users/' + user.uid))).val();
         if (!p || p.active !== true) {
             await signOut(auth);
             $('lgErr').style.color = '#dc2626';
@@ -176,7 +190,7 @@ onAuthStateChanged(auth, async user => {
             return;
         }
         me = { uid: user.uid, name: p.name || user.email, role: p.role || 'user', apps: p.apps || {} };
-        startSession();
+        await startSession();
     } catch (e) {
         await signOut(auth);
         $('lgErr').textContent = 'Không đọc được thông tin tài khoản: ' + errText(e);
@@ -186,38 +200,46 @@ onAuthStateChanged(auth, async user => {
 function showLogin() {
     $('loginScreen').style.display = 'flex';
     $('header').style.display = 'none';
+    $('viewBanner').style.display = 'none';
     $('container').style.display = 'none';
     $('lgBtn').disabled = false;
     $('lgPass').value = '';
 }
 
 /* ===================== PHIÊN LÀM VIỆC ===================== */
-function startSession() {
+async function startSession() {
     const isAdmin = me.role === 'admin';
     allowed = APPS.filter(a => isAdmin || me.apps[a.key] === true);
+    viewUid = me.uid;
+
+    try { modes = (await get(ref(db, 'config/appModes'))).val() || {}; } catch (e) { modes = {}; }
+
+    // Nếu cấu hình riêng/chung thay đổi so với lần trước thì xóa bộ nhớ tạm của các app
+    const sigNow = JSON.stringify(allowed.map(a => [a.key, modes[a.key] === 'private' ? 'p' : 's']));
+    let sigOld = null; try { sigOld = localStorage.getItem('thads_modes_sig'); } catch (e) {}
+    const changed = sigOld !== null && sigOld !== sigNow;
+    try { localStorage.setItem('thads_modes_sig', sigNow); } catch (e) {}
+
+    if (isAdmin) {
+        try { usersCache = (await get(ref(db, 'users'))).val() || {}; } catch (e) { usersCache = {}; }
+        fillViewSelect();
+    }
 
     $('loginScreen').style.display = 'none';
     $('header').style.display = 'flex';
     $('container').style.display = 'block';
     $('whoLabel').textContent = me.name + (isAdmin ? ' (Quản trị)' : '');
+    $('viewWrap').style.display = isAdmin ? 'inline-flex' : 'none';
     $('lgErr').textContent = ''; $('lgErr').style.color = '#dc2626';
 
     const tabs = $('tabs'), cont = $('container');
-    tabs.innerHTML = ''; cont.innerHTML = ''; frames = {};
-
+    tabs.innerHTML = ''; cont.innerHTML = '';
     allowed.forEach(a => {
         const b = document.createElement('button');
         b.className = 'tab'; b.dataset.key = a.key; b.textContent = a.name;
         b.onclick = () => switchApp(a.key);
         tabs.appendChild(b);
-        const f = document.createElement('iframe');
-        f.id = 'f_' + a.key; f.src = a.src;
-        // app1, app2, app4 nhận lại dữ liệu mây khi iframe tải xong (app3 tự reload khi nhận dữ liệu nên không gửi lại)
-        if (a.key !== 'app3') f.addEventListener('load', () => sendToApp(a.key));
-        cont.appendChild(f);
-        frames[a.key] = f;
     });
-
     if (isAdmin) {
         const b = document.createElement('button');
         b.className = 'tab admin'; b.dataset.key = 'admin'; b.textContent = '⚙ QUẢN TRỊ NGƯỜI DÙNG';
@@ -226,51 +248,126 @@ function startSession() {
         const p = document.createElement('div');
         p.id = 'adminPanel'; cont.appendChild(p);
     }
-
     if (!allowed.length && !isAdmin) {
-        cont.innerHTML = '<div style="padding:40px;text-align:center;color:#475569;font-size:16px">Tài khoản của bạn chưa được cấp quyền dùng app nào.<br>Vui lòng liên hệ quản trị viên.</div>';
+        cont.insertAdjacentHTML('beforeend', '<div style="padding:40px;text-align:center;color:#475569;font-size:16px">Tài khoản của bạn chưa được cấp quyền dùng app nào.<br>Vui lòng liên hệ quản trị viên.</div>');
     }
 
-    // Lắng nghe riêng từng app được phép (không nghe cả thads_data vì sẽ bị từ chối quyền đọc)
-    unsubs.forEach(u => u()); unsubs = []; lastData = {};
+    await loadWorkspace(changed);
+    currentKey = allowed[0] ? allowed[0].key : (isAdmin ? 'admin' : null);
+    if (currentKey) switchApp(currentKey);
+
+    // Quản trị viên đổi cấu hình riêng/chung trong lúc đang dùng: tải lại để áp dụng
+    if (cfgUnsub) cfgUnsub();
+    let first = true;
+    cfgUnsub = onValue(ref(db, 'config/appModes'), snap => {
+        const v = snap.val() || {};
+        if (first) { first = false; return; }
+        if (JSON.stringify(v) !== JSON.stringify(modes)) {
+            alert('Quản trị viên vừa thay đổi cách lưu dữ liệu. Hệ thống sẽ tải lại.');
+            location.reload();
+        }
+    }, () => {});
+}
+
+/* Xóa dữ liệu tạm trong trình duyệt của các app chỉ định */
+async function clearCaches(keys) {
+    keys.forEach(k => { (LOCAL_KEYS[k] || []).forEach(x => { try { localStorage.removeItem(x); } catch (e) {} }); });
+    if (keys.includes('app3')) {
+        await new Promise(res => {
+            try {
+                const r = indexedDB.deleteDatabase('c09_thads_v6');
+                r.onsuccess = r.onerror = r.onblocked = () => res();
+                setTimeout(res, 1500);
+            } catch (e) { res(); }
+        });
+    }
+}
+
+/* Dựng lại các app và lắng nghe đúng đường dẫn dữ liệu */
+async function loadWorkspace(clearAll) {
+    unsubs.forEach(u => u()); unsubs = [];
+    mStopAll();
+    Object.values(frames).forEach(f => f.remove());
+    frames = {}; loaded = {}; sentRaw = {}; lastData = {};
+
+    // App chạy chế độ riêng: luôn xóa dữ liệu tạm để không lẫn dữ liệu người khác
+    const toClear = allowed.filter(a => clearAll || modes[a.key] === 'private').map(a => a.key);
+    await clearCaches(toClear);
+
+    const cont = $('container');
     allowed.forEach(a => {
-        const un = onValue(child(dbRef, a.key), snap => {
+        const f = document.createElement('iframe');
+        f.id = 'f_' + a.key; f.src = a.src;
+        f.addEventListener('load', () => { loaded[a.key] = true; if (MONTHLY[a.key]) mStart(a.key); else sendToApp(a.key); });
+        cont.appendChild(f);
+        frames[a.key] = f;
+    });
+
+    allowed.forEach(a => {
+        if (MONTHLY[a.key]) return; // App 2, 3 lưu theo tháng, xử lý riêng
+        const un = onValue(ref(db, pathFor(a.key)), snap => {
             const v = snap.val();
             if (v) { lastData[a.key] = v; sendToApp(a.key); }
         }, err => console.error('Không đọc được ' + a.key, err));
         unsubs.push(un);
     });
 
-    const first = allowed[0] ? allowed[0].key : (isAdmin ? 'admin' : null);
-    if (first) switchApp(first);
+    updateBanner();
+    if (currentKey) switchApp(currentKey);
 }
 
 function sendToApp(key) {
     const raw = lastData[key], f = frames[key];
-    if (!raw || !f || !f.contentWindow) return;
+    if (!raw || !f || !loaded[key] || !f.contentWindow) return;
+    if (key === 'app3') { if (sentRaw.app3 === raw) return; sentRaw.app3 = raw; } // app3 tự tải lại khi nhận dữ liệu
     try {
-        const payload = JSON.parse(raw);
-        f.contentWindow.postMessage({ type: key === 'app3' ? 'RESTORE_DATA_IDB' : 'RESTORE_DATA', payload }, '*');
+        f.contentWindow.postMessage({ type: key === 'app3' ? 'RESTORE_DATA_IDB' : 'RESTORE_DATA', payload: JSON.parse(raw) }, '*');
     } catch (e) { console.error('Lỗi gửi dữ liệu ' + key, e); }
 }
 
 window.switchApp = function (key) {
+    currentKey = key;
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.key === key));
     Object.keys(frames).forEach(k => frames[k].classList.toggle('active', k === key));
     const ap = $('adminPanel');
     if (ap) { ap.classList.toggle('active', key === 'admin'); if (key === 'admin') renderAdmin(); }
 };
 
+/* ===================== ADMIN XEM DỮ LIỆU TỪNG NGƯỜI ===================== */
+function fillViewSelect() {
+    const sel = $('viewSel');
+    sel.innerHTML = '<option value="">Dữ liệu của tôi</option>' +
+        Object.entries(usersCache).filter(([uid]) => uid !== me.uid)
+            .map(([uid, u]) => '<option value="' + esc(uid) + '">' + esc(u.name || u.email || uid) + '</option>').join('');
+    sel.value = '';
+}
+$('viewSel').addEventListener('change', async e => {
+    viewUid = e.target.value || me.uid;
+    await loadWorkspace(false);
+});
+window.backToMine = async () => { viewUid = me.uid; $('viewSel').value = ''; await loadWorkspace(false); };
+
+function updateBanner() {
+    const b = $('viewBanner');
+    const hasPriv = allowed.some(a => modes[a.key] === 'private');
+    if (me && viewUid !== me.uid && hasPriv) {
+        const name = (usersCache[viewUid] || {}).name || viewUid;
+        b.style.display = 'flex';
+        b.innerHTML = '<span>Đang xem và sửa dữ liệu RIÊNG của: ' + esc(name) + ' (các app dùng chung vẫn giữ nguyên)</span><button type="button" onclick="backToMine()">Quay về dữ liệu của tôi</button>';
+    } else { b.style.display = 'none'; b.innerHTML = ''; }
+}
+
 /* ===================== NHẬN LỆNH LƯU TỪ CÁC APP ===================== */
 window.addEventListener('message', async e => {
     if (!e.data || (e.data.type !== 'DATA_RETURN' && e.data.type !== 'DATA_RETURN_IDB')) return;
     const appName = e.data.app;
-    if (!me || !allowed.some(a => a.key === appName)) return; // chặn app không có quyền
+    if (!me || !allowed.some(a => a.key === appName)) return;
     const led = $('led'), st = $('statusText');
     led.className = 'led syncing'; st.innerText = 'Đang đồng bộ...';
+    const path = pathFor(appName);
     try {
         if (appName === 'app1') {
-            await runTransaction(child(dbRef, appName), currentData => {
+            await runTransaction(ref(db, path), currentData => {
                 let localData = [];
                 try { localData = JSON.parse(e.data.data['thads_v5']); } catch (err) { return; }
                 let cloudData = [];
@@ -299,7 +396,9 @@ window.addEventListener('message', async e => {
                 return JSON.stringify({ 'thads_v5': JSON.stringify(mergedArray) });
             });
         } else {
-            await set(child(dbRef, appName), JSON.stringify(e.data.data));
+            const str = JSON.stringify(e.data.data);
+            if (appName === 'app3') sentRaw.app3 = str; // dữ liệu vừa lưu chính là dữ liệu app3 đang có, khỏi tải lại
+            await set(ref(db, path), str);
         }
         led.className = 'led'; st.innerText = 'Sẵn sàng';
     } catch (error) {
@@ -308,13 +407,175 @@ window.addEventListener('message', async e => {
     }
 });
 
+/* ===================== APP 2 và APP 3: LƯU THEO THÁNG ===================== */
+/* Cấu trúc trên máy chủ:  <gốc app>/m/<YYYY-MM> = chuỗi JSON các bản ghi của tháng
+                           <gốc app>/idx/<YYYY-MM> = số bản ghi của tháng            */
+const MONTHLY = {
+    app2: { label: 'App 2', prefix: 'APP2_', dateField: 'day',         legacy: s => { const o = JSON.parse(s); return JSON.parse(o['thads_v13'] || '[]'); } },
+    app3: { label: 'App 3', prefix: 'APP3_', dateField: 'dateCreated', legacy: s => JSON.parse(s) }
+};
+const MON = {};
+Object.keys(MONTHLY).forEach(k => { MON[k] = { token: 0, un: [], watched: new Set(), base: null, lastIdx: null }; });
+const MONTH_RE = /^\d{4}-\d{2}$/;
+function mPost(key, msg) { const f = frames[key]; if (f && f.contentWindow) f.contentWindow.postMessage(msg, '*'); }
+function mStop(key) { const m = MON[key]; m.un.forEach(u => { try { u(); } catch (e) {} }); m.un = []; m.watched.clear(); m.token++; m.lastIdx = null; }
+function mStopAll() { Object.keys(MONTHLY).forEach(mStop); }
+function mMonthKey(key, r) {
+    const m = String((r && r[MONTHLY[key].dateField]) || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return m[3] + '-' + String(m[2]).padStart(2, '0');
+    const d = new Date(Number(r && r.id));
+    if (!isNaN(d.getTime())) return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    return '0000-00';
+}
+function downloadText(name, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+}
+
+/* Nâng cấp dữ liệu cũ (một khối) sang cấu trúc theo tháng */
+async function mMigrate(key, base, legacyStr) {
+    const cfg = MONTHLY[key];
+    mPost(key, { type: cfg.prefix + 'NOTICE', message: 'Đang nâng cấp dữ liệu ' + cfg.label + ' sang cách lưu theo tháng (chỉ làm một lần), vui lòng chờ và đừng đóng trang…' });
+    let arr = [];
+    try { arr = cfg.legacy(legacyStr); if (!Array.isArray(arr)) arr = []; }
+    catch (e) { throw new Error('Dữ liệu ' + cfg.label + ' cũ không đọc được, chưa nâng cấp.'); }
+    if (me.role === 'admin') {
+        try { downloadText('thads_' + key + '_SAO_LUU_truoc_khi_nang_cap_' + Date.now() + '.json', JSON.stringify(arr)); } catch (e) {}
+    }
+    const groups = {};
+    arr.forEach(r => { if (r && r.id != null) { const k = mMonthKey(key, r); (groups[k] = groups[k] || []).push(r); } });
+    const m = {}, idx = {};
+    Object.keys(groups).forEach(k => { m[k] = JSON.stringify(groups[k]); idx[k] = groups[k].length; });
+    await set(ref(db, base), { m, idx });
+    mPost(key, { type: cfg.prefix + 'NOTICE', message: '' });
+}
+
+async function mStart(key) {
+    if (!frames[key]) return;
+    const cfg = MONTHLY[key], st = MON[key];
+    mStop(key);
+    const tk = st.token, base = pathFor(key);
+    st.base = base;
+    try {
+        const idxSnap = await get(ref(db, base + '/idx'));
+        if (tk !== st.token) return;
+        if (!idxSnap.exists()) {
+            const rootSnap = await get(ref(db, base));
+            if (tk !== st.token) return;
+            const v = rootSnap.val();
+            if (typeof v === 'string') { await mMigrate(key, base, v); if (tk !== st.token) return; }
+        }
+    } catch (e) {
+        mPost(key, { type: cfg.prefix + 'NOTICE', level: 'error', message: 'Không đọc/nâng cấp được dữ liệu ' + cfg.label + ': ' + errText(e) });
+        return;
+    }
+    const un = onValue(ref(db, base + '/idx'), snap => {
+        if (tk !== st.token) return;
+        st.lastIdx = snap.val() || {};
+        mPost(key, { type: cfg.prefix + 'INDEX', idx: st.lastIdx });
+    }, err => mPost(key, { type: cfg.prefix + 'NOTICE', level: 'error', message: 'Không đọc được danh mục ' + cfg.label + ': ' + errText(err) }));
+    st.un.push(un);
+}
+
+function parseMonth(v) {
+    let data = [];
+    if (v) { try { data = JSON.parse(v); } catch (e) { data = []; } }
+    return Array.isArray(data) ? data : [];
+}
+
+function mWatch(key, months) {
+    const cfg = MONTHLY[key], st = MON[key], tk = st.token, base = st.base;
+    if (!base) return;
+    months.filter(k => MONTH_RE.test(k)).forEach(month => {
+        if (st.watched.has(month)) return;
+        st.watched.add(month);
+        const un = onValue(ref(db, base + '/m/' + month), snap => {
+            if (tk !== st.token) return;
+            mPost(key, { type: cfg.prefix + 'MONTH', month, data: parseMonth(snap.val()) });
+        }, err => mPost(key, { type: cfg.prefix + 'NOTICE', level: 'error', message: 'Không đọc được tháng ' + month + ': ' + errText(err) }));
+        st.un.push(un);
+    });
+}
+
+async function mRefresh(key, months) {
+    const cfg = MONTHLY[key], base = MON[key].base; if (!base) return;
+    for (const month of months.filter(k => MONTH_RE.test(k))) {
+        const snap = await get(ref(db, base + '/m/' + month));
+        mPost(key, { type: cfg.prefix + 'MONTH', month, data: parseMonth(snap.val()) });
+    }
+}
+
+/* Áp dụng thao tác thêm/sửa/xóa trực tiếp lên từng tháng (an toàn khi nhiều người cùng lưu) */
+async function mOps(key, d) {
+    const cfg = MONTHLY[key];
+    const led = $('led'), st = $('statusText');
+    led.className = 'led syncing'; st.innerText = 'Đang đồng bộ...';
+    try {
+        const base = MON[key].base; if (!base) throw new Error('Chưa kết nối');
+        const by = {};
+        (Array.isArray(d.ops) ? d.ops : []).forEach(o => {
+            if (!o || !MONTH_RE.test(o.month)) return;
+            if (o.op === 'delete' && o.id != null) (by[o.month] = by[o.month] || []).push(o);
+            else if (o.op === 'upsert' && o.rec && o.rec.id != null) (by[o.month] = by[o.month] || []).push(o);
+        });
+        for (const month of Object.keys(by)) {
+            const mref = ref(db, base + '/m/' + month);
+            const res = await runTransaction(mref, cur => {
+                let arr = [];
+                if (cur) { try { arr = JSON.parse(cur); } catch (e) { return; } }
+                if (!Array.isArray(arr)) arr = [];
+                const map = new Map(arr.map(r => [String(r.id), r]));
+                by[month].forEach(o => { if (o.op === 'delete') map.delete(String(o.id)); else map.set(String(o.rec.id), o.rec); });
+                return map.size ? JSON.stringify(Array.from(map.values())) : null;
+            });
+            if (!res.committed) throw new Error('Không ghi được dữ liệu tháng ' + month);
+            let n = 0; try { n = JSON.parse(res.snapshot.val() || '[]').length; } catch (e) {}
+            await set(ref(db, base + '/idx/' + month), n || null);
+        }
+        mPost(key, { type: cfg.prefix + 'ACK', reqId: d.reqId, ok: true });
+        led.className = 'led'; st.innerText = 'Sẵn sàng';
+    } catch (e) {
+        console.error('Lỗi lưu ' + cfg.label + ':', e);
+        mPost(key, { type: cfg.prefix + 'ACK', reqId: d.reqId, ok: false, error: errText(e) });
+        led.className = 'led'; st.innerText = 'Lỗi! (có thể không đủ quyền)';
+    }
+}
+
+async function mExportAll(key) {
+    const cfg = MONTHLY[key];
+    try {
+        const snap = await get(ref(db, MON[key].base + '/m'));
+        const o = snap.val() || {}, all = [];
+        Object.keys(o).forEach(k => { parseMonth(o[k]).forEach(r => all.push(r)); });
+        mPost(key, { type: cfg.prefix + 'EXPORT_DATA', records: all });
+    } catch (e) { mPost(key, { type: cfg.prefix + 'NOTICE', level: 'error', message: 'Không xuất được: ' + errText(e) }); }
+}
+
+window.addEventListener('message', async e => {
+    const d = e.data;
+    if (!d || typeof d.type !== 'string') return;
+    const key = Object.keys(MONTHLY).find(k => d.type.indexOf(MONTHLY[k].prefix) === 0);
+    if (!key) return;
+    const p = MONTHLY[key].prefix;
+    if (!me || !frames[key] || e.source !== frames[key].contentWindow) return;
+    if (!allowed.some(a => a.key === key)) return;
+    if (d.type === p + 'READY') { if (MON[key].lastIdx) mPost(key, { type: p + 'INDEX', idx: MON[key].lastIdx }); }
+    else if (d.type === p + 'WATCH') mWatch(key, Array.isArray(d.months) ? d.months : []);
+    else if (d.type === p + 'REFRESH') { try { await mRefresh(key, Array.isArray(d.months) ? d.months : []); } catch (err) {} }
+    else if (d.type === p + 'OPS') await mOps(key, d);
+    else if (d.type === p + 'EXPORT_ALL') await mExportAll(key);
+});
+
 /* ===================== ĐĂNG XUẤT / ĐỔI MẬT KHẨU ===================== */
 $('btnLogout').addEventListener('click', async () => {
     if (!confirm('Đăng xuất? Dữ liệu đã đồng bộ lên mây sẽ không bị mất.')) return;
     unsubs.forEach(u => u()); unsubs = [];
-    $('container').innerHTML = ''; // gỡ các app để giải phóng IndexedDB
+    mStopAll();
+    if (cfgUnsub) { cfgUnsub(); cfgUnsub = null; }
+    $('container').innerHTML = '';
     try { await signOut(auth); } catch (e) {}
-    // Xóa dữ liệu lưu trong trình duyệt để người dùng khác dùng chung máy không thấy
     try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
     const done = () => location.reload();
     try {
@@ -335,16 +596,16 @@ $('btnChangePw').addEventListener('click', async () => {
     } catch (e) { alert(errText(e)); }
 });
 
-/* ===================== QUẢN TRỊ NGƯỜI DÙNG ===================== */
+/* ===================== QUẢN TRỊ ===================== */
 async function renderAdmin() {
     const p = $('adminPanel');
-    p.innerHTML = '<div class="adm"><h2>Quản trị người dùng</h2><div class="hint">Đang tải…</div></div>';
+    p.innerHTML = '<div class="adm"><h2>Quản trị</h2><div class="hint">Đang tải…</div></div>';
     let users = {};
-    try { users = (await get(ref(db, 'users'))).val() || {}; }
+    try { users = (await get(ref(db, 'users'))).val() || {}; usersCache = users; }
     catch (e) { p.innerHTML = '<div class="adm"><div class="msg err">Không đọc được danh sách: ' + esc(errText(e)) + '</div></div>'; return; }
 
-    const appChecks = (prefix, sel) => APPS.map(a =>
-        `<label><input type="checkbox" data-app="${a.key}" ${sel && sel[a.key] ? 'checked' : ''}> ${esc(a.name)}</label>`).join('');
+    const appChecks = APPS.map(a => `<label><input type="checkbox" data-app="${a.key}"> ${esc(a.name)}</label>`).join('');
+    const userOpts = Object.entries(users).map(([uid, u]) => `<option value="${esc(uid)}">${esc(u.name || u.email)} (${esc((u.email || '').replace(FAKE_DOMAIN, ''))})</option>`).join('');
 
     const rows = Object.entries(users).map(([uid, u]) => {
         const self = uid === me.uid;
@@ -357,34 +618,91 @@ async function renderAdmin() {
         </tr>`;
     }).join('');
 
+    const modeRows = APPS.map(a => `<tr><td><b>${esc(a.name)}</b></td><td>
+        <select data-mode="${a.key}">
+            <option value="shared" ${modes[a.key] !== 'private' ? 'selected' : ''}>Dùng chung (mọi người có quyền cùng thấy một danh sách)</option>
+            <option value="private" ${modes[a.key] === 'private' ? 'selected' : ''}>Riêng từng người (mỗi người chỉ thấy dữ liệu của mình)</option>
+        </select></td></tr>`).join('');
+
     p.innerHTML = `<div class="adm">
-        <h2>Quản trị người dùng</h2>
-        <div class="hint">Tạo tài khoản và chọn app mà từng người được dùng. Quản trị viên luôn dùng được tất cả app.</div>
+        <h2>Quản trị</h2>
+        <div class="hint">Quản trị viên luôn dùng được tất cả app và xem được dữ liệu của từng người (chọn tên ở ô "Xem dữ liệu của" trên thanh trên cùng).</div>
+
         <div class="card">
-            <h3>Thêm tài khoản mới</h3>
+            <h3>1. Cách lưu dữ liệu của từng app</h3>
+            <div class="hint">"Dùng chung": cả phòng thấy chung một danh sách. "Riêng từng người": mỗi tài khoản có danh sách riêng, người này không thấy, không sửa, không xóa được dữ liệu của người kia.</div>
+            <div class="tbl-wrap"><table><thead><tr><th style="width:220px">App</th><th>Cách lưu</th></tr></thead><tbody>${modeRows}</tbody></table></div>
+            <button class="primary" id="modeSave">Lưu cấu hình</button>
+            <div class="note">Sau khi lưu, trang tải lại. Dữ liệu đang có ở chế độ cũ <b>không bị xóa</b> nhưng không còn hiển thị ở chế độ mới. Dùng mục 2 bên dưới để chuyển dữ liệu cũ về đúng tài khoản.</div>
+            <div class="msg" id="modeMsg"></div>
+        </div>
+
+        <div class="card">
+            <h3>2. Chuyển dữ liệu dùng chung cũ về một tài khoản</h3>
+            <div class="hint">Dùng khi một app vừa chuyển sang "Riêng từng người". Sao chép toàn bộ danh sách dùng chung hiện có của app đó vào tài khoản bạn chọn (ví dụ tài khoản admin). Dữ liệu gốc vẫn còn, có thể làm lại.</div>
+            <div class="grid">
+                <div><label class="l">App</label><select id="mgApp">${APPS.map(a => `<option value="${a.key}">${esc(a.name)}</option>`).join('')}</select></div>
+                <div><label class="l">Chuyển về tài khoản</label><select id="mgUser">${userOpts}</select></div>
+            </div>
+            <button class="primary" id="mgBtn">Chuyển dữ liệu</button>
+            <div class="msg" id="mgMsg"></div>
+        </div>
+
+        <div class="card">
+            <h3>3. Thêm tài khoản mới</h3>
             <div class="grid">
                 <div><label class="l">Họ tên</label><input type="text" id="nuName" placeholder="Nguyễn Văn A"></div>
                 <div><label class="l">Tên đăng nhập hoặc email</label><input type="text" id="nuUser" placeholder="nguyenvana"></div>
                 <div><label class="l">Mật khẩu (≥ 6 ký tự)</label><input type="password" id="nuPass"></div>
                 <div><label class="l">Vai trò</label><select id="nuRole"><option value="user">Người dùng</option><option value="admin">Quản trị</option></select></div>
             </div>
-            <div class="checks" id="nuApps">${appChecks('nu', {})}</div>
-            <button class="primary" id="nuBtn">Tạo tài khoản</button>
+            <div class="checks" id="nuApps">${appChecks}</div>
+            <button class="primary" id="nuBtn" style="margin-top:0">Tạo tài khoản</button>
             <div class="msg" id="nuMsg"></div>
         </div>
+
         <div class="card">
-            <h3>Danh sách tài khoản (${Object.keys(users).length})</h3>
+            <h3>4. Danh sách tài khoản (${Object.keys(users).length})</h3>
             <div class="tbl-wrap"><table><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Được dùng</th><th>Trạng thái</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="5">Chưa có tài khoản.</td></tr>'}</tbody></table></div>
             <div class="msg" id="listMsg"></div>
         </div>
     </div>`;
 
+    $('modeSave').onclick = saveModes;
+    $('mgBtn').onclick = migrateData;
     $('nuBtn').onclick = createUser;
     p.querySelectorAll('select[data-f="role"]').forEach(s => s.onchange = () => {
         const tr = s.closest('tr'), isA = s.value === 'admin';
         tr.querySelectorAll('input[data-app]').forEach(c => { c.disabled = isA; if (isA) c.checked = true; });
     });
     p.querySelectorAll('[data-save]').forEach(b => b.onclick = () => saveUser(b.dataset.save, b.closest('tr')));
+}
+
+async function saveModes() {
+    const msg = $('modeMsg'); msg.className = 'msg';
+    const obj = {};
+    document.querySelectorAll('#adminPanel select[data-mode]').forEach(s => { obj[s.dataset.mode] = s.value; });
+    try {
+        await set(ref(db, 'config/appModes'), obj);
+        msg.classList.add('ok'); msg.textContent = 'Đã lưu. Đang tải lại…';
+        setTimeout(() => location.reload(), 700);
+    } catch (e) { msg.classList.add('err'); msg.textContent = errText(e); }
+}
+
+async function migrateData() {
+    const msg = $('mgMsg'); msg.className = 'msg';
+    const app = $('mgApp').value, uid = $('mgUser').value;
+    if (!uid) { msg.classList.add('err'); msg.textContent = 'Chưa chọn tài khoản.'; return; }
+    try {
+        const src = await get(ref(db, 'thads_data/' + app));
+        if (!src.exists()) { msg.classList.add('err'); msg.textContent = 'App này chưa có dữ liệu dùng chung để chuyển.'; return; }
+        if ((app === 'app2' || app === 'app3') && typeof src.val() === 'string') { msg.classList.add('err'); msg.textContent = 'Dữ liệu ' + (app === 'app2' ? 'App 2' : 'App 3') + ' chưa được nâng cấp. Hãy đăng nhập admin, mở tab ' + (app === 'app2' ? 'App 2' : 'App 3') + ' một lần (hệ thống tự nâng cấp) rồi chuyển lại.'; return; }
+        const dstRef = ref(db, 'thads_user/' + uid + '/' + app);
+        const dst = await get(dstRef);
+        if (dst.exists() && !confirm('Tài khoản này đã có dữ liệu riêng ở app này. Ghi đè bằng dữ liệu dùng chung cũ?')) return;
+        await set(dstRef, src.val());
+        msg.classList.add('ok'); msg.textContent = 'Đã chuyển dữ liệu. Người đó đăng nhập lại (hoặc bạn chọn tên họ ở ô "Xem dữ liệu của") để kiểm tra.';
+    } catch (e) { msg.classList.add('err'); msg.textContent = errText(e); }
 }
 
 async function createUser() {
@@ -401,7 +719,7 @@ async function createUser() {
         const cred = await createUserWithEmailAndPassword(sAuth, email, pass);
         await signOut(sAuth);
         await set(ref(db, 'users/' + cred.user.uid), { name, email, role, active: true, apps });
-        msg.classList.add('ok'); msg.textContent = 'Đã tạo tài khoản ' + user + '.';
+        fillViewSelect();
         renderAdmin();
     } catch (e) { msg.classList.add('err'); msg.textContent = errText(e); }
     $('nuBtn') && ($('nuBtn').disabled = false);
