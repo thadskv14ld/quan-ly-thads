@@ -105,7 +105,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, get, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, set, get, onValue, runTransaction, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -123,12 +123,14 @@ const APPS = [
     { key: 'app1', name: '1. CHUYỂN KHOẢN', src: 'app1.html' },
     { key: 'app2', name: '2. BƯU ĐIỆN',     src: 'app2.html' },
     { key: 'app3', name: '3. ĐỀ NGHỊ CHI',  src: 'app3.html' },
-    { key: 'app4', name: '4. TRA CỨU LUẬT', src: 'app-tra-cuu-van-ban-luat-v7.html' }
+    { key: 'app4', name: '4. TRA CỨU LUẬT', src: 'app-tra-cuu-van-ban-luat-v7.html' },
+    { key: 'app5', name: '5. BÁN ĐẤU GIÁ',  src: 'app5.html' }
 ];
 /* Các khóa dữ liệu mà mỗi app lưu trong trình duyệt (xóa khi đổi người xem / chế độ riêng) */
 const LOCAL_KEYS = {
     app1: ['thads_v5', 'thads_v5_ts'],
-    app4: ['thads.docs.v1', 'thads.order.v1']
+    app4: ['thads.docs.v1', 'thads.order.v1'],
+    app5: ['thads-hoso-v2']
 };
 const FAKE_DOMAIN = '@thads.local';
 
@@ -150,6 +152,8 @@ let unsubs = [], cfgUnsub = null, currentKey = null;
 let secondary = null;
 
 /* Đường dẫn dữ liệu của một app theo chế độ */
+/* App 5 mặc định lưu RIÊNG từng người (admin vẫn đổi được trong tab Quản trị) */
+const withDefaults = o => { o = Object.assign({}, o || {}); if (o.app5 === undefined) o.app5 = 'private'; return o; };
 const pathFor = key => modes[key] === 'private' ? 'thads_user/' + viewUid + '/' + key : 'thads_data/' + key;
 
 /* ===================== ĐĂNG NHẬP ===================== */
@@ -212,7 +216,7 @@ async function startSession() {
     allowed = APPS.filter(a => isAdmin || me.apps[a.key] === true);
     viewUid = me.uid;
 
-    try { modes = (await get(ref(db, 'config/appModes'))).val() || {}; } catch (e) { modes = {}; }
+    try { modes = withDefaults((await get(ref(db, 'config/appModes'))).val()); } catch (e) { modes = withDefaults({}); }
 
     // Nếu cấu hình riêng/chung thay đổi so với lần trước thì xóa bộ nhớ tạm của các app
     const sigNow = JSON.stringify(allowed.map(a => [a.key, modes[a.key] === 'private' ? 'p' : 's']));
@@ -260,7 +264,7 @@ async function startSession() {
     if (cfgUnsub) cfgUnsub();
     let first = true;
     cfgUnsub = onValue(ref(db, 'config/appModes'), snap => {
-        const v = snap.val() || {};
+        const v = withDefaults(snap.val());
         if (first) { first = false; return; }
         if (JSON.stringify(v) !== JSON.stringify(modes)) {
             alert('Quản trị viên vừa thay đổi cách lưu dữ liệu. Hệ thống sẽ tải lại.');
@@ -298,13 +302,13 @@ async function loadWorkspace(clearAll) {
     allowed.forEach(a => {
         const f = document.createElement('iframe');
         f.id = 'f_' + a.key; f.src = a.src;
-        f.addEventListener('load', () => { loaded[a.key] = true; if (MONTHLY[a.key]) mStart(a.key); else sendToApp(a.key); });
+        f.addEventListener('load', () => { loaded[a.key] = true; if (MONTHLY[a.key]) mStart(a.key); else if (RECORDS[a.key]) rStart(a.key); else sendToApp(a.key); });
         cont.appendChild(f);
         frames[a.key] = f;
     });
 
     allowed.forEach(a => {
-        if (MONTHLY[a.key]) return; // App 2, 3 lưu theo tháng, xử lý riêng
+        if (MONTHLY[a.key] || RECORDS[a.key]) return; // App 2, 3 lưu theo tháng; App 5 lưu theo từng hồ sơ, xử lý riêng
         const un = onValue(ref(db, pathFor(a.key)), snap => {
             const v = snap.val();
             if (v) { lastData[a.key] = v; sendToApp(a.key); }
@@ -405,6 +409,52 @@ window.addEventListener('message', async e => {
         console.error('Lỗi đồng bộ:', error);
         led.className = 'led'; st.innerText = 'Lỗi! (có thể không đủ quyền)';
     }
+});
+
+/* ===================== APP 5: LƯU THEO TỪNG HỒ SƠ ===================== */
+/* Cấu trúc trên máy chủ:  <gốc app>/cases/<mã hồ sơ> = chuỗi JSON của một hồ sơ
+   Mỗi hồ sơ ghi riêng nên nhiều người cùng sửa các hồ sơ khác nhau không ghi đè nhau. */
+const RECORDS = { app5: true };
+const RS = {};
+const REC_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+function rPost(key, msg) { const f = frames[key]; if (f && f.contentWindow) f.contentWindow.postMessage(msg, '*'); }
+function rStart(key) {
+    const base = pathFor(key) + '/cases';
+    const un = onValue(ref(db, base), snap => {
+        const v = snap.val() || {}, out = {};
+        Object.keys(v).forEach(id => { try { out[id] = JSON.parse(v[id]); } catch (e) {} });
+        RS[key] = out;
+        rPost(key, { type: 'APP5_DATA', cases: out });
+    }, err => console.error('Không đọc được ' + key, err));
+    unsubs.push(un);
+}
+async function rOps(key, d) {
+    const led = $('led'), st = $('statusText');
+    led.className = 'led syncing'; st.innerText = 'Đang đồng bộ...';
+    try {
+        const updates = {};
+        (Array.isArray(d.ops) ? d.ops : []).forEach(o => {
+            if (!o || typeof o.id !== 'string' || !REC_ID_RE.test(o.id)) return;
+            if (o.op === 'delete') updates[o.id] = null;
+            else if (o.op === 'set' && o.doc && typeof o.doc === 'object') updates[o.id] = JSON.stringify(o.doc);
+        });
+        if (Object.keys(updates).length) await update(ref(db, pathFor(key) + '/cases'), updates);
+        rPost(key, { type: 'APP5_ACK', reqId: d.reqId, ok: true });
+        led.className = 'led'; st.innerText = 'Sẵn sàng';
+    } catch (e) {
+        console.error('Lỗi lưu ' + key + ':', e);
+        rPost(key, { type: 'APP5_ACK', reqId: d.reqId, ok: false, error: errText(e) });
+        led.className = 'led'; st.innerText = 'Lỗi! (có thể không đủ quyền)';
+    }
+}
+window.addEventListener('message', async e => {
+    const d = e.data;
+    if (!d || typeof d.type !== 'string' || d.type.indexOf('APP5_') !== 0) return;
+    const key = 'app5';
+    if (!me || !frames[key] || e.source !== frames[key].contentWindow) return;
+    if (!allowed.some(a => a.key === key)) return;
+    if (d.type === 'APP5_READY') { if (RS[key]) rPost(key, { type: 'APP5_DATA', cases: RS[key] }); }
+    else if (d.type === 'APP5_OPS') await rOps(key, d);
 });
 
 /* ===================== APP 2 và APP 3: LƯU THEO THÁNG ===================== */
