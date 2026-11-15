@@ -763,19 +763,35 @@ function makeParentDb(){
     var c = curOf(r), lv = levelOf(r, t), st = STAGE[c.stage], lan = curLan(r), giaKD = curGiaKD(r), isOpen = !!open[r.id];
     var pillTxt = st.t + (lan != null && (BID_STAGES[c.stage] || c.stage === 'cho_qd_giam_gia' || c.stage === 'dau_gia_khong_thanh') ? ' • Lần ' + lan : '');
     var dateTxt = (c.start || c.end) && c.stage !== 'cho_qd_giam_gia' ? (fmt(c.start) || '…') + ' → ' + (fmt(c.end) || '…') : '';
-    var dateLab = BID_STAGES[c.stage] ? 'Đấu giá:' : c.stage === 'cho_qd_giam_gia' ? 'Nhận thông báo → hạn QĐ:' : 'Thực hiện:';
+    var dateLab = BID_STAGES[c.stage] ? 'Ngày bán đấu giá:' : c.stage === 'cho_qd_giam_gia' ? 'Nhận thông báo → hạn QĐ:' : 'Thực hiện:';
+    /* Nhãn và số tiền theo giai đoạn */
+    var kdLab = 'Giá khởi điểm', kdVal = giaKD, lanTxt = lan != null ? ' lần ' + lan : '';
+    if (BID_STAGES[c.stage]){ kdLab = 'Giá khởi điểm bán đấu giá' + lanTxt; if (c.giaKD != null) kdVal = c.giaKD; }
+    else if (c.stage === 'dau_gia_khong_thanh' || c.stage === 'cho_qd_giam_gia'){
+      /* Lấy số lần và số tiền từ lần bán đấu giá liền trước đó */
+      var pl = lan, pv = kdVal;
+      for (var bi = r.history.length - 1; bi >= 0; bi--){
+        if (r.history[bi].stage === 'dang_ban_dau_gia'){ if (r.history[bi].lan != null) pl = r.history[bi].lan; if (r.history[bi].giaKD != null) pv = r.history[bi].giaKD; break; }
+      }
+      kdLab = 'Tổng số tiền bán đấu giá không thành' + (pl != null ? ' lần ' + pl : ''); kdVal = pv;
+    }
+    else if (c.stage === 'ky_hd_dau_gia' && isPost(r)){
+      for (var gi = r.history.length - 1; gi >= 0; gi--){
+        if (r.history[gi].giaMoi != null){ kdLab = 'Tổng số tiền sau khi giảm giá' + (r.history[gi].lan != null ? ' lần ' + r.history[gi].lan : ''); kdVal = r.history[gi].giaMoi; break; }
+      }
+    }
     var li = h('li', { class:'card lv-' + lv.tone, id:'c-' + r.id },
       h('div', { class:'badge' }, h('span', { class:'lab' }, lv.lab), h('span', { class:'num' }, lv.num), h('span', { class:'stage' }, pillTxt)),
       h('div', { class:'body' },
         h('div', { class:'line1' }, h('span', { class:'so' }, r.soQD || '(chưa có số)')),
         (r.phai.ten || r.duoc.ten) ? h('p', { class:'parties' }, party('Người phải THA:', r.phai.ten), party('Người được THA:', r.duoc.ten)) : null,
-        (dateTxt || giaKD != null || c.giaMoi != null || c.pct != null) ? h('p', { class:'facts' },
+        (dateTxt || kdVal != null || c.giaMoi != null || c.pct != null) ? h('p', { class:'facts' },
           c.stage === 'dau_gia_khong_thanh' ? [
             c.start ? h('span', null, 'Thông báo ĐG không thành: ', h('b', null, fmt(c.start))) : null,
             c.end ? h('span', null, 'Dự kiến ra QĐ giảm giá: ', h('b', null, fmt(c.end))) : null,
             c.ngayTT ? h('span', null, 'Thực tế ra QĐ: ', h('b', null, fmt(c.ngayTT))) : null
           ] : dateTxt ? h('span', null, dateLab + ' ', h('b', null, dateTxt)) : null,
-          giaKD != null ? h('span', null, 'Giá khởi điểm: ', h('b', null, fmtMoney(giaKD))) : null,
+          kdVal != null ? h('span', null, kdLab + ': ', h('b', null, fmtMoney(kdVal))) : null,
           c.pct != null ? h('span', null, 'Mức giảm: ', h('b', null, c.pct + '%')) : null,
           c.giamTien != null ? h('span', null, 'Số tiền giảm: ', h('b', null, fmtMoney(c.giamTien))) : null,
           c.giaMoi != null ? h('span', null, 'Dự kiến sau giảm: ', h('b', null, fmtMoney(c.giaMoi))) : null) : null,
