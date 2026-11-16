@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HỆ THỐNG THADS</title>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://hethongthads-default-rtdb.firebaseio.com" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js">
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #0f172a; }
@@ -185,6 +190,7 @@ $('lgForgot').addEventListener('click', async () => {
 
 onAuthStateChanged(auth, async user => {
     if (!user) { showLogin(); return; }
+    const pModes = get(ref(db, 'config/appModes')).then(s => s.val(), () => null); // đọc song song với hồ sơ tài khoản cho nhanh
     try {
         const p = (await get(ref(db, 'users/' + user.uid))).val();
         if (!p || p.active !== true) {
@@ -194,7 +200,7 @@ onAuthStateChanged(auth, async user => {
             return;
         }
         me = { uid: user.uid, name: p.name || user.email, role: p.role || 'user', apps: p.apps || {} };
-        await startSession();
+        await startSession(pModes);
     } catch (e) {
         await signOut(auth);
         $('lgErr').textContent = 'Không đọc được thông tin tài khoản: ' + errText(e);
@@ -211,12 +217,12 @@ function showLogin() {
 }
 
 /* ===================== PHIÊN LÀM VIỆC ===================== */
-async function startSession() {
+async function startSession(pModes) {
     const isAdmin = me.role === 'admin';
     allowed = APPS.filter(a => isAdmin || me.apps[a.key] === true);
     viewUid = me.uid;
 
-    try { modes = withDefaults((await get(ref(db, 'config/appModes'))).val()); } catch (e) { modes = withDefaults({}); }
+    try { modes = withDefaults(await (pModes || get(ref(db, 'config/appModes')).then(s => s.val()))); } catch (e) { modes = withDefaults({}); }
 
     // Nếu cấu hình riêng/chung thay đổi so với lần trước thì xóa bộ nhớ tạm của các app
     const sigNow = JSON.stringify(allowed.map(a => [a.key, modes[a.key] === 'private' ? 'p' : 's']));
@@ -225,8 +231,9 @@ async function startSession() {
     try { localStorage.setItem('thads_modes_sig', sigNow); } catch (e) {}
 
     if (isAdmin) {
-        try { usersCache = (await get(ref(db, 'users'))).val() || {}; } catch (e) { usersCache = {}; }
         fillViewSelect();
+        // danh sách tài khoản chỉ để đổ ô "Xem dữ liệu của": tải ngầm, không bắt người dùng chờ
+        get(ref(db, 'users')).then(s => { usersCache = s.val() || {}; const cur = $('viewSel').value; fillViewSelect(); $('viewSel').value = cur; }, () => {});
     }
 
     $('loginScreen').style.display = 'none';
@@ -302,13 +309,14 @@ async function loadWorkspace(clearAll) {
     allowed.forEach(a => {
         const f = document.createElement('iframe');
         f.id = 'f_' + a.key; f.src = a.src;
-        f.addEventListener('load', () => { loaded[a.key] = true; if (MONTHLY[a.key]) mStart(a.key); else if (RECORDS[a.key]) rStart(a.key); else sendToApp(a.key); });
+        f.addEventListener('load', () => { loaded[a.key] = true; if (MONTHLY[a.key]) mStart(a.key); else if (RECORDS[a.key]) { /* App 5 đã bắt đầu tải dữ liệu từ trước, không chờ trang con tải xong */ } else sendToApp(a.key); });
         cont.appendChild(f);
         frames[a.key] = f;
     });
 
     allowed.forEach(a => {
-        if (MONTHLY[a.key] || RECORDS[a.key]) return; // App 2, 3 lưu theo tháng; App 5 lưu theo từng hồ sơ, xử lý riêng
+        if (RECORDS[a.key]) { delete RS[a.key]; rStart(a.key); return; } // App 5: tải dữ liệu ngay, song song với việc tải trang con
+        if (MONTHLY[a.key]) return; // App 2, 3 lưu theo tháng, xử lý riêng
         const un = onValue(ref(db, pathFor(a.key)), snap => {
             const v = snap.val();
             if (v) { lastData[a.key] = v; sendToApp(a.key); }
